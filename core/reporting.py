@@ -9,7 +9,7 @@ import json
 import re
 
 # PIP Packages
-from pandas import pd
+import pandas as pd
 
 # Local
 from . import api, queries, tools, builder, output, access

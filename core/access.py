@@ -10,9 +10,6 @@ import getpass
 import tideway
 import paramiko
 
-# Local library
-from . import access
-
 logger = logging.getLogger("_access_")
 
 def api_version(tw):
@@ -113,7 +110,7 @@ def method(args):
     if not token and not passwd:
         msg = "No access details supplied.\n"
         print(msg)
-        logger.error(msg)
+        logger.warning(msg)
         sys.exit(1)
 
     client = None

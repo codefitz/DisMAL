@@ -4,7 +4,7 @@
 #
 # For use with BMC Discovery
 #
-vers = "\nDisMAL Version: 0.0.3\n"
+vers = "\nDisMAL Version: 0.0.4\n"
 
 import sys
 import os
@@ -22,6 +22,7 @@ pwd = os.getcwd()
 
 parser = argparse.ArgumentParser(description='DisMAL Toolkit',formatter_class=RawTextHelpFormatter)
 # API Access Controls
+parser.add_argument('-v', '--version', dest='version', action='store_true', required=False, help='Version info for this app.\n\n')
 parser.add_argument('--discovery', dest='discovery',  type=str, required=False, help='The Discovery API target.\n\n', metavar='<ip_or_hostname>')
 parser.add_argument('--token', dest='token',  type=str, required=False, help='The Discovery API token without "Bearer".\n\n',metavar='<api_token>')
 parser.add_argument('--username', dest='username',  type=str, required=False, help='A login username for Discovery.\n\n',metavar='<username>')
@@ -29,7 +30,6 @@ parser.add_argument('--password', dest='password',  type=str, required=False, he
 parser.add_argument('--twpass', dest='twpass',  type=str, required=False, help='The tideway user password for a Discovery appliance.\n\n',metavar='<tideway_password>')
 parser.add_argument('--token_file', dest='f_token', type=str, required=False, help='Plaintext file containing API token string without "Bearer".\n\n', metavar='<filename>')
 parser.add_argument('--passwd_file', dest='f_passwd', type=str, required=False, help='Plaintext file containing password string.\n\n', metavar='<filename>')
-parser.add_argument('-v', '--version', dest='version', action='store_true', required=False, help='Version info for this app.\n\n')
 parser.add_argument('--noping', dest='noping', action='store_true', required=False, help="Don't ping target before running the tool.\n\n")
 
 # Data Quality Reports
@@ -66,6 +66,7 @@ parser.add_argument('--software_lifecycle_cli', dest='r_slc', action='store_true
 parser.add_argument('--database_lifecycle_cli', dest='r_dblc', action='store_true', required=False, help='Export of database lifecycle report (CLI).\n\n')
 parser.add_argument('--unrecognised_cli', dest='r_snmp', action='store_true', required=False, help='Export of unrecognised devices (CLI).\n\n')
 parser.add_argument('--software_agents_cli', dest='r_agents', action='store_true', required=False, help='Analysis of installed agents (CLI).\n\n')
+parser.add_argument('--software_users_cli', dest='r_softuser', action='store_true', required=False, help='Software with running process usernames (CLI).\n\n')
 parser.add_argument('--tku', dest='r_tku', action='store_true', required=False, help='Export TKU summary.\n\n')
 
 # DQ Output Modifiers
@@ -107,7 +108,7 @@ parser.add_argument('--tw_options', dest='tw_options', action='store_true', requ
 parser.add_argument('--tw_config_dump', dest='tw_config_dump', action='store_true', required=False, help='Export tw_config_dump.\n\n')
 parser.add_argument('--tw_crontab', dest='tw_crontab', action='store_true', required=False, help='Export Crontab configuration.\n\n')
 parser.add_argument('--login_users', dest='tw_list_users', action='store_true', required=False, help='Export list of UI logins.\n\n')
-parser.add_argument('--export_platforms_xml', dest='export_platforms', action='store_true', required=False, help='Export platform scripts as XML.\n\n')
+parser.add_argument('--export_platforms_xml', dest='export_platforms_xml', action='store_true', required=False, help='Export platform scripts as XML.\n\n')
 parser.add_argument('--export_platforms', dest='export_platforms', action='store_true', required=False, help='Export platform scripts.\n\n')
 parser.add_argument('--events', dest='tw_events', action='store_true', required=False, help='Export event logs.\n\n')
 parser.add_argument('--reports_model', dest='reports_model', action='store_true', required=False, help='Export Reports model data.\n\n')
@@ -125,7 +126,12 @@ parser.add_argument('--debug', dest='debugging',  action='store_true', required=
 global args
 args = parser.parse_args()
 
-if args.keep:
+if args.version:
+    print(vers)
+    if not args.discovery:
+        sys.exit(0)
+
+if args.wakey:
     if not tools.in_wsl():
         # pyautogui can't run in WSL as there is no screen, but need to keep function for Linux desktop
         import pyautogui
@@ -136,10 +142,11 @@ if args.keep:
             pyautogui.press('shift')
             pyautogui.PAUSE = 60
 
-reporting_dir = pwd + "/output_" + args.discovery.replace(".","_")
+if args.discovery:
+    reporting_dir = pwd + "/output_" + args.discovery.replace(".","_")
 
-if not os.path.exists(reporting_dir):
-    os.makedirs(reporting_dir)
+    if not os.path.exists(reporting_dir):
+        os.makedirs(reporting_dir)
 
 logging.basicConfig(level=logging.INFO, filename=logfile, filemode='w',force=True)
 logger = logging.getLogger("_dismal_")
@@ -152,21 +159,17 @@ if args.noping:
     msg = "Ping check off for %s..."%args.discovery
     print(msg)
 else:
-    exit_code = access.ping(args.discovery)
-    if exit_code == 0:
-        msg = "%s: successful ping!"%args.discovery
-        print(msg)
-        logger.info(msg)
-    else:
-        msg = "%s not found (ping)\nExit code: %s"%(args.discovery, exit_code)
-        print(msg)
-        logger.critical(msg)
-        sys.exit(1)
-
-if args.version:
-    print(vers)
-    if not args.discovery:
-        sys.exit(0)
+    if args.discovery:
+        exit_code = access.ping(args.discovery)
+        if exit_code == 0:
+            msg = "%s: successful ping!"%args.discovery
+            print(msg)
+            logger.info(msg)
+        else:
+            msg = "%s not found (ping)\nExit code: %s"%(args.discovery, exit_code)
+            print(msg)
+            logger.critical(msg)
+            sys.exit(1)
 
 # Validate access methods
 discovery, token, client, api_access, ssh_access, system_user, system_pass = access.method(args)

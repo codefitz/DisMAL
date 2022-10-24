@@ -127,3 +127,55 @@ def ip_or_string(value):
         msg = "Value %s Could not be convered to IPAddress"%value
         logger.warning(msg)
         return value
+
+def extract_credential(entry):
+    details = {}
+    uuid = entry.get('uuid')
+    index = entry.get('index')
+    label = entry.get('label')
+    enabled = entry.get('enabled')
+    types = entry.get('types')
+    username = None
+    if 'username' in entry:
+        username = entry.get('username')
+    elif 'snmp.v3.securityname' in entry:
+        username = entry.get('snmp.v3.securityname')
+    elif 'aws.access_key_id' in entry:
+        username = entry.get('aws.access_key_id')
+    elif 'azure.application_id' in entry:
+        username = entry.get('azure.application_id')
+    iprange = None
+    exclusions = None
+    if 'ip_range' in entry:
+        iprange = entry.get('ip_range')
+    if 'ip_exclusion' in entry:
+        exclusions = entry.get('ip_exclusion')
+    details = {"index":index,"uuid":uuid,"label":label,"username":username,"enabled":enabled,"iprange":iprange,"exclusions":exclusions,"types":types}
+    return details
+
+def dequote(s):
+    """
+    If a string has double quotes around it, remove them.
+    Make sure the pair of quotes match.
+    If a matching pair of quotes is not found, return the string unchanged.
+    """
+    if (s[0] == s[-1]) and s.startswith('"'):
+        return s[1:-1]
+    return s
+
+def json2csv(jsdata):
+    header = []
+    data = []
+    for jsitem in jsdata:
+        headers = jsitem.keys() # get the headers, unstructured
+        for label in headers:
+            # create a unique list of ALL possible headers
+            header.append(label)
+            header = sortlist(header)
+    for jsitem in jsdata:
+        values = []
+        for key in header:
+            # Loop through the unique set of headers and get values if exist
+            values.append(getr(jsitem,key,"N/A")) # Substitute if missing
+        data.append(values)
+    return header, data

@@ -12,7 +12,7 @@ import re
 from pandas import pd
 
 # Local
-from . import api, queries, tools, builder, output
+from . import api, queries, tools, builder, output, access
 
 logger = logging.getLogger("_reporting_")
 
@@ -155,6 +155,86 @@ def successful(creds, search, args):
     if msg:
         print(msg)
     output.report(data, headers, args)
+
+def successful_cli(client, sysuser, passwd, args, reporting_dir):
+    credentials = access.remote_cmd('tw_vault_control --show --json -u %s -p %s'%(sysuser,passwd),client)
+    credjson = []
+    for cred in credentials.split("\n"):
+        try:
+            credjson.append(json.loads(cred))
+        except:
+            pass
+
+    data = []
+    headers = []
+
+    for cred_detail in credjson:
+        msg = "Analysing Credential: %s\n"%cred_detail.get('uuid')
+        logger.debug(msg)
+
+        detail = tools.extract_credential(cred_detail)
+        uuid = detail.get('uuid')
+        
+        list_of_ranges = detail.get('iprange')
+        ip_exclude = detail.get('exclusions')
+        enabled = tools.getr(detail,'enabled')
+        types = tools.getr(detail,'types')
+        if enabled:
+            status = "Enabled"
+        else:
+            status = "Disabled"
+
+        active = False
+        success = 0
+        failure = 0
+        sessions = 0
+        devinfos = 0
+        credsux = access.remote_cmd('tw_query -u %s -p %s --csv "%s"'%(sysuser,passwd,queries.s_credential_success),client)
+        devinfosux = access.remote_cmd('tw_query -u %s -p %s --csv "%s"'%(sysuser,passwd,queries.s_deviceinfo_success),client)
+        credfail = access.remote_cmd('tw_query -u system -p %s --csv "%s"'%(sysuser,passwd,queries.s_credential_failure),client)
+        for line in devinfosux.split("\n"):
+            if uuid in line:
+                msg = "Successful UUID found in line: %s\n"%line
+                logger.debug(msg)
+                active = True
+                success += int(line.split(",")[2])
+        for line in credsux.split("\n"):
+            if uuid in line:
+                msg = "DevInfo UUID found in line: %s\n"%line
+                logger.debug(msg)
+                active = True
+                success += int(line.split(",")[2])
+        for line in credfail.split("\n"):
+            if uuid in line:
+                msg = "Failed UUID found in line: %s\n"%line
+                logger.debug(msg)
+                active = True
+                failure = int(line.split(",")[2])
+        
+        msg = "Sessions found, Active: %s" % devinfos
+        logger.debug(msg)
+        msg = "DeviceInfos found, Active: %s" % sessions
+        logger.debug(msg)
+        msg = "Failures found, Active: %s" % failure
+        logger.debug(msg)
+            
+        total = success + failure
+        if total > 0:
+            logger.debug("Successes: %s\nOut of Total: %s"%(success,total))
+            percent = "{0:.0%}".format(success/(total))
+
+        if active:
+            logger.debug("UUID %s found Active"%uuid)
+            data.append([ detail.get('label'), uuid, detail.get('username'), types, success, failure, percent, status, list_of_ranges, ip_exclude ])
+        else:
+            logger.debug("UUID %s found Inactive"%uuid)
+            data.append([ detail.get('label'), uuid, detail.get('username'), types, None, None, "0%", "Credential appears to not be in use (%s)" % status, list_of_ranges, ip_exclude ])
+        headers = [ "Credential", "UUID", "Login ID", "Protocol", "Successes", "Failures", "Success %", "State", "Scan Ranges", "Exclude Ranges" ]
+
+    headers.insert(0,"Discovery Instance")
+    for row in data:
+        row.insert(0, args.discovery)
+    output.csv_file(data, headers, reporting_dir+"/credentials.csv")
 
 def devices(twsearch, twcreds, args):
 

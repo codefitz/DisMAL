@@ -195,4 +195,4 @@ def method(args):
         print(msg)
         logger.warning(msg)
 
-    return disco, token, client, use_api, use_ssh, system_user
+    return disco, token, client, use_api, use_ssh, system_user, syspass

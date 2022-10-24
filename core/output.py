@@ -178,3 +178,14 @@ def cmd2csv(header,result,seperator,filename,appliance):
                 print(msg)
                 txt_dump(result,filename)
     csv_file(data, header, filename)
+
+def query2csv(search, query, filename, appliance):
+    response = api.search_results(search, query)
+    if type(response) == list and len(response) > 0:
+        header, data = tools.json2csv(response)
+        header.insert(0,"Discovery Instance")
+        for row in data:
+            row.insert(0, appliance)
+        csv_file(data, header, filename)
+    else:
+        txt_dump("No results.",filename)

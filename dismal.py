@@ -4,7 +4,7 @@
 #
 # For use with BMC Discovery
 #
-vers = "\nDisMAL Version: 0.0.2\n"
+vers = "\nDisMAL Version: 0.0.3\n"
 
 import sys
 import os
@@ -33,6 +33,7 @@ parser.add_argument('-v', '--version', dest='version', action='store_true', requ
 parser.add_argument('--noping', dest='noping', action='store_true', required=False, help="Don't ping target before running the tool.\n\n")
 
 # Data Quality Reports
+parser.add_argument('--api_admin', dest='a_admin', action='store_true', required=False, help='Export API admin info.\n\n')
 parser.add_argument('--device', dest='r_device', type=str, required=False, help='Run devices report on a device node (Host, NetworkDevice, Printer, SNMPManagedDevice, StorageDevice, ManagementController)\n\n',metavar='<device_name>')
 parser.add_argument('--devices', dest='r_devices',  action='store_true', required=False, help='Run devices access analysis report - showing credentials used from last session results.\n\n')
 parser.add_argument('--device_ids', dest='r_device_ids', action='store_true', required=False, help='Export a list of unique device identies.\n\n')
@@ -41,6 +42,7 @@ parser.add_argument('--cred_device', dest='r_cred_device', type=str, required=Fa
 parser.add_argument('--cred_order', dest='r_weigh', action='store_true', required=False, help="Display suggested order of credentials based on restricted ips, excluded ips, success/failure, privilege, type\n\n")
 parser.add_argument('--query', dest='a_query', type=str, required=False, help='Run a query.\n\n',metavar='<query string>')
 parser.add_argument('--success', dest='r_success',  action='store_true', required=False, help='Run credential success report.\n\n')
+parser.add_argument('--successful', dest='r_successful',  action='store_true', required=False, help='Run credential success report.\n\n')
 parser.add_argument('--success_cli', dest='r_successcli', action='store_true', required=False, help='Run credential success report (CLI).\n\n')
 parser.add_argument('--schedules', dest='r_schedules', action='store_true', required=False, help='Analysis report on which credentials will be used by with scan/exclude.\n\n')
 parser.add_argument('--schedules_cli', dest='r_schedulescli', action='store_true', required=False, help='Export of scan schedules (CLI).\n\n')
@@ -49,6 +51,7 @@ parser.add_argument('--scan_overlaps', dest='r_overlaps',  action='store_true', 
 parser.add_argument('--disco_access', dest='r_disco_access',  action='store_true', required=False, help='Export all DiscoveryAccess including dropped endpoints.\n\n')
 parser.add_argument('--disco_analysis', dest='r_disco_analysis',  action='store_true', required=False, help='Run analysis report on all DiscoveryAccess including dropped endpoints.\n\n')
 parser.add_argument('--active_runs', dest='r_activeruns', action='store_true', required=False, help='List active Discovery Runs.\n\n')
+parser.add_argument('--discovery_runs', dest='r_discoveryruns', action='store_true', required=False, help='Export active Discovery Runs.\n\n')
 parser.add_argument('--sensitive_data_cli', dest='r_sensitivecli', action='store_true', required=False, help='Export Sensitive Data report (CLI).\n\n')
 parser.add_argument('--export_tpl_cli', dest='r_tplexportcli', action='store_true', required=False, help='Export TPL (CLI).\n\n')
 parser.add_argument('--eca_errors_cli', dest='r_ecaerrorscli', action='store_true', required=False, help='Export ECA Errors (CLI).\n\n')
@@ -63,13 +66,14 @@ parser.add_argument('--software_lifecycle_cli', dest='r_slc', action='store_true
 parser.add_argument('--database_lifecycle_cli', dest='r_dblc', action='store_true', required=False, help='Export of database lifecycle report (CLI).\n\n')
 parser.add_argument('--unrecognised_cli', dest='r_snmp', action='store_true', required=False, help='Export of unrecognised devices (CLI).\n\n')
 parser.add_argument('--software_agents_cli', dest='r_agents', action='store_true', required=False, help='Analysis of installed agents (CLI).\n\n')
+parser.add_argument('--tku', dest='r_tku', action='store_true', required=False, help='Export TKU summary.\n\n')
 
 # DQ Output Modifiers
 parser.add_argument('--null', dest='nullreport',  action='store_true', required=False, help='Run report functions but do not output data (used for debugging).\n\n')
 parser.add_argument('-c', '--csv', dest='csv_export', action='store_true', required=False, help='Output CSV format.\n\n')
 parser.add_argument('-f', '--file', dest='f_name', type=str, required=False, help='Output file for CSV format.\n\n',metavar='<filename>')
 
-# UI Management
+# API Management
 parser.add_argument('--cred_remove', dest='a_removal', type=str, required=False, help='Delete a credential from the system (with prompt).\n\n',metavar='<UUID>')
 parser.add_argument('--cred_enable', dest='a_enable', type=str, required=False, help='Enable/Disable a credential.\n\n',metavar='<UUID>')
 parser.add_argument('--cred_remove_list', dest='f_remlist', type=str, required=False, help='Specify a list of credentials to delete (no prompt).\n\n',metavar='<filename>')
@@ -81,8 +85,9 @@ parser.add_argument('--kill_run', dest='a_kill_run', type=str, required=False, h
 parser.add_argument('--user_management', dest='a_user_man', type=str, required=False, help='Manage a GUI user (requires tideway login).\n\n',metavar='<login_id>')
 parser.add_argument('--services', dest='a_services', type=str, required=False, help='Takes CLI arguments for tw_service_control.\n\n',metavar='<argument>')
 parser.add_argument('--kill_scanning', dest='a_killemall', action='store_true', required=False, help='Clear the Discovery Run queue (use only if you know what you\'re doing).\n\n')
+parser.add_argument('--baseline', dest='r_baseline', action='store_true', required=False, help='Run the baseline command.\n\n')
 parser.add_argument('--baseline_cli', dest='r_baselinecli', action='store_true', required=False, help='Run the CLI baseline command.\n\n')
-parser.add_argument('--knowledge_cli', dest='r_knowledgecli', action='store_true', required=False, help='List Knowledge uploads.\n\n')
+parser.add_argument('--knowledge_cli', dest='r_knowledgecli', action='store_true', required=False, help='List Knowledge uploads (CLI).\n\n')
 parser.add_argument('--cmdbsync_cli', dest='r_cmdbsynccli', action='store_true', required=False, help='CMDB sync details (CLI).\n\n')
 parser.add_argument('--license_export', dest='r_license_export', action='store_true', required=False, help='Export license details.\n\n')
 parser.add_argument('--audit', dest='r_auditcli', action='store_true', required=False, help='Export audit report.\n\n')
@@ -337,17 +342,17 @@ if api_access:
     ##### Setup Endpoints #######
 
     try:
-        search = discovery.data()
+        disco = discovery.discovery()
     except:
-        msg = "Error getting Data endpoint from %s\n" % (args.discovery)
+        msg = "Error getting Discovery endpoint from %s\n" % (args.discovery)
         print(msg)
         logger.error(msg)
         sys.exit(1)
 
     try:
-        disco = discovery.discovery()
+        search = discovery.data()
     except:
-        msg = "Error getting Discovery endpoint from %s\n" % (args.discovery)
+        msg = "Error getting Data endpoint from %s\n" % (args.discovery)
         print(msg)
         logger.error(msg)
         sys.exit(1)
@@ -359,15 +364,41 @@ if api_access:
         print(msg)
         logger.error(msg)
         sys.exit(1)
+
+    try:
+        vault = discovery.vault()
+    except:
+        msg = "Error getting Vault endpoint from %s\n" % (args.discovery)
+        print(msg)
+        logger.error(msg)
+        sys.exit(1)
+
+    try:
+        knowledge = discovery.knowledge()
+    except:
+        msg = "Error getting Knowledge endpoint from %s\n" % (args.discovery)
+        print(msg)
+        logger.error(msg)
+        sys.exit(1)
     
     ####### API Management #######
 
     if args.r_activeruns:
-        ## Lookup a Device
         api.show_runs(disco, args)
+
+    if args.r_discoveryruns:
+        api.discovery_runs(disco, args, reporting_dir)
 
     if args.a_kill_run:
         api.cancel_run(disco, args)
+
+    if args.vault:
+        api.vault(vault, args, reporting_dir)
+
+    if args.r_successful:
+        print("\nCredential Success")
+        print("------------------")
+        api.success(creds, search, args, reporting_dir)
 
     if args.a_removal:
         lookup = builder.get_credential(search, creds, args.a_removal, args)
@@ -441,14 +472,26 @@ if api_access:
 
     ####### API Reporting ########
 
+    if args.a_admin:
+        api.admin(disco.admin(),reporting_dir)
+        
     if args.a_query:
         api.query(search, args)
+
+    if args.r_baseline:
+        api.baseline(disco.baseline(), args, reporting_dir)
 
     if args.r_cred_device:
         builder.get_credential(search, creds, args.r_cred_device, args)
 
     if args.r_device:
         builder.get_device(args.r_device, search, creds, args)
+
+    if args.hostname:
+        api.hostname(args.appliance,reporting_dir)
+
+    if args.r_tku:
+        api.tku(knowledge,reporting_dir)
 
     if args.r_success:
         print("\nCredential Success")
@@ -466,6 +509,69 @@ if api_access:
 
     if args.r_disco_analysis:
         reporting.discovery_analysis(search, creds, args)
+
+    if args.r_sensitive:
+        api.sensitive(search, reporting_dir, args.discovery)
+
+    if args.r_tpl_export:
+        api.tpl_export(search, reporting_dir, args.discovery)
+
+    if args.r_eca_errors:
+        api.eca_errors(search, reporting_dir, args.discovery)
+    
+    if args.r_schedules:
+        api.schedules(search, reporting_dir, args.discovery)
+    
+    if args.r_excludes:
+        api.excludes(search, reporting_dir, args.discovery)
+
+    if args.r_open_ports:
+        api.open_ports(search, reporting_dir, args.discovery)
+
+    if args.r_host_util:
+        api.host_util(search, reporting_dir, args.discovery)
+
+    if args.r_orphan_vms:
+        api.orphan_vms(search, reporting_dir, args.discovery)
+
+    if args.r_missing_vms:
+        api.missing_vms(search, reporting_dir, args.discovery)
+
+    if args.r_audit:
+        api.audit(search, reporting_dir, args.discovery)
+    
+    if args.r_near_removal:
+        api.near_removal(search, reporting_dir, args.discovery)
+
+    if args.r_removed:
+        api.removed(search, reporting_dir, args.discovery)
+
+    if args.r_oslc:
+        api.oslc(search, reporting_dir, args.discovery)
+
+    if args.r_slc:
+        api.slc(search, reporting_dir, args.discovery)
+
+    if args.r_dblc:
+        api.dblc(search, reporting_dir, args.discovery)
+
+    if args.r_agents:
+        api.agents(search, reporting_dir, args.discovery)
+
+    if args.r_software_users:
+        api.software_users(search, reporting_dir, args.discovery)
+
+    if args.r_cmdb_config:
+        api.cmdb_config(search, reporting_dir, args.discovery)
+
+    if args.r_modules:
+        api.modules(search, reporting_dir, args.discovery)
+
+    if args.r_licensing_csv:
+        api.licensing_csv(search, reporting_dir, args.discovery)
+
+    if args.r_licensing:
+        api.licensing(search, reporting_dir, args.discovery)
 
 if client:
     client.close()

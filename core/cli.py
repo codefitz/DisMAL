@@ -132,7 +132,7 @@ def baseline(client,args,instance_dir):
             checked.append([s.strip() for s in check])
     header.insert(0,"Discovery Instance")
     for row in checked:
-        row.insert(0, args.discovery)
+        row.insert(0, args.target)
     output.csv_file(checked, header, instance_dir+"/baseline.csv")
 
 def knowledge(client,sysuser,passwd,instance_dir):
@@ -156,84 +156,84 @@ def licensing(client,sysuser,passwd,args,instance_dir):
     logger.debug("Licenses:\n%s"%data)
     if not result:
         result = run_query(client,sysuser,passwd,queries.hc_license)
-        output.save2csv(result, instance_dir+"/license.csv",args.discovery)
+        output.save2csv(result, instance_dir+"/license.csv",args.target)
     else:
         output.txt_dump(result,instance_dir+"/license.txt")
 
 def sensitive(client,sysuser,syspass,args,instance_dir):
     result = run_query(client,sysuser,syspass,queries.hc_sensitive_data)
-    output.save2csv(result, instance_dir+"/dq_sensitive_data.csv",args.discovery)
+    output.save2csv(result, instance_dir+"/dq_sensitive_data.csv",args.target)
 
 def tplexport(client,sysuser,syspass,instance_dir):
     output.tpl_export(None, queries.hc_tpl_export, instance_dir, "ssh", client, syspass)
 
 def eca_errors(client,sysuser,syspass,args,instance_dir):
     result = run_query(client,sysuser,syspass,queries.hc_eca_error)
-    output.save2csv(result, instance_dir+"/dq_eca_errors.csv",args.discovery)
+    output.save2csv(result, instance_dir+"/dq_eca_errors.csv",args.target)
 
 def schedules(client,sysuser,syspass,args,instance_dir):
     result = run_query(client,sysuser,syspass,queries.hc_scan_ranges)
-    output.save2csv(result, instance_dir+"/dq_scan_ranges.csv",args.discovery)
+    output.save2csv(result, instance_dir+"/dq_scan_ranges.csv",args.target)
 
 def excludes(client,sysuser,syspass,args,instance_dir):
     result = run_query(client,sysuser,syspass,queries.hc_exclude_ranges)
-    output.save2csv(result, instance_dir+"/dq_exclude_ranges.csv",args.discovery)
+    output.save2csv(result, instance_dir+"/dq_exclude_ranges.csv",args.target)
 
 def open_ports(client,sysuser,syspass,args,instance_dir):
     result = run_query(client,sysuser,syspass,queries.hc_open_ports)
-    output.save2csv(result, instance_dir+"/dq_open_ports.csv",args.discovery)
+    output.save2csv(result, instance_dir+"/dq_open_ports.csv",args.target)
 
 def host_util(client,sysuser,syspass,args,instance_dir):
     result = run_query(client,sysuser,syspass,queries.hc_host_utilisation)
-    output.save2csv(result, instance_dir+"/dq_host_utilisation.csv",args.discovery)
+    output.save2csv(result, instance_dir+"/dq_host_utilisation.csv",args.target)
 
 def orphan_vms(client,sysuser,syspass,args,instance_dir):
     result = run_query(client,sysuser,syspass,queries.hc_orphan_vms)
-    output.save2csv(result, instance_dir+"/dq_orphan_vms.csv",args.discovery)
+    output.save2csv(result, instance_dir+"/dq_orphan_vms.csv",args.target)
 
 def missing_vms(client,sysuser,syspass,args,instance_dir):
     result = run_query(client,sysuser,syspass,queries.hc_missing_vms)
-    output.save2csv(result, instance_dir+"/dq_missing_vms.csv",args.discovery)
+    output.save2csv(result, instance_dir+"/dq_missing_vms.csv",args.target)
 
 def audit(client,sysuser,syspass,args,instance_dir):
     result = run_query(client,sysuser,syspass,queries.hc_audit)
-    output.save2csv(result, instance_dir+"/dq_audit.csv",args.discovery)
+    output.save2csv(result, instance_dir+"/dq_audit.csv",args.target)
 
 def near_removal(client,sysuser,syspass,args,instance_dir):
     result = run_query(client,sysuser,syspass,queries.hc_near_removal)
-    output.save2csv(result, instance_dir+"/dq_near_removal.csv",args.discovery)
+    output.save2csv(result, instance_dir+"/dq_near_removal.csv",args.target)
 
 def removed(client,sysuser,syspass,args,instance_dir):
     result = run_query(client,sysuser,syspass,queries.hc_removed)
-    output.save2csv(result, instance_dir+"/hc_removed.csv",args.discovery)
+    output.save2csv(result, instance_dir+"/hc_removed.csv",args.target)
 
 def os_lifecycle(client,sysuser,syspass,args,instance_dir):
     result = run_query(client,sysuser,syspass,queries.hc_os_lifecycle)
-    output.save2csv(result, instance_dir+"/dq_os_lifecycle.csv",args.discovery)
+    output.save2csv(result, instance_dir+"/dq_os_lifecycle.csv",args.target)
 
 def software_lifecycle(client,sysuser,syspass,args,instance_dir):
     result = run_query(client,sysuser,syspass,queries.hc_software_lifecycle)
-    output.save2csv(result, instance_dir+"/dq_software_lifecycle.csv",args.discovery)
+    output.save2csv(result, instance_dir+"/dq_software_lifecycle.csv",args.target)
 
 def db_lifecycle(client,sysuser,syspass,args,instance_dir):
     result = run_query(client,sysuser,syspass,queries.hc_db_lifecycle)
-    output.save2csv(result, instance_dir+"/dq_db_lifecycle.csv",args.discovery)
+    output.save2csv(result, instance_dir+"/dq_db_lifecycle.csv",args.target)
 
 def unrecognised_snmp(client,sysuser,syspass,args,instance_dir):
     result = run_query(client,sysuser,syspass,queries.hc_snmp_devices)
-    output.save2csv(result, instance_dir+"/dq_snmp_unrecognised.csv",args.discovery)
+    output.save2csv(result, instance_dir+"/dq_snmp_unrecognised.csv",args.target)
 
 def installed_agents(client,sysuser,syspass,args,instance_dir):
     result = run_query(client,sysuser,syspass,queries.hc_agents)
-    output.save2csv(result, instance_dir+"/dq_installed_agents.csv",args.discovery)
+    output.save2csv(result, instance_dir+"/dq_installed_agents.csv",args.target)
 
 def software_usernames(client,sysuser,syspass,args,instance_dir):
     result = run_query(client,sysuser,syspass,queries.hc_user_accounts)
-    output.save2csv(result, instance_dir+"/dq_software_usernames.csv",args.discovery)
+    output.save2csv(result, instance_dir+"/dq_software_usernames.csv",args.target)
 
 def module_summary(client,sysuser,syspass,args,instance_dir):
     result = run_query(client,sysuser,syspass,queries.pm_summary)
-    output.save2csv(result, instance_dir+"/dq_pattern_modules.csv",args.discovery)
+    output.save2csv(result, instance_dir+"/dq_pattern_modules.csv",args.target)
 
 ######
 
@@ -243,7 +243,7 @@ def df_h(client,instance_dir,args):
     data = access.remote_cmd(cmd,client)
     logger.debug("df -h:\n%s"%data)
     header = [ "fs", "mount", "size", "used", "available", "Used %" ]
-    output.cmd2csv(header, data, ",", instance_dir+"/disk.csv",args.discovery)
+    output.cmd2csv(header, data, ",", instance_dir+"/disk.csv",args.target)
 
 def timedatectl(client,instance_dir):
     # NTP Check
@@ -289,7 +289,7 @@ def ect_passwd(client,instance_dir,args):
     data = access.remote_cmd(cmd,client)
     logger.debug("/etc/passwd:\n%s"%data)
     header = [ "login", "password", "uid", "gid", "gecos", "homedir", "shellcmd" ]
-    output.cmd2csv(header, data, ":", instance_dir+"/etc_passwd.csv",args.discovery)
+    output.cmd2csv(header, data, ":", instance_dir+"/etc_passwd.csv",args.target)
 
 def syslog(client,twpasswd,instance_dir):
     # Syslog
@@ -459,7 +459,7 @@ def tree(client,instance_dir,args):
     result = access.remote_cmd(cmd,client)
     logger.debug("tree:\n%s"%result)
     header = [ "path" ]
-    output.cmd2csv(header, result, ",", instance_dir+"/tree.csv",args.discovery)
+    output.cmd2csv(header, result, ",", instance_dir+"/tree.csv",args.target)
 
 def host_info(client,instance_dir):
     uname = 'uname -a'

@@ -233,7 +233,7 @@ def successful_cli(client, sysuser, passwd, args, reporting_dir):
 
     headers.insert(0,"Discovery Instance")
     for row in data:
-        row.insert(0, args.discovery)
+        row.insert(0, args.target)
     output.csv_file(data, headers, reporting_dir+"/credentials.csv")
 
 def devices(twsearch, twcreds, args):

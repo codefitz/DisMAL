@@ -86,7 +86,7 @@ def baseline(data, args, instance_dir):
                     header, data = tools.json2csv(failures)
                 header.insert(0,"Discovery Instance")
                 for row in data:
-                    row.insert(0, args.discovery)
+                    row.insert(0, args.target)
                 output.csv_file(data, header, instance_dir+"/baseline.csv")
         except Exception as e:
             logger.error("Problem with baseline:\n%s\n%s"%(e.__class__,str(e)))
@@ -128,7 +128,7 @@ def discovery_runs(twdisco, args, instance_dir):
         header, data = tools.json2csv(runs)
         header.insert(0,"Discovery Instance")
         for row in data:
-            row.insert(0, args.discovery)
+            row.insert(0, args.target)
         output.csv_file(data, header, instance_dir+"/current_scans.csv")
 
 def cancel_run(disco, args):
@@ -171,7 +171,7 @@ def vault(twvault, args, instance_dir):
 def success(twcreds,twsearch,args,instance_dir):
     builder.successful(twcreds, twsearch, False, args)
     df = pandas.read_csv(args.file)
-    df.insert(0, "Discovery Instance", args.discovery)
+    df.insert(0, "Discovery Instance", args.target)
     df.to_csv(instance_dir+"/credentials.csv", index=False)
     os.remove(args.file)
 

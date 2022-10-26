@@ -58,21 +58,91 @@ def remote_cmd(cmd, client):
         output = error
     return output
 
-def method(args):
-    target = args.discovery
-    token = args.token
-    passwd = args.twpass
-    disco = None
-    use_api = False
-    use_ssh = False
+def login_target(client,args):
+    target = args.target
     system_user = args.username
-    if not target:
-        target = input("URL or IP address: ")
-        if not target:
-            msg = "Must enter valid URL or IP address.\n"
+    syspass = args.password
+    
+    if not syspass:
+        if args.f_passwd:
+            exists = os.path.isfile(args.f_passwd)
+            if exists:
+                f=open(args.f_passwd, 'r')
+                passwd=f.read()
+                f.close()
+            else:
+                msg = "Login password file not found!\n"
+                print(msg)
+                logger.error(msg)
+        else:
+            syspass = getpass.getpass(prompt='Please enter your system administrator password (enter=skip): ')
+    
+    if not syspass:
+        msg = "No system user password supplied."
+        print(msg)
+        logger.warning(msg)
+    
+    if syspass:
+        msg = "\nChecking %s login for %s..." %(system_user,target)
+        print(msg)
+        logger.info(msg)
+        try:
+            result = remote_cmd("tw_options -u %s -p %s > /dev/null && echo $?"%(system_user,syspass), client)
+            if result == "ERROR: Authentication unsuccessful":
+                print(result)
+                logger.error(msg)
+            else:
+                msg = "Successfully authenticated %s user" % (system_user)
+                print(msg)
+                logger.info(result)
+                logger.info(msg)
+        except Exception as e:
+            msg = "Problem logging into %s\n%s" % (target,e)
             print(msg)
             logger.error(msg)
-            sys.exit(1)
+
+    return system_user, syspass
+
+def cli_target(args):
+    target = args.target
+    passwd = args.twpass
+    client = None
+    
+    if args.f_twpasswd:
+        exists = os.path.isfile(args.f_twpasswd)
+        if exists:
+            f=open(args.f_twpasswd, 'r')
+            passwd=f.read()
+            f.close()
+        else:
+            msg = "Tideway password file not found!\n"
+            print(msg)
+            logger.error(msg)
+
+    if passwd:
+        msg = "\nChecking target tideway login for %s..." % target
+        print(msg)
+        logger.info(msg)
+        client = paramiko.SSHClient()
+        # Accept unknown target host
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        try:
+            client.connect(target, username="tideway", password=passwd)
+            output = remote_cmd('echo -n "Successfully logged in as " && whoami', client)
+            logger.info(output)
+            print(output)
+        except Exception as e:
+            msg = "Problem logging into %s\n%s" % (target,e)
+            print(msg)
+            logger.error(msg)
+
+    return client
+
+def api_target(args):
+    target = args.target
+    token = args.token
+    disco = None
+    use_api = False
 
     if args.f_token:
         exists = os.path.isfile(args.f_token)
@@ -84,40 +154,20 @@ def method(args):
             msg = "Token file not found!\n"
             print(msg)
             logger.error(msg)
-            sys.exit(1)
 
-    if args.f_passwd:
-        exists = os.path.isfile(args.f_passwd)
-        if exists:
-            f=open(args.f_passwd, 'r')
-            passwd=f.read()
-            f.close()
-        else:
-            msg = "Password file not found!\n"
+    if not token:
+        token = input("Bearer Token: ")
+        if not token:
+            msg = "Bearer token needed for API access.\n"
             print(msg)
             logger.error(msg)
             sys.exit(1)
-    exit_code = ping(target)
-    if not args.noping:
-        if exit_code != 0:
-            msg = "Endpoint %s not found (ping)\nExit Code: %s"%(target,exit_code)
-            print(msg)
-            logger.warning(msg)
-            sys.exit(1)
-
-    disco = tideway.appliance(target,token)
-
-    if not token and not passwd:
-        msg = "No access details supplied.\n"
-        print(msg)
-        logger.warning(msg)
-        sys.exit(1)
-
-    client = None
+        
     if token:
         msg = "\nChecking for Discovery API on %s..." % target
         print(msg)
         logger.info(msg)
+        disco = tideway.appliance(target,token)
 
         try:
             about, apiver = api_version(disco)
@@ -144,50 +194,5 @@ def method(args):
                 msg = "Problem with API version, please refer to developer.\nReason: %s, URL: %s\n" % (swagger.reason, swagger.url)
                 print(msg)
                 logger.error(msg)
-            use_api = True
 
-    if passwd:
-        msg = "\nChecking target login for %s..." % target
-        print(msg)
-        logger.info(msg)
-        if not args.noping:
-            exit_code = ping(target)
-            if exit_code != 0:
-                msg = "CLI endpoint %s not found (ping)\nExit Code: %s"%(target,exit_code)
-                print(msg)
-                logger.warning(msg)
-                sys.exit(1)
-        client = paramiko.SSHClient()
-        # Accept unknown target host
-        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        try:
-            client.connect(target, username="tideway", password=passwd)
-            output = remote_cmd('echo -n "Successfully logged in as " && whoami', client)
-            logger.info(output)
-            print(output)
-            use_ssh = True
-        except Exception as e:
-            msg = "Problem logging into %s\n%s" % (target,e)
-            print(msg)
-            logger.error(msg)
-
-    syspass = args.password
-    if not syspass:
-        if args.f_passwd:
-            exists = os.path.isfile(args.f_passwd)
-            if exists:
-                f=open(args.f_passwd, 'r')
-                syspass=f.read()
-                f.close()
-            else:
-                msg = "File %s does not exist!\n"%args.f_passwd
-                logger.error(msg)
-        if not syspass:
-            syspass = getpass.getpass(prompt='Please enter your system administrator password (enter=skip): ')
-    
-    if not syspass:
-        msg = "No system user supplied."
-        print(msg)
-        logger.warning(msg)
-
-    return disco, token, client, use_api, use_ssh, system_user, syspass
+    return disco

@@ -4,7 +4,7 @@
 #
 # For use with BMC Discovery
 #
-vers = "\nDisMAL Version: 0.0.4\n"
+vers = "\nDisMAL Version: 0.0.5\n"
 
 import sys
 import os
@@ -27,9 +27,10 @@ parser.add_argument('--discovery', dest='discovery',  type=str, required=False, 
 parser.add_argument('--token', dest='token',  type=str, required=False, help='The Discovery API token without "Bearer".\n\n',metavar='<api_token>')
 parser.add_argument('--username', dest='username',  type=str, required=False, help='A login username for Discovery.\n\n',metavar='<username>')
 parser.add_argument('--password', dest='password',  type=str, required=False, help='The password to login.\n\n',metavar='<password>')
-parser.add_argument('--twpass', dest='twpass',  type=str, required=False, help='The tideway user password for a Discovery appliance.\n\n',metavar='<tideway_password>')
+parser.add_argument('--tw_pass', dest='twpass',  type=str, required=False, help='The tideway user password for a Discovery appliance.\n\n',metavar='<tideway_password>')
 parser.add_argument('--token_file', dest='f_token', type=str, required=False, help='Plaintext file containing API token string without "Bearer".\n\n', metavar='<filename>')
-parser.add_argument('--passwd_file', dest='f_passwd', type=str, required=False, help='Plaintext file containing password string.\n\n', metavar='<filename>')
+parser.add_argument('--password_file', dest='f_passwd', type=str, required=False, help='Plaintext file containing password string.\n\n', metavar='<filename>')
+parser.add_argument('--tw_password_file', dest='f_twpasswd', type=str, required=False, help='Plaintext file containing tideway password string.\n\n', metavar='<filename>')
 parser.add_argument('--noping', dest='noping', action='store_true', required=False, help="Don't ping target before running the tool.\n\n")
 
 # Data Quality Reports
@@ -46,28 +47,41 @@ parser.add_argument('--successful', dest='r_successful',  action='store_true', r
 parser.add_argument('--success_cli', dest='r_successcli', action='store_true', required=False, help='Run credential success report (CLI).\n\n')
 parser.add_argument('--schedules', dest='r_schedules', action='store_true', required=False, help='Analysis report on which credentials will be used by with scan/exclude.\n\n')
 parser.add_argument('--schedules_cli', dest='r_schedulescli', action='store_true', required=False, help='Export of scan schedules (CLI).\n\n')
+parser.add_argument('--excludes', dest='r_excludes', action='store_true', required=False, help='Export of exclude schedules.\n\n')
 parser.add_argument('--excludes_cli', dest='r_excludescli', action='store_true', required=False, help='Export of exclude schedules (CLI).\n\n')
 parser.add_argument('--scan_overlaps', dest='r_overlaps',  action='store_true', required=False, help='Run overlapping range analysis report.\n\n')
 parser.add_argument('--disco_access', dest='r_disco_access',  action='store_true', required=False, help='Export all DiscoveryAccess including dropped endpoints.\n\n')
 parser.add_argument('--disco_analysis', dest='r_disco_analysis',  action='store_true', required=False, help='Run analysis report on all DiscoveryAccess including dropped endpoints.\n\n')
 parser.add_argument('--active_runs', dest='r_activeruns', action='store_true', required=False, help='List active Discovery Runs.\n\n')
 parser.add_argument('--discovery_runs', dest='r_discoveryruns', action='store_true', required=False, help='Export active Discovery Runs.\n\n')
+parser.add_argument('--sensitive_data', dest='r_sensitive', action='store_true', required=False, help='Export Sensitive Data report.\n\n')
 parser.add_argument('--sensitive_data_cli', dest='r_sensitivecli', action='store_true', required=False, help='Export Sensitive Data report (CLI).\n\n')
+parser.add_argument('--export_tpl', dest='r_tpl_export', action='store_true', required=False, help='Export TPL.\n\n')
 parser.add_argument('--export_tpl_cli', dest='r_tplexportcli', action='store_true', required=False, help='Export TPL (CLI).\n\n')
+parser.add_argument('--eca_errors', dest='r_eca_errors', action='store_true', required=False, help='Export ECA Errors.\n\n')
 parser.add_argument('--eca_errors_cli', dest='r_ecaerrorscli', action='store_true', required=False, help='Export ECA Errors (CLI).\n\n')
+parser.add_argument('--open_ports', dest='r_open_ports', action='store_true', required=False, help='Export of open ports analysis.\n\n')
 parser.add_argument('--open_ports_cli', dest='r_portscli', action='store_true', required=False, help='Export of open ports analysis (CLI).\n\n')
+parser.add_argument('--host_utilisation', dest='r_host_util', action='store_true', required=False, help='Export of Host utilisation.\n\n')
 parser.add_argument('--host_utilisation_cli', dest='r_utilisationcli', action='store_true', required=False, help='Export of Host utilisation (CLI).\n\n')
+parser.add_argument('--orphan_vms', dest='r_orphan_vms', action='store_true', required=False, help='Export of orphan VMs.\n\n')
 parser.add_argument('--orphan_vms_cli', dest='r_orphanvmscli', action='store_true', required=False, help='Export of orphan VMs (CLI).\n\n')
+parser.add_argument('--missing_vms', dest='r_missing_vms', action='store_true', required=False, help='Export of missing VMs.\n\n')
 parser.add_argument('--missing_vms_cli', dest='r_missingvmscli', action='store_true', required=False, help='Export of missing VMs (CLI).\n\n')
+parser.add_argument('--near_removal', dest='r_near_removal', action='store_true', required=False, help='Export of devices near removal.\n\n')
 parser.add_argument('--near_removal_cli', dest='r_nearremcli', action='store_true', required=False, help='Export of devices near removal (CLI).\n\n')
+parser.add_argument('--removed', dest='r_removed', action='store_true', required=False, help='Export of devices removed recently.\n\n')
 parser.add_argument('--removed_cli', dest='r_removedcli', action='store_true', required=False, help='Export of devices removed recently (CLI).\n\n')
 parser.add_argument('--os_lifecycle_cli', dest='r_oslc', action='store_true', required=False, help='Export of OS lifecycle report (CLI).\n\n')
 parser.add_argument('--software_lifecycle_cli', dest='r_slc', action='store_true', required=False, help='Export of software lifecycle report (CLI).\n\n')
 parser.add_argument('--database_lifecycle_cli', dest='r_dblc', action='store_true', required=False, help='Export of database lifecycle report (CLI).\n\n')
 parser.add_argument('--unrecognised_cli', dest='r_snmp', action='store_true', required=False, help='Export of unrecognised devices (CLI).\n\n')
 parser.add_argument('--software_agents_cli', dest='r_agents', action='store_true', required=False, help='Analysis of installed agents (CLI).\n\n')
+parser.add_argument('--software_users', dest='r_software_users', action='store_true', required=False, help='Software with running process usernames.\n\n')
 parser.add_argument('--software_users_cli', dest='r_softuser', action='store_true', required=False, help='Software with running process usernames (CLI).\n\n')
 parser.add_argument('--tku', dest='r_tku', action='store_true', required=False, help='Export TKU summary.\n\n')
+parser.add_argument('--vault', dest='r_vault', action='store_true', required=False, help='Export vault details.\n\n')
+parser.add_argument('--hostname', dest='r_hostname', action='store_true', required=False, help='Export hostname.\n\n')
 
 # DQ Output Modifiers
 parser.add_argument('--null', dest='nullreport',  action='store_true', required=False, help='Run report functions but do not output data (used for debugging).\n\n')
@@ -89,9 +103,13 @@ parser.add_argument('--kill_scanning', dest='a_killemall', action='store_true', 
 parser.add_argument('--baseline', dest='r_baseline', action='store_true', required=False, help='Run the baseline command.\n\n')
 parser.add_argument('--baseline_cli', dest='r_baselinecli', action='store_true', required=False, help='Run the CLI baseline command.\n\n')
 parser.add_argument('--knowledge_cli', dest='r_knowledgecli', action='store_true', required=False, help='List Knowledge uploads (CLI).\n\n')
+parser.add_argument('--cmdbsync', dest='r_cmdb_config', action='store_true', required=False, help='CMDB sync details.\n\n')
 parser.add_argument('--cmdbsync_cli', dest='r_cmdbsynccli', action='store_true', required=False, help='CMDB sync details (CLI).\n\n')
-parser.add_argument('--license_export', dest='r_license_export', action='store_true', required=False, help='Export license details.\n\n')
-parser.add_argument('--audit', dest='r_auditcli', action='store_true', required=False, help='Export audit report.\n\n')
+parser.add_argument('--license_export_cli', dest='r_license_export', action='store_true', required=False, help='Export license details (CLI).\n\n')
+parser.add_argument('--license_export_csv', dest='r_licensing_csv', action='store_true', required=False, help='Export license details - CSV.\n\n')
+parser.add_argument('--license_export', dest='r_licensing', action='store_true', required=False, help='Export license details.\n\n')
+parser.add_argument('--audit', dest='r_audit', action='store_true', required=False, help='Export audit report.\n\n')
+parser.add_argument('--audit_cli', dest='r_auditcli', action='store_true', required=False, help='Export audit report (CLI).\n\n')
 parser.add_argument('--pattern_modules', dest='r_modules', action='store_true', required=False, help='Summary of Pattern Modules (CLI).\n\n')
 parser.add_argument('--disk', dest='df_h', action='store_true', required=False, help='Export disk info.\n\n')
 parser.add_argument('--ntp', dest='timedatectl', action='store_true', required=False, help='Export date and timezone info.\n\n')
@@ -395,7 +413,7 @@ if api_access:
     if args.a_kill_run:
         api.cancel_run(disco, args)
 
-    if args.vault:
+    if args.r_vault:
         api.vault(vault, args, reporting_dir)
 
     if args.r_successful:
@@ -460,7 +478,7 @@ if api_access:
     if args.a_opt:
         builder.ordering(creds, search, args)
 
-    if args.schedules:
+    if args.r_schedules:
         builder.scheduling(creds, search, args)
 
     if args.r_device_ids:
@@ -470,7 +488,7 @@ if api_access:
             data.append([identity['originating_endpoint'],identity['list_of_ips'],identity['list_of_names']])
         output.report(data, [ "Origating Endpoint", "List of IPs", "List of Names" ], args)
 
-    if args.overlaps:
+    if args.r_overlaps:
         builder.overlapping(disco, args)
 
     ####### API Reporting ########
@@ -490,7 +508,7 @@ if api_access:
     if args.r_device:
         builder.get_device(args.r_device, search, creds, args)
 
-    if args.hostname:
+    if args.r_hostname:
         api.hostname(args.appliance,reporting_dir)
 
     if args.r_tku:

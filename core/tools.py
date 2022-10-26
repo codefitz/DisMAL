@@ -2,6 +2,7 @@
 
 import logging
 import re
+from platform import uname
 
 # PIP Modules
 import ipaddress
@@ -70,6 +71,30 @@ def range_to_ips(iprange):
                             logger.warning(msg)
     return list_of_ips
 
+def get_credential(data,uuid):
+    credentials = data
+    detail = {}
+    for credential in credentials:
+        if uuid == credential.get('uuid'):
+            uuid = getr(credential,'uuid')
+            index = getr(credential,'index')
+            label = getr(credential,'label')
+            enabled = getr(credential,'enabled')
+            types = getr(credential,'types')
+            username = None
+            if 'username' in credential:
+                username = getr(credential,'username')
+            elif 'snmp.v3.securityname' in credential:
+                username = getr(credential,'snmp.v3.securityname')
+            elif 'aws.access_key_id' in credential:
+                username = getr(credential,'aws.access_key_id')
+            elif 'azure.application_id' in credential:
+                username = getr(credential,'azure.application_id')
+            iprange = getr(credential,'ip_range')
+            exclusions = getr(credential,'ip_exclusion')
+            detail = {"index":index,"uuid":uuid,"label":label,"username":username,"enabled":enabled,"iprange":iprange,"exclusions":exclusions,"types":types}
+    return detail
+
 def sortlist(lst,dv=None):
     logger.debug("List to sort and unique:\n%s"%lst)
     if dv:
@@ -135,6 +160,8 @@ def extract_credential(entry):
     label = entry.get('label')
     enabled = entry.get('enabled')
     types = entry.get('types')
+    usage = entry.get('usage')
+    internal_store = entry.get('internal.store')
     username = None
     if 'username' in entry:
         username = entry.get('username')
@@ -150,7 +177,7 @@ def extract_credential(entry):
         iprange = entry.get('ip_range')
     if 'ip_exclusion' in entry:
         exclusions = entry.get('ip_exclusion')
-    details = {"index":index,"uuid":uuid,"label":label,"username":username,"enabled":enabled,"iprange":iprange,"exclusions":exclusions,"types":types}
+    details = {"index":index,"uuid":uuid,"label":label,"username":username,"enabled":enabled,"iprange":iprange,"exclusions":exclusions,"types":types,"usage":usage,"internal_store":internal_store}
     return details
 
 def dequote(s):

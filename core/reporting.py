@@ -189,9 +189,9 @@ def successful_cli(client, sysuser, passwd, args, reporting_dir):
         failure = 0
         sessions = 0
         devinfos = 0
-        credsux = access.remote_cmd('tw_query -u %s -p %s --csv "%s"'%(sysuser,passwd,queries.s_credential_success),client)
-        devinfosux = access.remote_cmd('tw_query -u %s -p %s --csv "%s"'%(sysuser,passwd,queries.s_deviceinfo_success),client)
-        credfail = access.remote_cmd('tw_query -u system -p %s --csv "%s"'%(sysuser,passwd,queries.s_credential_failure),client)
+        credsux = access.remote_cmd('tw_query -u %s -p %s --csv %s'%(sysuser,passwd,queries.s_credential_success),client)
+        devinfosux = access.remote_cmd('tw_query -u %s -p %s --csv %s'%(sysuser,passwd,queries.s_deviceinfo_success),client)
+        credfail = access.remote_cmd('tw_query -u %s -p %s --csv %s'%(sysuser,passwd,queries.s_credential_failure),client)
         for line in devinfosux.split("\n"):
             if uuid in line:
                 msg = "Successful UUID found in line: %s\n"%line
@@ -228,8 +228,8 @@ def successful_cli(client, sysuser, passwd, args, reporting_dir):
             data.append([ detail.get('label'), uuid, detail.get('username'), types, success, failure, percent, status, list_of_ranges, ip_exclude ])
         else:
             logger.debug("UUID %s found Inactive"%uuid)
-            data.append([ detail.get('label'), uuid, detail.get('username'), types, None, None, "0%", "Credential appears to not be in use (%s)" % status, list_of_ranges, ip_exclude ])
-        headers = [ "Credential", "UUID", "Login ID", "Protocol", "Successes", "Failures", "Success %", "State", "Scan Ranges", "Exclude Ranges" ]
+            data.append([ detail.get('label'), uuid, detail.get('username'), types, None, None, "0%", "Credential appears to not be in use (%s)" % status, detail.get('usage'), detail.get('internal_store'), list_of_ranges, ip_exclude ])
+        headers = [ "Credential", "UUID", "Login ID", "Protocol", "Successes", "Failures", "Success %", "State", "Usage", "Store", "Scan Ranges", "Exclude Ranges" ]
 
     headers.insert(0,"Discovery Instance")
     for row in data:
@@ -297,7 +297,7 @@ def devices(twsearch, twcreds, args):
                 cred_label = None
                 cred_username = None
                 if uuid:
-                    credential_details = builder.get_credential(vaultcreds,uuid)
+                    credential_details = tools.get_credential(vaultcreds,uuid)
                     cred_label = tools.getr(credential_details,'label',"Not Found")
                     cred_username = tools.getr(credential_details,'username',"Not Found")
                     all_credentials_used.append("%s (%s)" % (cred_label,uuid))
@@ -454,7 +454,7 @@ def devices(twsearch, twcreds, args):
         last_access_method = device.get('last_access_method')
 
         msg = os.linesep
-        if args.export or args.file:    
+        if args.csv_export or args.f_name:    
             data.append([
                         last_scanned_ip,
                         last_identity,
@@ -777,7 +777,7 @@ def discovery_access(twsearch, twcreds, args):
                         logger.debug("Endpoint %s Identity: %s"%(endpoint,identity))
             
                 if last_credential:
-                    credential_details = builder.get_credential(vaultcreds,last_credential)
+                    credential_details = tools.get_credential(vaultcreds,last_credential)
                     credential_name = tools.getr(credential_details,'label',"Not Found")
                     credential_login = tools.getr(credential_details,'username',"Not Found")
                     logger.debug("Last Credential: %s"%(last_credential))
@@ -915,7 +915,7 @@ def discovery_access(twsearch, twcreds, args):
 
     for ddata in disco_data:
 
-        if args.export or args.file:
+        if args.csv_export or args.f_name:
 
             data.append([
                         ddata.get("endpoint"),
@@ -1116,7 +1116,7 @@ def discovery_analysis(twsearch, twcreds, args):
                         logger.debug("Endpoint %s Identity: %s"%(endpoint,identity))
             
                 if last_credential:
-                    credential_details = builder.get_credential(vaultcreds,last_credential)
+                    credential_details = tools.get_credential(vaultcreds,last_credential)
                     credential_name = tools.getr(credential_details,'label',"Not Found")
                     credential_login = tools.getr(credential_details,'username',"Not Found")
                     logger.debug("Last Credential: %s"%(last_credential))
@@ -1289,7 +1289,7 @@ def discovery_analysis(twsearch, twcreds, args):
 
     for ddata in disco_data:
 
-        if args.export or args.file:
+        if args.csv_export or args.f_name:
 
             data.append([
                         ddata.get("endpoint"),

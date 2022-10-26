@@ -65,7 +65,7 @@ def method(args):
     disco = None
     use_api = False
     use_ssh = False
-    system_user = False
+    system_user = args.username
     if not target:
         target = input("URL or IP address: ")
         if not target:
@@ -183,11 +183,9 @@ def method(args):
                 msg = "File %s does not exist!\n"%args.f_passwd
                 logger.error(msg)
         if not syspass:
-            syspass = getpass.getpass(prompt='Please enter your system administrator password: ')
+            syspass = getpass.getpass(prompt='Please enter your system administrator password (enter=skip): ')
     
-    if syspass:
-        system_user = True
-    else:
+    if not syspass:
         msg = "No system user supplied."
         print(msg)
         logger.warning(msg)

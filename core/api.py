@@ -42,14 +42,14 @@ def query(disco, args):
         print(msg)
         logger.error(msg)
     if len(results) > 0:
-        if args.csv_export:
+        if args.output_csv:
             w = csv.writer(sys.stdout)
             w.writerows(results)
-        elif args.f_name:
-            with open(args.f_name, 'w', newline='') as file:
+        elif args.output_file:
+            with open(args.output_file, 'w', newline='') as file:
                 writer = csv.writer(file)
                 writer.writerows(results)
-                msg = "Results written to %s" % args.f_name
+                msg = "Results written to %s" % args.output_file
                 print(msg)
                 logger.info(msg)
         else:

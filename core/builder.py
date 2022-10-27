@@ -458,7 +458,7 @@ def scheduling(vault, search, args):
         in_exclude = tools.sortlist(in_exclude)
         logger.debug("Excludes:%s"%(in_exclude))
 
-        if args.csv_export or args.f_name:
+        if args.output_csv or args.output_file:
             msg = os.linesep
             data.append([ sc, "Exclude Range", i, fr, None, dr, in_exclude ])
         else:
@@ -504,7 +504,7 @@ def scheduling(vault, search, args):
         in_run = tools.sortlist(in_run)
         logger.debug("Runs:%s"%(in_run))
         
-        if args.csv_export or args.f_name:
+        if args.output_csv or args.output_file:
             msg = os.linesep
             data.append([ sc, "Scan Range", i, fr, sl, dr, in_run ])
         else:

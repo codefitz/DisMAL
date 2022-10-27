@@ -138,7 +138,7 @@ def successful(creds, search, args):
             percent = "{0:.0%}".format(success/(total))
 
         msg = None
-        if args.f_name or args.csv_export:
+        if args.output_file or args.output_csv:
             if active:
                 data.append([ detail.get('label'), index, uuid, detail.get('username'), session or failure[0], success, failure[1], percent, status, ip_range, ip_exclude, scheduled_scans if scheduled_scans else None, excluded_scans if excluded_scans else None ])
             else:
@@ -454,7 +454,7 @@ def devices(twsearch, twcreds, args):
         last_access_method = device.get('last_access_method')
 
         msg = os.linesep
-        if args.csv_export or args.f_name:    
+        if args.output_csv or args.output_file:    
             data.append([
                         last_scanned_ip,
                         last_identity,
@@ -915,7 +915,7 @@ def discovery_access(twsearch, twcreds, args):
 
     for ddata in disco_data:
 
-        if args.csv_export or args.f_name:
+        if args.output_csv or args.output_file:
 
             data.append([
                         ddata.get("endpoint"),
@@ -1289,7 +1289,7 @@ def discovery_analysis(twsearch, twcreds, args):
 
     for ddata in disco_data:
 
-        if args.csv_export or args.f_name:
+        if args.output_csv or args.output_file:
 
             data.append([
                         ddata.get("endpoint"),
@@ -1391,3 +1391,57 @@ def discovery_analysis(twsearch, twcreds, args):
         logger.error(msg)
 
     output.report(data, headers, args)
+
+def tpl_export(search, query, dir, method, client, sysuser, syspass):
+    tpldir = dir + "/tpl"
+    if not os.path.exists(tpldir):
+        os.makedirs(tpldir)
+    files=0
+    if method == "api":
+        response = api.search_results(search, query)
+        if type(response) == list and len(response) > 0:
+            header, data = tools.json2csv(response)
+            for row in data:
+                filename = "%s/%s.tpl"%(tpldir,row[1])
+                files+=1
+                try:
+                    f=open(filename, 'w', encoding="utf-8")
+                    f.write(row[0])
+                    f.close()
+                except Exception as e:
+                    logger.error("Problem with TPL: %s\n%s\n%s\nRow Data:\n%s"%(filename,e.__class__,str(e),row))
+                    txt_dump(str(row),"%s/module_%s.tpl"%(tpldir,files))
+        else:
+            txt_dump("No results.","%s/tpl_export.txt"%tpldir)
+    else:
+        results = cli.run_query(client,sysuser,syspass,query)
+        try:
+            body = results.split("\n",1)[1]
+            for line in body.split("\r\n"):
+                files+=1
+                if line:
+                    try:
+                        columns = [c.strip() for c in line.split(',')]
+                        filename = "%s/%s.tpl"%(tpldir,columns[0])
+                        columns.pop(0)
+                        row = [ tools.dequote(columns) ]
+                        logger.debug("Parsing row:\n%s"%row)
+                        row2 = ''.join(row[0])
+                        row3 = tools.dequote(row2)
+                        newrow = row3.replace('""""','","')
+                        logger.debug("NEW row:\n%s"%newrow)
+                        try:
+                            f=open(filename, 'w', encoding="utf-8")
+                            f.write(newrow)
+                            f.close()
+                        except Exception as e:
+                            logger.error("Problem with TPL: %s\n%s\n%s\nRow Data:\n%s"%(filename,e.__class__,str(e),row))
+                            txt_dump(str(row),"%s/module_%s.tpl"%(tpldir,files))
+                    except Exception as e:
+                        logger.error("Problem with TPL:\n%s\n%s\nRow Data:\n%s"%(e.__class__,str(e),line))
+                        # Dump
+                        txt_dump(str(line),"%s/module_%s.tpl"%(tpldir,files))
+        except Exception as e:
+            logger.error("Problem parsing data:\n%s\n%s"%(e.__class__,str(e)))
+            # Try dumping it instead
+            txt_dump(results,"%s/tpl_export.txt"%tpldir)

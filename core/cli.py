@@ -8,9 +8,95 @@ import sys
 import ast
 
 # Local modules
-from . import access, output, queries
+from . import access, output, queries, defaults
 
 logger = logging.getLogger("_cli_")
+
+def certificates(client,args,dir):
+    cmd = defaults.tls_certificates_cmd+"%s:443"%args.target
+    logger.info("Running %s"%cmd)
+    result = access.remote_cmd(cmd,client)
+    logger.debug("Certificates:\n%s"%result)
+    output.define_txt(args,result,dir+defaults.tls_certificates_filename,args.output_file)
+
+def etc_passwd(client,args,dir):
+    cmd = defaults.ect_passwd_cmd
+    logger.info("Running %s"%cmd)
+    result = access.remote_cmd(cmd,client)
+    logger.debug("/etc/passwd:\n%s"%result)
+    output.define_csv(args,defaults.etc_passwd_header,result,dir+defaults.etc_passwd_filename,args.output_file,args.target)
+
+def cluster_info(client,args,dir):
+    cmd = defaults.cluster_cmd
+    logger.info("Running %s"%cmd)
+    result = access.remote_cmd(cmd,client)
+    logger.debug("Cluster Info:\n%s"%result)
+    output.define_txt(args,result,dir+defaults.cluster_filename,args.output_file)
+
+def cmdb_errors(client,args,dir):
+    cmd = defaults.cmdb_errors
+    logger.info("Running %s"%cmd)
+    result = access.remote_cmd(cmd,client)
+    logger.debug("CMDB Errors:\n%s"%result)
+    output.define_txt(args,result,dir+defaults.cmdb_errors_filename,args.output_file)
+
+def core_dumps(client,args,dir):
+    cmd = defaults.core_dumps_cmd
+    logger.info("Running %s"%cmd)
+    result = access.remote_cmd(cmd,client)
+    logger.debug("Core Dumps:\n%s"%result)
+    output.define_txt(args,result,dir+defaults.core_dumps_filename,args.output_file)
+
+def df_h(client,args,dir):
+    cmd = defaults.df_h_cmd
+    logger.info("Running %s"%cmd)
+    result = access.remote_cmd(cmd,client)
+    logger.debug("df -h:\n%s"%result)
+    output.define_csv(args,defaults.df_h_header,result,dir+defaults.df_h_filename,args.output_file,args.target)
+
+def resolv_conf(client,args,dir):
+    cmd = defaults.resolv_conf_cmd
+    logger.info("Running %s"%cmd)
+    result = access.remote_cmd(cmd,client)
+    logger.debug("resolv.conf:\n%s"%result)
+    output.define_txt(args,result,dir+defaults.resolv_conf_filename,args.output_file)
+
+def ds_compact(client,args,dir):
+    offcmd = defaults.ds_status_off_cmd
+    oncmd = defaults.ds_status_on_cmd
+    logger.info("Running %s"%offcmd)
+    logger.info("Running %s"%oncmd)
+    offline = access.remote_cmd(offcmd,client)
+    logger.debug("tw_ds_offline_compact.log:\n%s"%offline)
+    logger.info("Running %s"%oncmd)
+    online = access.remote_cmd(oncmd,client)
+    logger.debug("tw_ds_online_compact.log:\n%s"%online)
+    output.define_txt(args,offline,dir+defaults.tw_ds_offline_filename,"offline_"+args.output_file)
+    output.define_txt(args,online,dir+defaults.tw_ds_compact_filename,"online_"+args.output_file)
+
+def host_info(client,args,dir):
+    uname = defaults.uname_cmd
+    logger.info("Running %s"%uname)
+    uname_out = access.remote_cmd(uname,client)
+    logger.debug("uname -a:\n%s"%uname_out)
+    hostname = defaults.hostname_cmd
+    logger.info("Running %s"%hostname)
+    hostname_out = access.remote_cmd(hostname,client)
+    logger.debug("hostname:\n%s"%hostname_out)
+    ipaddr = defaults.ipaddr_cmd
+    logger.info("Running %s"%ipaddr)
+    ipaddr_out = access.remote_cmd(ipaddr,client)
+    logger.debug("ip addr:\n%s"%ipaddr_out)
+    output.define_txt(args,uname_out,dir+defaults.uname_filename,"uname_"+args.output_file)
+    output.define_txt(args,uname_out,dir+defaults.hostname_filename,"hostname_"+args.output_file)
+    output.define_txt(args,uname_out,dir+defaults.ipaddr_filename,"ipaddr_"+args.output_file)
+
+def ldap(client,args,dir):
+    cmd = defaults.ldap_cmd
+    logger.info("Running %s"%cmd)
+    result = access.remote_cmd(cmd,client)
+    logger.debug("LDAP:\n%s"%result)
+    output.define_txt(args,result,dir+defaults.ldap_filename,args.output_file)
 
 def run_query(client,sysuser,passwd,query):
     runQuery = 'tw_query -u %s -p %s --csv "%s"'%(sysuser,passwd,query)
@@ -26,7 +112,7 @@ def run_query(client,sysuser,passwd,query):
     return data
 
 def user_management(args, client):
-    login = args.a_user_man
+    login = args.tw_user
     msg = "Checking for user login %s...\n" % login
     logger.info(msg)
     print(msg)
@@ -84,7 +170,7 @@ def user_management(args, client):
         print(out)
 
 def service_management(args, client):
-    cmd = args.a_services
+    cmd = args.servicecctl
     msg = "Sending Command: tw_service_control --%s\n" % cmd
     logger.info(msg)
     print(msg)
@@ -235,16 +321,6 @@ def module_summary(client,sysuser,syspass,args,instance_dir):
     result = run_query(client,sysuser,syspass,queries.pm_summary)
     output.save2csv(result, instance_dir+"/dq_pattern_modules.csv",args.target)
 
-######
-
-def df_h(client,instance_dir,args):
-    cmd = 'df -h | awk \'NR > 1 {OFS=",";print $1,$6,$2,$3,$4,$5}\''
-    logger.info("Running %s"%cmd)
-    data = access.remote_cmd(cmd,client)
-    logger.debug("df -h:\n%s"%data)
-    header = [ "fs", "mount", "size", "used", "available", "Used %" ]
-    output.cmd2csv(header, data, ",", instance_dir+"/disk.csv",args.target)
-
 def timedatectl(client,instance_dir):
     # NTP Check
     cmd = 'command -v timedatectl &> /dev/null && timedatectl status | grep "NTP" || ntpstat'
@@ -258,39 +334,6 @@ def timedatectl(client,instance_dir):
     output.txt_dump(ntp_status,instance_dir+"/ntp_status.txt")
     output.txt_dump(time_zone,instance_dir+"/timezone.txt")
 
-def core_dumps(client,instance_dir):
-    # Core Dumps
-    cmd = 'command -v tw_check_cores &> /dev/null && tw_check_cores || ls -l $HOME/cores'
-    logger.info("Running %s"%cmd)
-    data = access.remote_cmd(cmd,client)
-    logger.debug("Core Dumps:\n%s"%data)
-    output.txt_dump(data,instance_dir+"/core_dumps.txt")
-
-def cmdb_errors(client,instance_dir):
-    # CMDB Errors
-    cmd = 'cat /usr/tideway/log/tw_svc_cmdbsync_transformer.log | egrep -i "Failed creation|Failed deletion|RPC call failed" || echo "No errors"'
-    logger.info("Running %s"%cmd)
-    data = access.remote_cmd(cmd,client)
-    logger.debug("CMDB Errors:\n%s"%data)
-    output.txt_dump(data,instance_dir+"/cmdb_errors.txt")
-
-def ldap(client,instance_dir):
-    # LDAP
-    cmd = 'tw_secopts | grep LDAP_ENABLED'
-    logger.info("Running %s"%cmd)
-    data = access.remote_cmd(cmd,client)
-    logger.debug("LDAP:\n%s"%data)
-    output.txt_dump(data,instance_dir+"/ldap.txt")
-
-def ect_passwd(client,instance_dir,args):
-    # Users
-    cmd = 'cat /etc/passwd'
-    logger.info("Running %s"%cmd)
-    data = access.remote_cmd(cmd,client)
-    logger.debug("/etc/passwd:\n%s"%data)
-    header = [ "login", "password", "uid", "gid", "gecos", "homedir", "shellcmd" ]
-    output.cmd2csv(header, data, ":", instance_dir+"/etc_passwd.csv",args.target)
-
 def syslog(client,twpasswd,instance_dir):
     # Syslog
     cmd = 'command -v systemctl && systemctl is-active rsyslog'
@@ -303,14 +346,6 @@ def syslog(client,twpasswd,instance_dir):
     logger.debug("Config:\n%s"%config)
     status = syslog+"\n"+config
     output.txt_dump(status,instance_dir+"/syslog.txt")
-
-def cluster_info(client,instance_dir):
-    # Cluster Info
-    cmd = 'tw_cluster_control --show-members'
-    logger.info("Running %s"%cmd)
-    result = access.remote_cmd(cmd,client)
-    logger.debug("Cluster Info:\n%s"%result)
-    output.txt_dump(result,instance_dir+"/cluster.txt")
 
 def ui_errors(client,instance_dir):
     # UI Errors
@@ -427,32 +462,6 @@ def reasoning(client,sysuser,passwd,instance_dir):
     output.txt_dump(disco_status,instance_dir+"/discovery_status.txt")
     output.txt_dump(waiting,instance_dir+"/waiting.txt")
 
-def certificates(client,appliance,instance_dir):
-    cmd = 'openssl s_client -showcerts -connect %s:443'%appliance
-    logger.info("Running %s"%cmd)
-    result = access.remote_cmd(cmd,client)
-    logger.debug("certificates:\n%s"%result)
-    output.txt_dump(result,instance_dir+"/ssl.txt")
-
-def resolv_conf(client,instance_dir):
-    cmd = 'cat /etc/resolv.conf'
-    logger.info("Running %s"%cmd)
-    result = access.remote_cmd(cmd,client)
-    logger.debug("resolv.conf:\n%s"%result)
-    output.txt_dump(result,instance_dir+"/resolv.conf")
-
-def ds_compact(client,instance_dir):
-    offcmd = 'cat /usr/tideway/log/tw_ds_offline_compact.log'
-    oncmd = 'cat /usr/tideway/log/tw_ds_compact.log'
-    logger.info("Running %s"%offcmd)
-    offline = access.remote_cmd(offcmd,client)
-    logger.debug("tw_ds_offline_compact.log:\n%s"%offline)
-    logger.info("Running %s"%oncmd)
-    online = access.remote_cmd(oncmd,client)
-    logger.debug("tw_ds_offline_compact.log:\n%s"%online)
-    output.txt_dump(offline,instance_dir+"/tw_ds_offline_compact.log")
-    output.txt_dump(online,instance_dir+"/tw_ds_compact.log")
-
 def tree(client,instance_dir,args):
     cmd = 'find /usr/tideway'
     logger.info("Running %s"%cmd)
@@ -460,20 +469,3 @@ def tree(client,instance_dir,args):
     logger.debug("tree:\n%s"%result)
     header = [ "path" ]
     output.cmd2csv(header, result, ",", instance_dir+"/tree.csv",args.target)
-
-def host_info(client,instance_dir):
-    uname = 'uname -a'
-    logger.info("Running %s"%uname)
-    uname_out = access.remote_cmd(uname,client)
-    logger.debug("uname -a:\n%s"%uname_out)
-    hostname = 'hostname'
-    logger.info("Running %s"%hostname)
-    hostname_out = access.remote_cmd(hostname,client)
-    logger.debug("hostname:\n%s"%hostname_out)
-    ipaddr = 'hostname -I'
-    logger.info("Running %s"%ipaddr)
-    ipaddr_out = access.remote_cmd(ipaddr,client)
-    logger.debug("ip addr:\n%s"%ipaddr_out)
-    output.txt_dump(uname,instance_dir+"/uname.txt")
-    output.txt_dump(hostname,instance_dir+"/hostname.txt")
-    output.txt_dump(ipaddr,instance_dir+"/ipaddr.txt")

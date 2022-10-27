@@ -4,7 +4,7 @@
 #
 # For use with BMC Discovery
 #
-vers = "0.0.6"
+vers = "0.0.7"
 
 import argparse
 import datetime
@@ -15,10 +15,10 @@ from argparse import RawTextHelpFormatter
 
 from core import access, api, builder, cli, curl, output, reporting, tools
 
-logfile = 'dismal_%s.log' % ( str(datetime.date.today() ))
+logfile = 'dismal_%s.log'%( str(datetime.date.today() ))
 
 argv = sys.argv[1:]
-pwd = os.getcwd()
+pwd  = os.getcwd()
 
 parser = argparse.ArgumentParser(description='DisMAL Toolkit for BMC Discovery v%s'%vers,formatter_class=RawTextHelpFormatter)
 parser.add_argument('-v', '--version', dest='version', action='store_true', required=False, help='Version info for this app.\n\n')
@@ -42,10 +42,11 @@ access_inputs.add_argument('-W','--tw_password_file',   dest='f_twpasswd', type=
 access_inputs.add_argument('--noping',                  dest='noping', action='store_true', required=False, help="Don't ping target before running the tool (needed for Helix).\n\n")
 
 # DQ Output Modifiers
-outputs = parser.add_argument_group("Output Methods")
-outputs.add_argument('-c', '--csv',     dest='csv_export', action='store_true', required=False, help='Output CSV format.\n\n')
-outputs.add_argument('-f', '--file',    dest='f_name', type=str, required=False, help='Output file (CSV format).\n\n',metavar='<filename>')
-outputs.add_argument('--null',          dest='nullreport',  action='store_true', required=False, help='Run report functions but do not output data (used for debugging).\n\n')
+outputs = parser.add_argument_group("Output Options")
+outputs.add_argument('-c', '--csv',     dest='output_csv', action='store_true', required=False, help='Output CSV format.\n\n')
+outputs.add_argument('-f', '--file',    dest='output_file', type=str, required=False, help='Output file (CSV format).\n\n',metavar='<filename>')
+outputs.add_argument('-s', '--path',    dest='output_path', type=str, required=False, help='Path to save bulk files (default=pwd + "/output_" + target).\n\n',metavar='<path>')
+outputs.add_argument('--null',          dest='output_null',  action='store_true', required=False, help='Run report functions but do not output data (used for debugging).\n\n')
 
 # Hidden Options
 parser.add_argument('-k', '--keep-awake',   dest='wakey', action='store_true', required=False, help=argparse.SUPPRESS)
@@ -56,6 +57,7 @@ cli_management = parser.add_argument_group("CLI Appliance Management")
 cli_management.add_argument('--tideway', dest='tideway', type=str, required=False, help= '''
 The management report to export.
 \nOptions:
+"all"           - Export all reports
 "certificates"  - TLS info
 "cli_users"     - CLI user logins
 "clustering"    - Cluster configuration
@@ -78,20 +80,10 @@ The management report to export.
 "vmware_tools"  - VMware Tools status
 \n
 ''',metavar='<filename>')
-cli_management.add_argument('--kill_scanning',  dest='a_killemall', action='store_true', required=False, help='Clear the Discovery Run queue (use only if you know what you\'re doing).\n\n')
-cli_management.add_argument('--user_management',dest='a_user_man', type=str, required=False, help='Manage a GUI user (requires tideway login).\n\n',metavar='<login_id>')
-cli_management.add_argument('--services',       dest='a_services', type=str, required=False, help='Takes CLI arguments for tw_service_control.\n\n',metavar='<argument>')
+cli_management.add_argument('--kill_scanning',  dest='clear_queue', action='store_true', required=False, help='Clear the Discovery Run queue (use only if you know what you\'re doing).\n\n')
+cli_management.add_argument('--user_management',dest='tw_user', type=str, required=False, help='Manage a GUI user (requires tideway login).\n\n',metavar='<login_id>')
+cli_management.add_argument('--services',       dest='servicecctl', type=str, required=False, help='Takes CLI arguments for tw_service_control.\n\n',metavar='<argument>')
 ###
-cli_management.add_argument('--certificates',   dest='certificates', action='store_true', required=False, help='Export TLS info.\n\n')
-cli_management.add_argument('--cli_users',      dest='ect_passwd', action='store_true', required=False, help='Export CLI user logins.\n\n')
-cli_management.add_argument('--clustering',     dest='cluster_info', action='store_true', required=False, help='Export cluster configuration.\n\n')
-cli_management.add_argument('--cmdb_errors',    dest='cmdb_errors', action='store_true', required=False, help='Export CMDB error log.\n\n')
-cli_management.add_argument('--core_dumps',     dest='core_dumps', action='store_true', required=False, help='Export list of core dumps.\n\n')
-cli_management.add_argument('--disk',           dest='df_h', action='store_true', required=False, help='Export disk info.\n\n')
-cli_management.add_argument('--dns_resolution', dest='resolv_conf', action='store_true', required=False, help='Export DNS information.\n\n')
-cli_management.add_argument('--ds_status',      dest='ds_compact', action='store_true', required=False, help='Export datastore compaction logs.\n\n')
-cli_management.add_argument('--host_info',      dest='host_info', action='store_true', required=False, help='Export appliance host information.\n\n')
-cli_management.add_argument('--ldap',           dest='ldap', action='store_true', required=False, help='Export LDAP configuration.\n\n')
 cli_management.add_argument('--ntp',            dest='timedatectl', action='store_true', required=False, help='Export date and timezone info.\n\n')
 cli_management.add_argument('--reasoning',      dest='reasoning', action='store_true', required=False, help='Export reasoning info.\n\n')
 cli_management.add_argument('--reports_model',  dest='reports_model', action='store_true', required=False, help='Export Reports model data.\n\n')
@@ -199,8 +191,10 @@ if args.wakey:
             pyautogui.PAUSE = 60
 
 if args.target:
-    reporting_dir = pwd + "/output_" + args.target.replace(".","_")
-
+    if args.output_path:
+        reporting_dir = args.output_path + "/output_" + args.target.replace(".","_")
+    else:
+        reporting_dir = pwd + "/output_" + args.target.replace(".","_")
     if not os.path.exists(reporting_dir):
         os.makedirs(reporting_dir)
 
@@ -248,38 +242,63 @@ if args.access_method=="cli" or args.access_method=="all":
 
     ### Tideway CLI Management ###
 
-    if args.a_user_man:
+    if args.tideway == "all":
+        # Run all reports
+        cli.certificates(cli_target, args, reporting_dir)
+        cli.etc_passwd(cli_target, args, reporting_dir)
+        cli.cluster_info(cli_target, args, reporting_dir)
+        cli.cmdb_errors(cli_target, args, reporting_dir)
+        cli.core_dumps(cli_target, args, reporting_dir)
+        cli.df_h(cli_target, args, reporting_dir)
+        cli.resolv_conf(cli_target, args, reporting_dir)
+        cli.ds_compact(cli_target, args, reporting_dir)
+        cli.host_info(cli_target, args, reporting_dir)
+        cli.ldap(cli_target, args, reporting_dir)
+
+    if args.tideway == "certificates":
+        cli.certificates(cli_target, args, reporting_dir)
+
+    if args.tideway == "cli_users":
+        cli.etc_passwd(cli_target, args, reporting_dir)
+
+    if args.tideway == "clustering":
+        cli.cluster_info(cli_target, args, reporting_dir)
+
+    if args.tideway == "cmdb_errors":
+        cli.cmdb_errors(cli_target, args, reporting_dir)
+
+    if args.tideway == "core_dumps":
+        cli.core_dumps(cli_target, args, reporting_dir)
+
+    if args.tideway == "disk_info":
+        cli.df_h(cli_target, args, reporting_dir)
+
+    if args.tideway == "dns_resolution":
+        cli.resolv_conf(cli_target, args, reporting_dir)
+
+    if args.tideway == "ds_status":
+        cli.ds_compact(cli_target, args, reporting_dir)
+
+    if args.tideway == "host_info":
+        cli.host_info(cli_target, args, reporting_dir)
+
+    if args.tideway == "ldap":
+        cli.ldap(cli_target, args, reporting_dir)
+
+    if args.tw_user:
         cli.user_management(args, cli_target)
 
-    if args.a_services:
+    if args.servicecctl:
         cli.service_management(args, cli_target)
 
-    if args.a_killemall:
+    if args.clear_queue:
         cli.clear_queue(cli_target)
 
     if args.r_baselinecli:
         cli.baseline(cli_target, args, reporting_dir)
 
-    if args.df_h:
-        cli.df_h(cli_target, reporting_dir, args)
-
     if args.timedatectl:
         cli.timedatectl(cli_target, reporting_dir)
-
-    if args.core_dumps:
-        cli.core_dumps(cli_target, reporting_dir)
-
-    if args.cmdb_errors:
-        cli.cmdb_errors(cli_target, reporting_dir)
-
-    if args.ldap:
-        cli.ldap(cli_target, reporting_dir)
-
-    if args.ect_passwd:
-        cli.ect_passwd(cli_target, reporting_dir, args)
-
-    if args.cluster_info:
-        cli.cluster_info(cli_target, reporting_dir)
 
     if args.ui_errors:
         cli.ui_errors(cli_target, reporting_dir)
@@ -293,20 +312,8 @@ if args.access_method=="cli" or args.access_method=="all":
     if args.tw_list_users:
         cli.tw_list_users(cli_target, reporting_dir)
 
-    if args.certificates:
-        cli.certificates(cli_target, args.target, reporting_dir)
-
-    if args.resolv_conf:
-        cli.resolv_conf(cli_target, reporting_dir)
-
-    if args.ds_compact:
-        cli.ds_compact(cli_target, reporting_dir)
-
     if args.tree:
         cli.tree(cli_target, reporting_dir, args)
-
-    if args.host_info:
-        cli.host_info(cli_target, reporting_dir)
 
     if args.twpass:
 

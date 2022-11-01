@@ -13,53 +13,53 @@ from . import access, output, queries, defaults
 logger = logging.getLogger("_cli_")
 
 def certificates(client,args,dir):
-    cmd = defaults.tls_certificates_cmd+"%s:443"%args.target
+    cmd = "%s %s:443"%(defaults.tls_certificates_cmd,args.target)
     logger.info("Running %s"%cmd)
     result = access.remote_cmd(cmd,client)
     logger.debug("Certificates:\n%s"%result)
-    output.define_txt(args,result,dir+defaults.tls_certificates_filename,args.output_file)
+    output.define_txt(args,result,dir+defaults.tls_certificates_filename,None)
 
 def etc_passwd(client,args,dir):
     cmd = defaults.ect_passwd_cmd
     logger.info("Running %s"%cmd)
     result = access.remote_cmd(cmd,client)
     logger.debug("/etc/passwd:\n%s"%result)
-    output.define_csv(args,defaults.etc_passwd_header,result,dir+defaults.etc_passwd_filename,args.output_file,args.target)
+    output.define_csv(args,defaults.etc_passwd_header,result,dir+defaults.etc_passwd_filename,args.output_file,args.target,"cmd")
 
 def cluster_info(client,args,dir):
     cmd = defaults.cluster_cmd
     logger.info("Running %s"%cmd)
     result = access.remote_cmd(cmd,client)
     logger.debug("Cluster Info:\n%s"%result)
-    output.define_txt(args,result,dir+defaults.cluster_filename,args.output_file)
+    output.define_txt(args,result,dir+defaults.cluster_filename,None)
 
 def cmdb_errors(client,args,dir):
-    cmd = defaults.cmdb_errors
+    cmd = defaults.cmdb_errors_cmd
     logger.info("Running %s"%cmd)
     result = access.remote_cmd(cmd,client)
     logger.debug("CMDB Errors:\n%s"%result)
-    output.define_txt(args,result,dir+defaults.cmdb_errors_filename,args.output_file)
+    output.define_txt(args,result,dir+defaults.cmdb_errors_filename,None)
 
 def core_dumps(client,args,dir):
     cmd = defaults.core_dumps_cmd
     logger.info("Running %s"%cmd)
     result = access.remote_cmd(cmd,client)
     logger.debug("Core Dumps:\n%s"%result)
-    output.define_txt(args,result,dir+defaults.core_dumps_filename,args.output_file)
+    output.define_txt(args,result,dir+defaults.core_dumps_filename,None)
 
 def df_h(client,args,dir):
     cmd = defaults.df_h_cmd
     logger.info("Running %s"%cmd)
     result = access.remote_cmd(cmd,client)
     logger.debug("df -h:\n%s"%result)
-    output.define_csv(args,defaults.df_h_header,result,dir+defaults.df_h_filename,args.output_file,args.target)
+    output.define_csv(args,defaults.df_h_header,result,dir+defaults.disk_filename,args.output_file,args.target,"cmd")
 
 def resolv_conf(client,args,dir):
     cmd = defaults.resolv_conf_cmd
     logger.info("Running %s"%cmd)
     result = access.remote_cmd(cmd,client)
     logger.debug("resolv.conf:\n%s"%result)
-    output.define_txt(args,result,dir+defaults.resolv_conf_filename,args.output_file)
+    output.define_txt(args,result,dir+defaults.resolv_conf_filename,None)
 
 def ds_compact(client,args,dir):
     offcmd = defaults.ds_status_off_cmd
@@ -71,8 +71,8 @@ def ds_compact(client,args,dir):
     logger.info("Running %s"%oncmd)
     online = access.remote_cmd(oncmd,client)
     logger.debug("tw_ds_online_compact.log:\n%s"%online)
-    output.define_txt(args,offline,dir+defaults.tw_ds_offline_filename,"offline_"+args.output_file)
-    output.define_txt(args,online,dir+defaults.tw_ds_compact_filename,"online_"+args.output_file)
+    output.define_txt(args,offline,dir+defaults.tw_ds_offline_filename,"offline")
+    output.define_txt(args,online,dir+defaults.tw_ds_compact_filename,"online")
 
 def host_info(client,args,dir):
     uname = defaults.uname_cmd
@@ -87,16 +87,153 @@ def host_info(client,args,dir):
     logger.info("Running %s"%ipaddr)
     ipaddr_out = access.remote_cmd(ipaddr,client)
     logger.debug("ip addr:\n%s"%ipaddr_out)
-    output.define_txt(args,uname_out,dir+defaults.uname_filename,"uname_"+args.output_file)
-    output.define_txt(args,uname_out,dir+defaults.hostname_filename,"hostname_"+args.output_file)
-    output.define_txt(args,uname_out,dir+defaults.ipaddr_filename,"ipaddr_"+args.output_file)
+    output.define_txt(args,uname_out,dir+defaults.uname_filename,"uname")
+    output.define_txt(args,uname_out,dir+defaults.hostname_filename,"hostname")
+    output.define_txt(args,uname_out,dir+defaults.ipaddr_filename,"ipaddr")
 
 def ldap(client,args,dir):
     cmd = defaults.ldap_cmd
     logger.info("Running %s"%cmd)
     result = access.remote_cmd(cmd,client)
     logger.debug("LDAP:\n%s"%result)
-    output.define_txt(args,result,dir+defaults.ldap_filename,args.output_file)
+    output.define_txt(args,result,dir+defaults.ldap_filename,None)
+
+def timedatectl(client,args,dir):
+    cmd = defaults.ntp_cmd
+    logger.info("Running %s"%cmd)
+    ntp_status = access.remote_cmd(cmd,client)
+    logger.debug("NTP Status:\n%s"%ntp_status)
+    cmd = defaults.tz_cmd
+    logger.info("Running %s"%cmd)
+    time_zone = access.remote_cmd(cmd,client)
+    logger.debug("Time Zone:\n%s"%time_zone)
+    output.define_txt(args,ntp_status,dir+defaults.ntp_filename,"ntp")
+    output.define_txt(args,time_zone,dir+defaults.timezone_filename,"tz")
+
+def reasoning(client,args,user,passwd,dir):
+    cmd = defaults.cons_status_cmd
+    logger.info("Running %s"%cmd)
+    consolidation = access.remote_cmd('%s -u %s -p %s'%(cmd,user,passwd),client)
+    logger.debug("Consolidation Status:\n%s"%consolidation)
+    cmd = defaults.outposts_cmd
+    logger.info("Running %s"%cmd)
+    outposts = access.remote_cmd('%s -u %s -p %s'%(cmd,user,passwd),client)
+    logger.debug("Outposts:\n%s"%outposts)
+    cmd = defaults.disco_status_cmd
+    logger.info("Running %s"%cmd)
+    disco_status = access.remote_cmd('%s -u %s -p %s'%(cmd,user,passwd),client)
+    logger.debug("Discovery Status:\n%s"%disco_status)
+    cmd = defaults.reasoning_cmd
+    logger.info("Running %s"%cmd)
+    waiting = access.remote_cmd('%s -u %s -p %s'%(cmd,user,passwd),client)
+    if not waiting:
+        waiting = "No output."
+    logger.debug("Waiting:\n%s"%waiting)
+    output.define_txt(args,consolidation,dir+defaults.consolidation_filename,"consolidation")
+    output.define_txt(args,outposts,dir+defaults.outposts_filename,"outposts")
+    output.define_txt(args,disco_status,dir+defaults.disco_status_filename,"disco_status")
+    output.define_txt(args,waiting,dir+defaults.reasoning_filename,"waiting")
+
+def reports_model(client,args,user,passwd,dir):
+    # no idea what this does, never got it to run on demo appliance
+    cmd = defaults.reports_model_cmd
+    logger.info("Running %s"%cmd)
+    result = access.remote_cmd('%s -u %s -p %s'%(cmd,user,passwd),client)
+    if not result:
+        result = "No output."
+    logger.debug("tw_check_reports_model:\n%s"%result)
+    output.define_txt(args,result,dir+defaults.reports_model_filename,None)
+
+def syslog(client,args,passwd,dir):
+    cmd = '%s || echo %s | sudo -S /sbin/service rsyslog status'%(defaults.rsyslog_cmd,passwd)
+    logger.info("Running %s"%cmd)
+    syslog = access.remote_cmd(cmd,client)
+    logger.debug("systemctl status rsyslog:\n%s"%syslog)
+    cmd = defaults.rsyslog_conf_cmd
+    logger.info("Running %s"%cmd)
+    config = access.remote_cmd(cmd,client)
+    logger.debug("Config:\n%s"%config)
+    status = syslog+"\n"+config
+    output.define_txt(args,status,dir+defaults.syslog_filename,None)
+
+def tax_deprecated(client,args,user,passwd,dir):
+    # Deprecation
+    cmd = '%s -u %s -p %s'%(defaults.tax_deprecated_cmd,user,passwd)
+    logger.info("Running %s"%cmd)
+    result = access.remote_cmd(cmd,client)
+    logger.debug("Taxonomy Deprecation:\n%s"%result)
+    output.define_txt(args,result,dir+defaults.tax_deprecation_filename,None)
+
+def tree(client,args,dir):
+    cmd = defaults.tree_cmd
+    logger.info("Running %s"%cmd)
+    result = access.remote_cmd(cmd,client)
+    logger.debug("tree:\n%s"%result)
+    output.define_csv(args,defaults.tree_header,result,dir+defaults.tree_filename,args.output_file,args.target,"cmd")
+
+def tw_config_dump(client,args,dir):
+    cmd = defaults.tw_config_dump_cmd
+    logger.info("Running %s"%cmd)
+    result = access.remote_cmd(cmd,client)
+    logger.debug("tw_config_dump:\n%s"%result)
+    output.define_txt(args,result,dir+defaults.config_dump_filename,None)
+
+def tw_crontab(client,args,dir):
+    cmd = defaults.tw_crontab_cmd
+    logger.info("Running %s"%cmd)
+    result = access.remote_cmd(cmd,client)
+    logger.debug("crontab:\n%s"%result)
+    output.define_txt(args,result,dir+defaults.crontab_filename,None)
+
+def tw_options(client,args,user,passwd,dir):
+    opt_cmd = '%s -u %s -p %s'%(defaults.tw_options_cmd,user,passwd)
+    logger.info("Running %s"%opt_cmd)
+    options = access.remote_cmd(opt_cmd,client)
+    logger.debug("tw_options:\n%s"%options)
+    get_opts = defaults.get_opts_cmd
+    logger.info("Running %s"%get_opts)
+    current = access.remote_cmd(get_opts,client)
+    logger.debug("Current tw_options:\n%s"%current)
+    current_opts = ast.literal_eval(current)
+    get_defaults = defaults.get_defaults_cmd
+    logger.info("Running %s"%get_defaults)
+    default = access.remote_cmd(get_defaults,client)
+    logger.debug("Default tw_options:\n%s"%default)
+    default_opts = ast.literal_eval(default)
+    output.define_txt(args,options,dir+defaults.tw_options_filename,"twoptions")
+    output.define_txt(args,current_opts,dir+defaults.current_opts_filename,"twoptions_current")
+    output.define_txt(args,default_opts,dir+defaults.default_opts_filename,"twoptions_default")
+
+def ui_errors(client,args,dir):
+    cmd = defaults.ui_errors_cmd
+    logger.info("Running %s"%cmd)
+    result = access.remote_cmd(cmd,client)
+    logger.debug("UI Errors:\n%s"%result)
+    output.define_txt(args,result,dir+defaults.ui_errors_filename,None)
+
+def vmware_tools(client,args,passwd,dir):
+    cmd = '%s || echo %s | sudo -S /sbin/service vmware-tools status'%(defaults.vmware_tools_cmd,passwd)
+    logger.info("Running %s"%cmd)
+    result = access.remote_cmd(cmd,client)
+    logger.debug("VMware Tools:\n%s"%result)
+    output.define_txt(args,result,dir+defaults.vmware_tools_filename,None)
+
+def syslog(client,args,passwd,dir):
+    # Syslog
+    cmd = '%s || echo %s | sudo -S /sbin/service rsyslog status'%(defaults.rsyslog_cmd,passwd)
+    logger.info("Running %s"%cmd)
+    syslog = access.remote_cmd(cmd,client)
+    logger.debug("systemctl status rsyslog:\n%s"%syslog)
+    cmd = defaults.rsyslog_conf_cmd
+    logger.info("Running %s"%cmd)
+    config = access.remote_cmd(cmd,client)
+    logger.debug("Config:\n%s"%config)
+    status = syslog+"\n"+config
+    output.define_txt(args,status,dir+defaults.syslog_filename,None)
+
+def audit(client,args,user,passwd,dir):
+    result = run_query(client,user,passwd,queries.hc_audit)
+    output.define_csv(args,None,result,dir+defaults.audit_filename,args.output_file,args.target,"csv")
 
 def run_query(client,sysuser,passwd,query):
     runQuery = 'tw_query -u %s -p %s --csv "%s"'%(sysuser,passwd,query)
@@ -281,10 +418,6 @@ def missing_vms(client,sysuser,syspass,args,instance_dir):
     result = run_query(client,sysuser,syspass,queries.hc_missing_vms)
     output.save2csv(result, instance_dir+"/dq_missing_vms.csv",args.target)
 
-def audit(client,sysuser,syspass,args,instance_dir):
-    result = run_query(client,sysuser,syspass,queries.hc_audit)
-    output.save2csv(result, instance_dir+"/dq_audit.csv",args.target)
-
 def near_removal(client,sysuser,syspass,args,instance_dir):
     result = run_query(client,sysuser,syspass,queries.hc_near_removal)
     output.save2csv(result, instance_dir+"/dq_near_removal.csv",args.target)
@@ -321,88 +454,6 @@ def module_summary(client,sysuser,syspass,args,instance_dir):
     result = run_query(client,sysuser,syspass,queries.pm_summary)
     output.save2csv(result, instance_dir+"/dq_pattern_modules.csv",args.target)
 
-def timedatectl(client,instance_dir):
-    # NTP Check
-    cmd = 'command -v timedatectl &> /dev/null && timedatectl status | grep "NTP" || ntpstat'
-    logger.info("Running %s"%cmd)
-    ntp_status = access.remote_cmd(cmd,client)
-    logger.debug("NTP Status:\n%s"%ntp_status)
-    cmd = 'command -v timedatectl &> /dev/null && timedatectl status | grep "Time zone" || cat /etc/sysconfig/clock && date +%Z'
-    logger.info("Running %s"%cmd)
-    time_zone = access.remote_cmd(cmd,client)
-    logger.debug("Time Zone:\n%s"%time_zone)
-    output.txt_dump(ntp_status,instance_dir+"/ntp_status.txt")
-    output.txt_dump(time_zone,instance_dir+"/timezone.txt")
-
-def syslog(client,twpasswd,instance_dir):
-    # Syslog
-    cmd = 'command -v systemctl && systemctl is-active rsyslog'
-    logger.info("Running %s"%cmd)
-    syslog = access.remote_cmd('%s || echo %s | sudo -S /sbin/service rsyslog status'%(cmd,twpasswd),client)
-    logger.debug("systemctl status rsyslog:\n%s"%syslog)
-    cmd = 'cat /etc/rsyslog.conf | sed -e \'1,/#\$ActionResumeRetryCount/d\''
-    logger.info("Running %s"%cmd)
-    config = access.remote_cmd(cmd,client)
-    logger.debug("Config:\n%s"%config)
-    status = syslog+"\n"+config
-    output.txt_dump(status,instance_dir+"/syslog.txt")
-
-def ui_errors(client,instance_dir):
-    # UI Errors
-    cmd = 'ls -l /usr/tideway/python/ui/web/ErrorMsgs/'
-    logger.info("Running %s"%cmd)
-    result = access.remote_cmd(cmd,client)
-    logger.debug("UI Errors:\n%s"%result)
-    output.txt_dump(result,instance_dir+"/ui_errors.txt")
-
-def tax_deprecated(client,sysuser,passwd,instance_dir):
-    # Deprecation
-    cmd = 'tw_tax_deprecated'
-    logger.info("Running %s"%cmd)
-    result = access.remote_cmd('%s -u %s -p %s'%(cmd,sysuser,passwd),client)
-    logger.debug("Taxonomy Deprecation:\n%s"%result)
-    output.txt_dump(result,instance_dir+"/tax_deprecation.txt")
-
-def vmware_tools(client,twpasswd,instance_dir):
-    cmd = 'command -v systemctl && systemctl is-active vmware-tools'
-    logger.info("Running %s"%cmd)
-    result = access.remote_cmd('%s || echo %s | sudo -S /sbin/service vmware-tools status'%(cmd,twpasswd),client)
-    logger.debug("VMware Tools:\n%s"%result)
-    output.txt_dump(result,instance_dir+"/vmware_tools.txt")
-
-def tw_options(client,sysuser,passwd,instance_dir):
-    opt_cmd = 'tw_options'
-    logger.info("Running %s"%opt_cmd)
-    options = access.remote_cmd('%s -u %s -p %s'%(opt_cmd,sysuser,passwd),client)
-    logger.debug("tw_options:\n%s"%current)
-    output.txt_dump(options,instance_dir+"/tw_options.txt")
-    get_opts = 'python3 -c "from common.options.main import getOptions; print(getOptions())"'
-    logger.info("Running %s"%get_opts)
-    current = access.remote_cmd(get_opts,client)
-    logger.debug("Current tw_options:\n%s"%current)
-    currents = ast.literal_eval(current)
-    output.txt_dump(str(currents),instance_dir+"/tw_options_current.dict")
-    get_defaults = 'python3 -c "from common.options.defaults import getDefaults; print(getDefaults())"'
-    logger.info("Running %s"%get_defaults)
-    default = access.remote_cmd(get_defaults,client)
-    logger.debug("Default tw_options:\n%s"%default)
-    defaults = ast.literal_eval(default)
-    output.txt_dump(str(defaults),instance_dir+"/tw_options_default.dict")
-
-def tw_config_dump(client,instance_dir):
-    cmd = 'tw_config_dump'
-    logger.info("Running %s"%cmd)
-    result = access.remote_cmd(cmd,client)
-    logger.debug("tw_config_dump:\n%s"%result)
-    output.txt_dump(result,instance_dir+"/config_dump.xml")
-
-def tw_crontab(client,instance_dir):
-    cmd = 'crontab -l'
-    logger.info("Running %s"%cmd)
-    result = access.remote_cmd(cmd,client)
-    logger.debug("crontab:\n%s"%result)
-    output.txt_dump(result,instance_dir+"/crontab.txt")
-
 def tw_list_users(client,instance_dir):
     cmd = 'tw_listusers'
     logger.info("Running %s"%cmd)
@@ -426,46 +477,3 @@ def tw_events(client,sysuser,passwd,instance_dir):
     result = access.remote_cmd('%s -u %s -p %s --list'%(cmd,sysuser,passwd),client)
     logger.debug("tw_event_control:\n%s"%result)
     output.txt_dump(result,instance_dir+"/events.txt")
-
-def reports_model(client,sysuser,passwd,instance_dir):
-    # no idea what this does, never got it to run on demo appliance
-    cmd = 'tw_check_reports_model'
-    logger.info("Running %s"%cmd)
-    result = access.remote_cmd('%s -u %s -p %s'%(cmd,sysuser,passwd),client)
-    if not result:
-        result = "No output."
-    logger.debug("tw_check_reports_model:\n%s"%result)
-    output.txt_dump(result,instance_dir+"/reports_model.txt")
-
-def reasoning(client,sysuser,passwd,instance_dir):
-    # Get reasoning info
-    cmd = 'tw_reasoningstatus --consolidation-status'
-    logger.info("Running %s"%cmd)
-    consolidation = access.remote_cmd('%s -u %s -p %s'%(cmd,sysuser,passwd),client)
-    logger.debug("Consolidation Status:\n%s"%consolidation)
-    cmd = 'tw_reasoningstatus --discovery-outposts'
-    logger.info("Running %s"%cmd)
-    outposts = access.remote_cmd('%s -u %s -p %s'%(cmd,sysuser,passwd),client)
-    logger.debug("Outposts:\n%s"%outposts)
-    cmd = 'tw_reasoningstatus --discovery-status'
-    logger.info("Running %s"%cmd)
-    disco_status = access.remote_cmd('%s -u %s -p %s'%(cmd,sysuser,passwd),client)
-    logger.debug("Discovery Status:\n%s"%disco_status)
-    cmd = 'tw_reasoningstatus --waiting-full'
-    logger.info("Running %s"%cmd)
-    waiting = access.remote_cmd('%s -u %s -p %s'%(cmd,sysuser,passwd),client)
-    if not waiting:
-        waiting = "No output."
-    logger.debug("Waiting:\n%s"%waiting)
-    output.txt_dump(consolidation,instance_dir+"/consolidation.txt")
-    output.txt_dump(outposts,instance_dir+"/outposts.txt")
-    output.txt_dump(disco_status,instance_dir+"/discovery_status.txt")
-    output.txt_dump(waiting,instance_dir+"/waiting.txt")
-
-def tree(client,instance_dir,args):
-    cmd = 'find /usr/tideway'
-    logger.info("Running %s"%cmd)
-    result = access.remote_cmd(cmd,client)
-    logger.debug("tree:\n%s"%result)
-    header = [ "path" ]
-    output.cmd2csv(header, result, ",", instance_dir+"/tree.csv",args.target)

@@ -149,31 +149,62 @@ def query2csv(search, query, filename, appliance):
     else:
         txt_dump("No results.",filename)
 
-def define_txt(args,result,path,file):
+def define_txt(args,result,path,filename):
     # Manage all Output options
-    if args.tideway == "all":
+    if args.access_method == "all":
         txt_dump(result,path)
     elif args.output_file:
-        txt_dump(result,file)
+        if filename:
+            output_file = filename+"_"+args.output_file
+        else:
+            output_file = args.output_file
+        txt_dump(result,output_file)
     elif args.output_csv:
         msg ="DisMAL: Output cannot be converted into CSV, defaulting to text."
         logger.warning(msg)
         print(msg)
-        txt_dump(result,file)
+        txt_dump(result,filename)
     elif args.output_null:
         print("Report completed (null).")
     else:
         print(result)
 
-def define_csv(args,header,result,path,file,target):
+def define_csv(args,head_ep,result_qry,path,file,target,type):
     # Manage all Output options
-    if args.tideway == "all":
-        cmd2csv(header, result, ":", path, target)
-    elif args.output_file:
-        cmd2csv(header, result, ":", file, target)
-    elif args.output_csv:
-        cmd2csv_out(header, result, ":")
-    elif args.output_null:
-        print("Report completed (null).")
-    else:
-        print(result)
+    if type == "cmd":
+        if args.access_method == "all":
+            cmd2csv(head_ep, result_qry, ":", path, target)
+        elif args.output_file:
+            cmd2csv(head_ep, result_qry, ":", file, target)
+        elif args.output_csv:
+            cmd2csv_out(head_ep, result_qry, ":")
+        elif args.output_null:
+            print("Report completed (null).")
+        else:
+            print(result_qry)
+    elif type == "csv":
+        if args.access_method == "all":
+            save2csv(result_qry, path, target)
+        elif args.output_file:
+            save2csv(result_qry, file, target)
+        elif args.output_csv:
+            print(result_qry)
+        elif args.output_null:
+            print("Report completed (null).")
+        else:
+            print(result_qry)
+    elif type == "query":
+        if args.access_method == "all":
+            query2csv(head_ep, result_qry, path, target)
+        elif args.output_file:
+            query2csv(head_ep, result_qry, file, target)
+        elif args.output_csv:
+            msg ="DisMAL: Output cannot be export to CLI."
+            logger.warning(msg)
+            print(msg)
+        elif args.output_null:
+            print("Report function completed (null).")
+        else:
+            msg ="DisMAL: Output cannot be export to CLI."
+            logger.warning(msg)
+            print(msg)

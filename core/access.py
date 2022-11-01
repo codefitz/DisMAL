@@ -136,7 +136,7 @@ def cli_target(args):
             print(msg)
             logger.error(msg)
 
-    return client
+    return client, passwd
 
 def api_target(args):
     target = args.target

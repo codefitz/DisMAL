@@ -11,9 +11,47 @@ from pprint import pprint
 import pandas
 
 # Local
-from . import tools, output, builder, queries
+from . import tools, output, builder, queries, defaults
 
 logger = logging.getLogger("_api_")
+
+def init_endpoints(api_target, args):
+    try:
+        disco = api_target.discovery()
+    except:
+        msg = "Error getting Discovery endpoint from %s\n" % (args.target)
+        print(msg)
+        logger.error(msg)
+        sys.exit(1)
+    try:
+        search = api_target.data()
+    except:
+        msg = "Error getting Data endpoint from %s\n" % (args.target)
+        print(msg)
+        logger.error(msg)
+        sys.exit(1)
+    try:
+        creds = api_target.credentials()
+    except:
+        msg = "Error getting Credentials endpoint from %s\n" % (args.target)
+        print(msg)
+        logger.error(msg)
+        sys.exit(1)
+    try:
+        vault = api_target.vault()
+    except:
+        msg = "Error getting Vault endpoint from %s\n" % (args.target)
+        print(msg)
+        logger.error(msg)
+        sys.exit(1)
+    try:
+        knowledge = api_target.knowledge()
+    except:
+        msg = "Error getting Knowledge endpoint from %s\n" % (args.target)
+        print(msg)
+        logger.error(msg)
+        sys.exit(1)
+    return disco, search, creds, vault, knowledge
 
 def get_json(api_endpoint):
     status_code = api_endpoint.status_code
@@ -32,6 +70,17 @@ def get_json(api_endpoint):
         logger.error(msg)
         return False
     return api_json
+
+def admin(disco,args,dir):
+    data = disco.admin()
+    result = get_json(data)
+    os_version = result['versions']['os_updates']
+    logger.info('OS Version:\n%s'%os_version)
+    logger.info('Discovery Version:\n%s'%os_version)
+    output.define_txt(args,json.dumps(result['versions']),dir+defaults.api_filename,None)
+
+def audit(search,args,dir):
+    output.define_csv(args,search,queries.hc_audit,dir+defaults.audit_filename,args.output_file,args.target,"query")
 
 def query(disco, args):
     results = []
@@ -58,14 +107,6 @@ def query(disco, args):
         msg = "No results found!\n"
         print(msg)
         logger.warning(msg)
-
-def admin(data,instance_dir):
-    result = get_json(data)
-    os_version = result['versions']['os_updates']
-    logger.info('OS Version:\n%s'%os_version)
-    disco_version = result['versions']['product']
-    logger.info('Discovery Version:\n%s'%os_version)
-    output.txt_dump(json.dumps(result['versions']),instance_dir+"/versions.txt")
 
 def baseline(data, args, instance_dir):
     logger.info("Checking Baseline...")
@@ -300,10 +341,6 @@ def orphan_vms(twsearch, instance_dir, discovery):
 # Missing VM Children
 def missing_vms(twsearch, instance_dir, discovery):
     output.query2csv(twsearch, queries.hc_missing_vms, instance_dir+"/dq_missing_vms.csv",discovery)
-    
-# Audit Report
-def audit(twsearch, instance_dir, discovery):
-    output.query2csv(twsearch, queries.hc_audit, instance_dir+"/dq_audit.csv",discovery)
 
 # Devices Near Removal
 def near_removal(twsearch, instance_dir, discovery):

@@ -4,7 +4,7 @@
 #
 # For use with BMC Discovery
 #
-vers = "0.0.7"
+vers = "0.0.8"
 
 import argparse
 import datetime
@@ -31,7 +31,7 @@ Method to get data:
 "cli" - Use CLI commands only.
 "all" - Use API and CLI commands (default).
 \n''',default='all',metavar='<method>')
-access_inputs.add_argument('-d','--discovery_target',   dest='target',  type=str, required=False, help='The Discovery or Outpost target.\n\n', metavar='<ip_or_hostname>')
+access_inputs.add_argument('-i','--discovery_instance', dest='target',  type=str, required=False, help='The Discovery or Outpost target.\n\n', metavar='<ip_or_hostname>')
 access_inputs.add_argument('-u','--username',           dest='username',  type=str, required=False, help='A login username for Discovery.\n\n',metavar='<username>')
 access_inputs.add_argument('-p','--password',           dest='password',  type=str, required=False, help='The login password for Discovery.\n\n',metavar='<password>')
 access_inputs.add_argument('-P','--password_file',      dest='f_passwd', type=str, required=False, help='Plaintext file containing password string.\n\n', metavar='<filename>')
@@ -43,19 +43,19 @@ access_inputs.add_argument('--noping',                  dest='noping', action='s
 
 # DQ Output Modifiers
 outputs = parser.add_argument_group("Output Options")
-outputs.add_argument('-c', '--csv',     dest='output_csv', action='store_true', required=False, help='Output CSV format.\n\n')
-outputs.add_argument('-f', '--file',    dest='output_file', type=str, required=False, help='Output file (CSV format).\n\n',metavar='<filename>')
-outputs.add_argument('-s', '--path',    dest='output_path', type=str, required=False, help='Path to save bulk files (default=pwd + "/output_" + target).\n\n',metavar='<path>')
+outputs.add_argument('-c', '--csv',     dest='output_csv', action='store_true', required=False, help='Output to CLI in CSV format.\n\n')
+outputs.add_argument('-f', '--file',    dest='output_file', type=str, required=False, help='Output file (TXT/CSV format).\n\n',metavar='<filename>')
+outputs.add_argument('-s', '--path',    dest='output_path', type=str, required=False, help='Path to save bulk files (default=pwd).\n\n',metavar='<path>')
 outputs.add_argument('--null',          dest='output_null',  action='store_true', required=False, help='Run report functions but do not output data (used for debugging).\n\n')
 
 # Hidden Options
 parser.add_argument('-k', '--keep-awake',   dest='wakey', action='store_true', required=False, help=argparse.SUPPRESS)
 parser.add_argument('--debug',              dest='debugging',  action='store_true', required=False, help=argparse.SUPPRESS)
 
-# CLI Management
+# CLI Appliance Management
 cli_management = parser.add_argument_group("CLI Appliance Management")
 cli_management.add_argument('--tideway', dest='tideway', type=str, required=False, help= '''
-The management report to export.
+CLI management reports export.
 \nOptions:
 "all"           - Export all reports
 "certificates"  - TLS info
@@ -68,6 +68,7 @@ The management report to export.
 "ds_status"     - Datastore compaction logs
 "host_info"     - Appliance host information
 "ldap"          - LDAP configuration
+"ntp"           - Date and timezone info
 "reasoning"     - Reasoning info
 "reports_model" - Reports model data
 "syslog"        - Syslog configuration
@@ -79,47 +80,49 @@ The management report to export.
 "ui_errors"     - UI error info
 "vmware_tools"  - VMware Tools status
 \n
-''',metavar='<filename>')
+''',metavar='<report>')
 cli_management.add_argument('--kill_scanning',  dest='clear_queue', action='store_true', required=False, help='Clear the Discovery Run queue (use only if you know what you\'re doing).\n\n')
 cli_management.add_argument('--user_management',dest='tw_user', type=str, required=False, help='Manage a GUI user (requires tideway login).\n\n',metavar='<login_id>')
 cli_management.add_argument('--services',       dest='servicecctl', type=str, required=False, help='Takes CLI arguments for tw_service_control.\n\n',metavar='<argument>')
-###
-cli_management.add_argument('--ntp',            dest='timedatectl', action='store_true', required=False, help='Export date and timezone info.\n\n')
-cli_management.add_argument('--reasoning',      dest='reasoning', action='store_true', required=False, help='Export reasoning info.\n\n')
-cli_management.add_argument('--reports_model',  dest='reports_model', action='store_true', required=False, help='Export Reports model data.\n\n')
-cli_management.add_argument('--syslog',         dest='syslog', action='store_true', required=False, help='Export syslog configuration.\n\n')
-cli_management.add_argument('--tax_deprecated', dest='tax_deprecated', action='store_true', required=False, help='Export taxonomy deprecation issues.\n\n')
-cli_management.add_argument('--tree',           dest='tree', action='store_true', required=False, help='Export full tree of appliance.\n\n')
-cli_management.add_argument('--tw_config_dump', dest='tw_config_dump', action='store_true', required=False, help='Export tw_config_dump.\n\n')
-cli_management.add_argument('--tw_crontab',     dest='tw_crontab', action='store_true', required=False, help='Export Crontab configuration.\n\n')
-cli_management.add_argument('--tw_options',     dest='tw_options', action='store_true', required=False, help='Export tw_options analysis.\n\n')
-cli_management.add_argument('--ui_errors',      dest='ui_errors', action='store_true', required=False, help='Export UI error info.\n\n')
-cli_management.add_argument('--vmware_tools',   dest='vmware_tools', action='store_true', required=False, help='Export VMware Tools status.\n\n')
 
 # Discovery Administration
 administration = parser.add_argument_group("Discovery Administration")
-administration.add_argument('--api_admin',              dest='a_admin', action='store_true', required=False, help='Export API admin info.\n\n')
+administration.add_argument('--sysadmin', dest='sysadmin', type=str, required=False, help= '''
+Management reports to export.
+\nOptions:
+"api_version"   - API version info
+"audit"         - Audit report
+"baseline"      - Run the baseline command
+"cmdbsync"      - CMDB sync details
+"events"        - Event logs
+"platforms"     - Platform scripts
+"knowledge"     - List Knowledge uploads
+"licensing"     - License reports
+"users"         - List of local UI logins
+\n
+''',metavar='<report>')
 administration.add_argument('--audit',                  dest='r_audit', action='store_true', required=False, help='Export audit report.\n\n')
 administration.add_argument('--audit_cli',              dest='r_auditcli', action='store_true', required=False, help='Export audit report (CLI).\n\n')
 administration.add_argument('--baseline',               dest='r_baseline', action='store_true', required=False, help='Run the baseline command.\n\n')
 administration.add_argument('--baseline_cli',           dest='r_baselinecli', action='store_true', required=False, help='Run the CLI baseline command.\n\n')
 administration.add_argument('--cmdbsync',               dest='r_cmdb_config', action='store_true', required=False, help='CMDB sync details.\n\n')
 administration.add_argument('--cmdbsync_cli',           dest='r_cmdbsynccli', action='store_true', required=False, help='CMDB sync details (CLI).\n\n')
+administration.add_argument('--events',                 dest='tw_events', action='store_true', required=False, help='Export event logs.\n\n')
+administration.add_argument('--export_platforms',       dest='export_platforms', action='store_true', required=False, help='Export platform scripts.\n\n')
+administration.add_argument('--export_platforms_xml',   dest='export_platforms_xml', action='store_true', required=False, help='Export platform scripts as XML.\n\n')
+administration.add_argument('--knowledge_cli',          dest='r_knowledgecli', action='store_true', required=False, help='List Knowledge uploads (CLI).\n\n')
+administration.add_argument('--pattern_modules',        dest='r_modules', action='store_true', required=False, help='Summary of Pattern Modules (CLI).\n\n')
+administration.add_argument('--license_export',         dest='r_licensing', action='store_true', required=False, help='Export license details.\n\n')
+administration.add_argument('--license_export_cli',     dest='r_license_export', action='store_true', required=False, help='Export license details (CLI).\n\n')
+administration.add_argument('--license_export_csv',     dest='r_licensing_csv', action='store_true', required=False, help='Export license details - CSV.\n\n')
+administration.add_argument('--login_users',            dest='tw_list_users', action='store_true', required=False, help='Export list of UI logins.\n\n')
+###
 administration.add_argument('--cred_enable',            dest='a_enable', type=str, required=False, help='Enable/Disable a credential.\n\n',metavar='<UUID>')
 administration.add_argument('--cred_enable_list',       dest='f_enablelist', type=str, required=False, help='Specify a list of credentials to enable/disable.\n\n',metavar='<filename>')
 administration.add_argument('--cred_optimise',          dest='a_opt', action='store_true', required=False, help='Optimise credentials based on restricted ips, excluded ips, success/failure, privilege, type\n\n')
 administration.add_argument('--cred_remove',            dest='a_removal', type=str, required=False, help='Delete a credential from the system (with prompt).\n\n',metavar='<UUID>')
 administration.add_argument('--cred_remove_list',       dest='f_remlist', type=str, required=False, help='Specify a list of credentials to delete (no prompt).\n\n',metavar='<filename>')
-administration.add_argument('--events',                 dest='tw_events', action='store_true', required=False, help='Export event logs.\n\n')
-administration.add_argument('--export_platforms',       dest='export_platforms', action='store_true', required=False, help='Export platform scripts.\n\n')
-administration.add_argument('--export_platforms_xml',   dest='export_platforms_xml', action='store_true', required=False, help='Export platform scripts as XML.\n\n')
 administration.add_argument('--kill_run',               dest='a_kill_run', type=str, required=False, help='Nicely kill a discovery run that is jammed.\n\n',metavar='<argument>')
-administration.add_argument('--knowledge_cli',          dest='r_knowledgecli', action='store_true', required=False, help='List Knowledge uploads (CLI).\n\n')
-administration.add_argument('--license_export',         dest='r_licensing', action='store_true', required=False, help='Export license details.\n\n')
-administration.add_argument('--license_export_cli',     dest='r_license_export', action='store_true', required=False, help='Export license details (CLI).\n\n')
-administration.add_argument('--license_export_csv',     dest='r_licensing_csv', action='store_true', required=False, help='Export license details - CSV.\n\n')
-administration.add_argument('--login_users',            dest='tw_list_users', action='store_true', required=False, help='Export list of UI logins.\n\n')
-administration.add_argument('--pattern_modules',        dest='r_modules', action='store_true', required=False, help='Summary of Pattern Modules (CLI).\n\n')
 
 # Excavation (Boosted Reports)
 excavation = parser.add_argument_group("Excavation (Boosted Reports)")
@@ -222,28 +225,32 @@ else:
             sys.exit(1)
 
 # Validate access methods
+api_target = None
+cli_target = None
 ## API
 if args.access_method=="api":
     api_target = access.api_target(args)
+    disco, search, creds, vault, knowledge = api.init_endpoints(api_target, args)
 
 ## Client
 if args.access_method=="cli":
-    cli_target = access.cli_target(args)
+    cli_target, tw_passwd = access.cli_target(args)
     ## System User Access
     system_user, system_passwd = access.login_target(cli_target, args)
 
 ## All
 if args.access_method=="all":
     api_target = access.api_target(args)
-    cli_target = access.cli_target(args)
+    disco, search, creds, vault, knowledge = api.init_endpoints(api_target, args)
+    cli_target, tw_passwd = access.cli_target(args)
     system_user, system_passwd = access.login_target(cli_target, args)
 
-if args.access_method=="cli" or args.access_method=="all":
+if args.access_method == "all":
 
-    ### Tideway CLI Management ###
+    ### CLI Appliance Management ###
 
-    if args.tideway == "all":
-        # Run all reports
+    if cli_target:
+
         cli.certificates(cli_target, args, reporting_dir)
         cli.etc_passwd(cli_target, args, reporting_dir)
         cli.cluster_info(cli_target, args, reporting_dir)
@@ -254,6 +261,27 @@ if args.access_method=="cli" or args.access_method=="all":
         cli.ds_compact(cli_target, args, reporting_dir)
         cli.host_info(cli_target, args, reporting_dir)
         cli.ldap(cli_target, args, reporting_dir)
+        cli.timedatectl(cli_target, args, reporting_dir)
+        cli.reasoning(cli_target, args, system_user, system_passwd, reporting_dir)
+        cli.reports_model(cli_target, args, system_user, system_passwd, reporting_dir)
+        cli.syslog(cli_target, args, tw_passwd, reporting_dir)
+        cli.tax_deprecated(cli_target, args, system_user, system_passwd, reporting_dir)
+        cli.tree(cli_target, args, reporting_dir)
+        cli.tw_config_dump(cli_target, args, reporting_dir)
+        cli.tw_crontab(cli_target, args, reporting_dir)
+        cli.tw_options(cli_target, args, system_user, system_passwd, reporting_dir)
+        cli.ui_errors(cli_target, args, reporting_dir)
+        cli.vmware_tools(cli_target, args, tw_passwd, reporting_dir)
+        cli.audit(cli_target, args, system_user, system_passwd, reporting_dir)
+
+        ######## API Management ########
+
+    if api_target:
+
+        api.admin(disco, args, reporting_dir)
+        api.audit(search, args, reporting_dir)
+
+if args.access_method=="cli":
 
     if args.tideway == "certificates":
         cli.certificates(cli_target, args, reporting_dir)
@@ -285,6 +313,44 @@ if args.access_method=="cli" or args.access_method=="all":
     if args.tideway == "ldap":
         cli.ldap(cli_target, args, reporting_dir)
 
+    if args.tideway == "ntp":
+        cli.timedatectl(cli_target, args, reporting_dir)
+
+    if args.tideway == "reasoning":
+        cli.reasoning(cli_target, args, system_user, system_passwd, reporting_dir)
+
+    if args.tideway == "reports_model":
+        cli.reports_model(cli_target, args, system_user, system_passwd, reporting_dir)
+
+    if args.tideway == "syslog":
+        cli.syslog(cli_target, args, tw_passwd, reporting_dir)
+
+    if args.tideway == "tax_deprecated":
+        cli.tax_deprecated(cli_target, args, system_user, system_passwd, reporting_dir)
+
+    if args.tideway == "tree":
+        cli.tree(cli_target, args, reporting_dir)
+
+    if args.tideway == "tw_config_dump":
+        cli.tw_config_dump(cli_target, args, reporting_dir)
+
+    if args.tideway == "tw_crontab":
+        cli.tw_crontab(cli_target, args, reporting_dir)
+
+    if args.tideway == "tw_options":
+        cli.tw_options(cli_target, args, system_user, system_passwd, reporting_dir)
+
+    if args.tideway == "ui_errors":
+        cli.ui_errors(cli_target, args, reporting_dir)
+
+    if args.tideway == "vmware_tools":
+        cli.vmware_tools(cli_target, args, tw_passwd, reporting_dir)
+
+    if args.sysadmin == "audit":
+        cli.audit(cli_target, args, system_user, system_passwd, reporting_dir)
+
+    ###########################################
+
     if args.tw_user:
         cli.user_management(args, cli_target)
 
@@ -297,171 +363,95 @@ if args.access_method=="cli" or args.access_method=="all":
     if args.r_baselinecli:
         cli.baseline(cli_target, args, reporting_dir)
 
-    if args.timedatectl:
-        cli.timedatectl(cli_target, reporting_dir)
-
-    if args.ui_errors:
-        cli.ui_errors(cli_target, reporting_dir)
-
-    if args.tw_config_dump:
-        cli.tw_config_dump(cli_target, reporting_dir)
-
-    if args.tw_crontab:
-        cli.tw_crontab(cli_target, reporting_dir)
-
     if args.tw_list_users:
         cli.tw_list_users(cli_target, reporting_dir)
 
-    if args.tree:
-        cli.tree(cli_target, reporting_dir, args)
+    if args.r_knowledgecli:
+        cli.knowledge(cli_target, system_user, system_passwd, reporting_dir)
 
-    if args.twpass:
+    if args.r_cmdbsynccli:
+        cli.cmdb_sync(cli_target, system_user, system_passwd, reporting_dir)
 
-        if args.syslog:
-            cli.syslog(cli_target, args.twpass, reporting_dir)
+    if args.r_successcli:
+        reporting.successful_cli(cli_target, system_user, system_passwd, args, reporting_dir)
 
-        if args.vmware_tools:
-            cli.vmware_tools(cli_target, args.twpass, reporting_dir)
+    if args.r_license_export:
+        cli.licensing(cli_target, system_user, system_passwd, args, reporting_dir)
+    
+    if args.r_sensitivecli:
+        cli.sensitive(cli_target,system_user, system_passwd, args, reporting_dir)
 
-    if system_user:
+    if args.r_tplexportcli:
+        cli.tplexport(cli_target, system_user, system_passwd, reporting_dir)
+    
+    if args.r_ecaerrorscli:
+        cli.eca_errors(cli_target, system_user, system_passwd, args, reporting_dir)
 
-        if args.r_knowledgecli:
-            cli.knowledge(cli_target, system_user, system_passwd, reporting_dir)
+    if args.r_schedulescli:
+        cli.schedules(cli_target, system_user, system_passwd, args, reporting_dir)
 
-        if args.r_cmdbsynccli:
-            cli.cmdb_sync(cli_target, system_user, system_passwd, reporting_dir)
+    if args.r_excludescli:
+        cli.excludes(cli_target, system_user, system_passwd, args, reporting_dir)
 
-        ####### CLI Reporting ########
+    if args.r_portscli:
+        cli.open_ports(cli_target, system_user, system_passwd, args, reporting_dir)
 
-        if args.r_successcli:
-            reporting.successful_cli(cli_target, system_user, system_passwd, args, reporting_dir)
+    if args.r_utilisationcli:
+        cli.host_util(cli_target, system_user, system_passwd, args, reporting_dir)
 
-        if args.r_license_export:
-            cli.licensing(cli_target, system_user, system_passwd, args, reporting_dir)
-        
-        if args.r_sensitivecli:
-            cli.sensitive(cli_target,system_user, system_passwd, args, reporting_dir)
+    if args.r_orphanvmscli:
+        cli.orphan_vms(cli_target, system_user, system_passwd, args, reporting_dir)
 
-        if args.r_tplexportcli:
-            cli.tplexport(cli_target, system_user, system_passwd, reporting_dir)
-        
-        if args.r_ecaerrorscli:
-            cli.eca_errors(cli_target, system_user, system_passwd, args, reporting_dir)
+    if args.r_missingvmscli:
+        cli.missing_vms(cli_target, system_user, system_passwd, args, reporting_dir)
 
-        if args.r_schedulescli:
-            cli.schedules(cli_target, system_user, system_passwd, args, reporting_dir)
+    if args.r_nearremcli:
+        cli.near_removal(cli_target, system_user, system_passwd, args, reporting_dir)
 
-        if args.r_excludescli:
-            cli.excludes(cli_target, system_user, system_passwd, args, reporting_dir)
+    if args.r_removedcli:
+        cli.removed(cli_target, system_user, system_passwd, args, reporting_dir)
 
-        if args.r_portscli:
-            cli.open_ports(cli_target, system_user, system_passwd, args, reporting_dir)
+    if args.r_oslc:
+        cli.os_lifecycle(cli_target, system_user, system_passwd, args, reporting_dir)
 
-        if args.r_utilisationcli:
-            cli.host_util(cli_target, system_user, system_passwd, args, reporting_dir)
+    if args.r_slc:
+        cli.software_lifecycle(cli_target, system_user, system_passwd, args, reporting_dir)
 
-        if args.r_orphanvmscli:
-            cli.orphan_vms(cli_target, system_user, system_passwd, args, reporting_dir)
+    if args.r_dblc:
+        cli.db_lifecycle(cli_target, system_user, system_passwd, args, reporting_dir)
 
-        if args.r_missingvmscli:
-            cli.missing_vms(cli_target, system_user, system_passwd, args, reporting_dir)
+    if args.r_snmp:
+        cli.unrecognised_snmp(cli_target, system_user, system_passwd, args, reporting_dir)
 
-        if args.r_auditcli:
-            cli.audit(cli_target, system_user, system_passwd, args, reporting_dir)
+    if args.r_agents:
+        cli.installed_agents(cli_target, system_user, system_passwd, args, reporting_dir)
 
-        if args.r_nearremcli:
-            cli.near_removal(cli_target, system_user, system_passwd, args, reporting_dir)
+    if args.r_softuser:
+        cli.software_usernames(cli_target, system_user, system_passwd, args, reporting_dir)
 
-        if args.r_removedcli:
-            cli.removed(cli_target, system_user, system_passwd, args, reporting_dir)
+    if args.r_modules:
+        cli.module_summary(cli_target, system_user, system_passwd, args, reporting_dir)
 
-        if args.r_oslc:
-            cli.os_lifecycle(cli_target, system_user, system_passwd, args, reporting_dir)
+    if args.export_platforms:
+        curl.platform_scripts(args.target, system_user, system_passwd, reporting_dir+"/platforms")
 
-        if args.r_slc:
-            cli.software_lifecycle(cli_target, system_user, system_passwd, args, reporting_dir)
+    if args.export_platforms_xml:
+        cli.export_platforms(cli_target, system_user, system_passwd, reporting_dir)
 
-        if args.r_dblc:
-            cli.db_lifecycle(cli_target, system_user, system_passwd, args, reporting_dir)
+    if args.tw_events:
+        cli.tw_events(cli_target, system_user, system_passwd, reporting_dir)
 
-        if args.r_snmp:
-            cli.unrecognised_snmp(cli_target, system_user, system_passwd, args, reporting_dir)
-
-        if args.r_agents:
-            cli.installed_agents(cli_target, system_user, system_passwd, args, reporting_dir)
-
-        if args.r_softuser:
-            cli.software_usernames(cli_target, system_user, system_passwd, args, reporting_dir)
-
-        if args.r_modules:
-            cli.module_summary(cli_target, system_user, system_passwd, args, reporting_dir)
-
-        if args.tax_deprecated:
-            cli.tax_deprecated(cli_target, system_user, system_passwd, reporting_dir)
-
-        if args.tw_options:
-            cli.tw_options(cli_target, system_user, system_passwd, reporting_dir)
-
-        if args.export_platforms:
-            curl.platform_scripts(args.target, system_user, system_passwd, reporting_dir+"/platforms")
-
-        if args.export_platforms_xml:
-            cli.export_platforms(cli_target, system_user, system_passwd, reporting_dir)
-
-        if args.tw_events:
-            cli.tw_events(cli_target, system_user, system_passwd, reporting_dir)
-
-        if args.reports_model:
-            cli.reports_model(cli_target, system_user, system_passwd, reporting_dir)
-
-        if args.reasoning:
-            cli.reasoning(cli_target, system_user, system_passwd, reporting_dir)
-
-if args.access_method=="api" or args.access_method=="all":
-
-    ##### Setup Endpoints #######
-
-    try:
-        disco = api_target.discovery()
-    except:
-        msg = "Error getting Discovery endpoint from %s\n" % (args.target)
-        print(msg)
-        logger.error(msg)
-        sys.exit(1)
-
-    try:
-        search = api_target.data()
-    except:
-        msg = "Error getting Data endpoint from %s\n" % (args.target)
-        print(msg)
-        logger.error(msg)
-        sys.exit(1)
-
-    try:
-        creds = api_target.credentials()
-    except:
-        msg = "Error getting Credentials endpoint from %s\n" % (args.target)
-        print(msg)
-        logger.error(msg)
-        sys.exit(1)
-
-    try:
-        vault = api_target.vault()
-    except:
-        msg = "Error getting Vault endpoint from %s\n" % (args.target)
-        print(msg)
-        logger.error(msg)
-        sys.exit(1)
-
-    try:
-        knowledge = api_target.knowledge()
-    except:
-        msg = "Error getting Knowledge endpoint from %s\n" % (args.target)
-        print(msg)
-        logger.error(msg)
-        sys.exit(1)
+if args.access_method=="api":
     
     ####### API Management #######
+
+    if args.sysadmin == "api_version":
+        api.admin(disco.admin(), args, reporting_dir)
+
+    if args.sysadmin == "audit":
+        api.audit(search, args, reporting_dir)
+
+    ###########################################
 
     if args.r_activeruns:
         api.show_runs(disco, args)
@@ -551,10 +541,7 @@ if args.access_method=="api" or args.access_method=="all":
         builder.overlapping(disco, args)
 
     ####### API Reporting ########
-
-    if args.a_admin:
-        api.admin(disco.admin(),reporting_dir)
-        
+    
     if args.a_query:
         api.query(search, args)
 
@@ -616,9 +603,6 @@ if args.access_method=="api" or args.access_method=="all":
 
     if args.r_missing_vms:
         api.missing_vms(search, reporting_dir, args.target)
-
-    if args.r_audit:
-        api.audit(search, reporting_dir, args.target)
     
     if args.r_near_removal:
         api.near_removal(search, reporting_dir, args.target)

@@ -112,9 +112,27 @@ def baseline(disco, args, dir):
         last_message = bl
         output.txt_dump(last_message,dir+"/baseline_status.txt")
 
-# CMDB Sync config
 def cmdb_config(search, args, dir):
     output.define_csv(args,search,queries.cmdb_sync_config,dir+defaults.cmdbsync_filename,args.output_file,args.target,"query")
+
+def modules(search, args, dir):
+    output.define_csv(args,search,queries.pm_summary,dir+defaults.tw_knowledge_filename,args.output_file,args.target,"query")
+
+def licensing(disco, args, dir):
+    try:
+        # CSV
+        r = disco.licensing(content_type="csv")
+        handle = open("%s%s"%(dir,defaults.tw_license_zip_filename), "wb")
+        for chunk in r.iter_content(chunk_size=512):
+            if chunk:  # filter out keep-alive new chunks
+                handle.write(chunk)
+    except:
+        # Plaintext
+        r = disco.licensing()
+        handle = open("%s%s"%(dir,defaults.tw_license_raw_filename), "wb")
+        for chunk in r.iter_content(chunk_size=512):
+            if chunk:  # filter out keep-alive new chunks
+                handle.write(chunk)
 
 def query(disco, args):
     results = []
@@ -378,24 +396,3 @@ def agents(twsearch, instance_dir, discovery):
 # Software and User Accounts
 def software_users(twsearch, instance_dir, discovery):
     output.query2csv(twsearch, queries.hc_user_accounts, instance_dir+"/dq_software_usernames.csv",discovery)
-
-# Pattern Module Summary
-def modules(twsearch, instance_dir, discovery):
-    output.query2csv(twsearch, queries.pm_summary, instance_dir+"/dq_pattern_modules.csv",discovery)
-
-# License Report
-def licensing_csv(twdisco, instance_dir):
-    # CSV
-    r = twdisco.licensing(content_type="csv")
-    handle = open("%s/license_export.zip"%instance_dir, "wb")
-    for chunk in r.iter_content(chunk_size=512):
-        if chunk:  # filter out keep-alive new chunks
-            handle.write(chunk)
-
-def licensing(twdisco, instance_dir):
-    # Plaintext
-    r = twdisco.licensing()
-    handle = open("%s/license_report.txt"%instance_dir, "wb")
-    for chunk in r.iter_content(chunk_size=512):
-        if chunk:  # filter out keep-alive new chunks
-            handle.write(chunk)

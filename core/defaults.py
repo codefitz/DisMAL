@@ -46,6 +46,11 @@ vmware_tools_filename       = "/vmware_tools.txt"
 tw_events_filename          = "/events.txt"
 current_platforms_filename  = "/platforms_current.xml"
 default_platforms_filename  = "/platforms_default.xml"
+tw_knowledge_filename       = "/knowledge.txt"
+tw_license_raw_filename     = "/license.txt"
+tw_license_csv_filename     = "/license.csv"
+tw_license_zip_filename     = "/license.zip"
+tw_listusers_filename       = "/users.txt"
 
 # Headers
 baseline_header     = [ "Check", "Result", "Description" ]
@@ -89,3 +94,6 @@ uname_cmd               = 'uname -a'
 vmware_tools_cmd        = 'command -v systemctl && systemctl is-active vmware-tools'
 tw_events_cmd           = 'tw_event_control'
 tw_platforms_cmd        = 'tw_disco_export_platforms'
+tw_knowledge_cmd        = 'tw_pattern_management --list-uploads'
+licensing_cmd           = 'command -v tw_license_report && tw_license_report'
+tw_listusers_cmd        = 'tw_listusers'

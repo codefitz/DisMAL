@@ -292,7 +292,8 @@ def ordering(appliance, search, args):
 
     output.report(data, headers, args)
 
-def get_device(dev, search, credentials, args):
+def get_device(search, credentials, args):
+    dev = args.excavate[1]
     msg = "\nDevice Lookup: %s" % dev
     logger.info(msg)
     print(msg)

@@ -12,6 +12,19 @@ from . import access, output, queries, defaults
 
 logger = logging.getLogger("_cli_")
 
+def run_query(client,sysuser,passwd,query):
+    runQuery = 'tw_query -u %s -p %s --csv "%s"'%(sysuser,passwd,query)
+    logger.info("Running query: %s"%query)
+    try:
+        data = access.remote_cmd(runQuery,client)
+        logger.debug("Query Ran:\n%s\n%s"%(query,data))
+    except Exception as e:
+        msg = "Query failed to run: %s\nException: %s\n%s" %(query,e.__class__,str(e))
+        logger.error(msg)
+        data = "%s\n>>>Query failed to run, check logs."%query
+        print(data)
+    return data
+
 def certificates(client,args,dir):
     cmd = "%s %s:443"%(defaults.tls_certificates_cmd,args.target)
     logger.info("Running %s"%cmd)
@@ -250,7 +263,7 @@ def baseline(client,args,dir):
     header.insert(0,"Discovery Instance")
     for row in checked:
         row.insert(0, args.target)
-    output.define_csv(args,header,checked,dir+defaults.baseline_filename,args.output_file,args.target,"csv")
+    output.define_csv(args,header,checked,dir+defaults.baseline_filename,args.output_file,args.target,"csv_file")
 
 def cmdb_sync(client,args,user,passwd,dir):
     cmd = '%s -u %s -p %s'%(defaults.cmdbsync_cmd,user,passwd)
@@ -275,18 +288,30 @@ def export_platforms(client,args,user,passwd,dir):
     output.define_txt(args,current,dir+defaults.current_platforms_filename,None)
     output.define_txt(args,default,dir+defaults.default_platforms_filename,None)
 
-def run_query(client,sysuser,passwd,query):
-    runQuery = 'tw_query -u %s -p %s --csv "%s"'%(sysuser,passwd,query)
-    logger.info("Running query: %s"%query)
-    try:
-        data = access.remote_cmd(runQuery,client)
-        logger.debug("Query Ran:\n%s\n%s"%(query,data))
-    except Exception as e:
-        msg = "Query failed to run: %s\nException: %s\n%s" %(query,e.__class__,str(e))
-        logger.error(msg)
-        data = "%s\n>>>Query failed to run, check logs."%query
-        print(data)
-    return data
+def knowledge(client,args,user,passwd,dir):
+    cmd = defaults.tw_knowledge_cmd
+    logger.info("Running %s"%cmd)
+    result = access.remote_cmd("%s -u %s -p %s"%(cmd,user,passwd),client)
+    logger.debug("Knowledge Ouptut:\n%s"%result)
+    output.define_txt(args,result,dir+defaults.tw_knowledge_filename,None)
+
+def licensing(client,args,user,passwd,dir):
+    cmd = defaults.licensing_cmd
+    logger.info("Running %s"%cmd)
+    result = access.remote_cmd('%s -u %s -p %s'%(cmd,user,passwd),client)
+    logger.debug("Licenses:\n%s"%result)
+    if not result:
+        result = run_query(client,user,passwd,queries.hc_license)
+        output.define_csv(args,None,result,dir+defaults.tw_license_csv_filename,args.output_file,args.target,"csv")
+    else:
+        output.define_txt(args,result,dir+defaults.tw_license_raw_filename,None)
+
+def tw_list_users(client,args,dir):
+    cmd = defaults.tw_listusers_cmd
+    logger.info("Running %s"%cmd)
+    result = access.remote_cmd(cmd,client)
+    logger.debug("tw_listusers:\n%s"%result)
+    output.define_txt(args,result,dir+defaults.tw_listusers_filename,None)
 
 def user_management(args, client):
     login = args.tw_user
@@ -381,24 +406,6 @@ def clear_queue(client):
     elif gonogo == "No":
         print("Cancelled. No action taken.")
 
-def knowledge(client,sysuser,passwd,instance_dir):
-    cmd = 'tw_pattern_management --list-uploads'
-    logger.info("Running %s"%cmd)
-    data = access.remote_cmd("%s -u %s -p %s"%(cmd,sysuser,passwd),client)
-    logger.debug("Knowledge Ouptut:\n%s"%data)
-    output.txt_dump(data,instance_dir+"/knowledge.txt")
-
-def licensing(client,sysuser,passwd,args,instance_dir):
-    cmd = 'command -v tw_license_report && tw_license_report'
-    logger.info("Running %s"%cmd)
-    data = access.remote_cmd('%s -u %s -p %s'%(cmd,sysuser,passwd),client)
-    logger.debug("Licenses:\n%s"%data)
-    if not result:
-        result = run_query(client,sysuser,passwd,queries.hc_license)
-        output.save2csv(result, instance_dir+"/license.csv",args.target)
-    else:
-        output.txt_dump(result,instance_dir+"/license.txt")
-
 def sensitive(client,sysuser,syspass,args,instance_dir):
     result = run_query(client,sysuser,syspass,queries.hc_sensitive_data)
     output.save2csv(result, instance_dir+"/dq_sensitive_data.csv",args.target)
@@ -469,10 +476,3 @@ def software_usernames(client,sysuser,syspass,args,instance_dir):
 def module_summary(client,sysuser,syspass,args,instance_dir):
     result = run_query(client,sysuser,syspass,queries.pm_summary)
     output.save2csv(result, instance_dir+"/dq_pattern_modules.csv",args.target)
-
-def tw_list_users(client,instance_dir):
-    cmd = 'tw_listusers'
-    logger.info("Running %s"%cmd)
-    result = access.remote_cmd(cmd,client)
-    logger.debug("tw_listusers:\n%s"%result)
-    output.txt_dump(result,instance_dir+"/users.txt")

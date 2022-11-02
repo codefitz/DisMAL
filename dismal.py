@@ -4,7 +4,7 @@
 #
 # For use with BMC Discovery
 #
-vers = "0.0.9"
+vers = "0.1.0"
 
 import argparse
 import datetime
@@ -101,38 +101,39 @@ Management reports to export.
 "users"         - List of local UI logins
 \n
 ''',metavar='<report>')
-administration.add_argument('--knowledge_cli',          dest='r_knowledgecli', action='store_true', required=False, help='List Knowledge uploads (CLI).\n\n')
-administration.add_argument('--pattern_modules',        dest='r_modules', action='store_true', required=False, help='Summary of Pattern Modules (CLI).\n\n')
-administration.add_argument('--license_export',         dest='r_licensing', action='store_true', required=False, help='Export license details.\n\n')
-administration.add_argument('--license_export_cli',     dest='r_license_export', action='store_true', required=False, help='Export license details (CLI).\n\n')
-administration.add_argument('--license_export_csv',     dest='r_licensing_csv', action='store_true', required=False, help='Export license details - CSV.\n\n')
-administration.add_argument('--login_users',            dest='tw_list_users', action='store_true', required=False, help='Export list of UI logins.\n\n')
-###
-administration.add_argument('--cred_enable',            dest='a_enable', type=str, required=False, help='Enable/Disable a credential.\n\n',metavar='<UUID>')
-administration.add_argument('--cred_enable_list',       dest='f_enablelist', type=str, required=False, help='Specify a list of credentials to enable/disable.\n\n',metavar='<filename>')
-administration.add_argument('--cred_optimise',          dest='a_opt', action='store_true', required=False, help='Optimise credentials based on restricted ips, excluded ips, success/failure, privilege, type\n\n')
-administration.add_argument('--cred_remove',            dest='a_removal', type=str, required=False, help='Delete a credential from the system (with prompt).\n\n',metavar='<UUID>')
-administration.add_argument('--cred_remove_list',       dest='f_remlist', type=str, required=False, help='Specify a list of credentials to delete (no prompt).\n\n',metavar='<filename>')
-administration.add_argument('--kill_run',               dest='a_kill_run', type=str, required=False, help='Nicely kill a discovery run that is jammed.\n\n',metavar='<argument>')
+administration.add_argument('--cred_enable',        dest='a_enable', type=str, required=False, help='Enable/Disable a credential.\n\n',metavar='<UUID>')
+administration.add_argument('--cred_enable_list',   dest='f_enablelist', type=str, required=False, help='Specify a list of credentials to enable/disable.\n\n',metavar='<filename>')
+administration.add_argument('--cred_optimise',      dest='a_opt', action='store_true', required=False, help='Optimise credentials based on restricted ips, excluded ips, success/failure, privilege, type\n\n')
+administration.add_argument('--cred_remove',        dest='a_removal', type=str, required=False, help='Delete a credential from the system (with prompt).\n\n',metavar='<UUID>')
+administration.add_argument('--cred_remove_list',   dest='f_remlist', type=str, required=False, help='Specify a list of credentials to delete (no prompt).\n\n',metavar='<filename>')
+administration.add_argument('--kill_run',           dest='a_kill_run', type=str, required=False, help='Nicely kill a discovery run that is jammed.\n\n',metavar='<argument>')
 
 # Excavation (Boosted Reports)
 excavation = parser.add_argument_group("Excavation (Boosted Reports)")
-excavation.add_argument('--device',                 dest='r_device', type=str, required=False, help='Run devices report on a device node (Host, NetworkDevice, Printer, SNMPManagedDevice, StorageDevice, ManagementController)\n\n',metavar='<device_name>')
-excavation.add_argument('--devices',                dest='r_devices',  action='store_true', required=False, help='Run devices access analysis report - showing credentials used from last session results.\n\n')
-excavation.add_argument('--device_ids',             dest='r_device_ids', action='store_true', required=False, help='Export a list of unique device identies.\n\n')
-excavation.add_argument('--ipaddr',                 dest='r_ipaddr', type=str, required=False, help='Search specific IP address for DiscoveryAccess results.\n\n',metavar='<ip_address>')
+excavation.add_argument('--excavate', dest='excavate', type=str, required=False, help= '''
+Excavation reports - for automated beneficial reporting and deeper analysis.
+\nOptions:
+"device" <name>         - Report on a specific device node by name (Host, NetworkDevice, Printer, SNMPManagedDevice, StorageDevice, ManagementController)
+"devices"               - Report of unique device profiles - includes last DiscoveryAccess and last _successful_ DiscoveryAccess results with credential details
+"device_ids"            - Export list of unique device identities
+"ipaddr" <ip_address>   - Search specific IP address for DiscoveryAccess results
+\n
+''',metavar='<report> [value]',nargs='*')
 excavation.add_argument('--cred_device',            dest='r_cred_device', type=str, required=False, help='Run devices report for a specific credential\n\n',metavar='<UUID>')
 excavation.add_argument('--cred_order',             dest='r_weigh', action='store_true', required=False, help="Display suggested order of credentials based on restricted ips, excluded ips, success/failure, privilege, type\n\n")
 excavation.add_argument('--query',                  dest='a_query', type=str, required=False, help='Run a query.\n\n',metavar='<query string>')
 excavation.add_argument('--success',                dest='r_success',  action='store_true', required=False, help='Run credential success report.\n\n')
 excavation.add_argument('--successful',             dest='r_successful',  action='store_true', required=False, help='Run credential success report.\n\n')
 excavation.add_argument('--success_cli',            dest='r_successcli', action='store_true', required=False, help='Run credential success report (CLI).\n\n')
+# Export of schedules with additional list of credentials that will be used in range
 excavation.add_argument('--schedules',              dest='r_schedules', action='store_true', required=False, help='Analysis report on which credentials will be used by with scan/exclude.\n\n')
 excavation.add_argument('--schedules_cli',          dest='r_schedulescli', action='store_true', required=False, help='Export of scan schedules (CLI).\n\n')
 excavation.add_argument('--excludes',               dest='r_excludes', action='store_true', required=False, help='Export of exclude schedules.\n\n')
 excavation.add_argument('--excludes_cli',           dest='r_excludescli', action='store_true', required=False, help='Export of exclude schedules (CLI).\n\n')
 excavation.add_argument('--scan_overlaps',          dest='r_overlaps',  action='store_true', required=False, help='Run overlapping range analysis report.\n\n')
+# Report of all DiscoveryAccesses and Dropped Endpoints with credential details, consistency if available
 excavation.add_argument('--disco_access',           dest='r_disco_access',  action='store_true', required=False, help='Export all DiscoveryAccess including dropped endpoints.\n\n')
+# Report of unique DiscoveryAccesses and Dropped Endpoints with credential details, consistency analysis and end state change
 excavation.add_argument('--disco_analysis',         dest='r_disco_analysis',  action='store_true', required=False, help='Run analysis report on all DiscoveryAccess including dropped endpoints.\n\n')
 excavation.add_argument('--active_runs',            dest='r_activeruns', action='store_true', required=False, help='List active Discovery Runs.\n\n')
 excavation.add_argument('--discovery_runs',         dest='r_discoveryruns', action='store_true', required=False, help='Export active Discovery Runs.\n\n')
@@ -239,7 +240,7 @@ if args.access_method=="all":
 
 if args.access_method == "all":
 
-    ### CLI Appliance Management ###
+    curl_cmd = True
 
     if cli_target:
 
@@ -269,8 +270,11 @@ if args.access_method == "all":
         cli.cmdb_sync(cli_target, args, system_user, system_passwd, reporting_dir)
         cli.tw_events(cli_target, args, system_user, system_passwd, reporting_dir)
         cli.export_platforms(cli_target, args, system_user, system_passwd, reporting_dir)
-
-        ######## API Management ########
+        curl.platform_scripts(args, system_user, system_passwd, reporting_dir+"/platforms")
+        curl_cmd = False
+        cli.knowledge(cli_target, args, system_user, system_passwd, reporting_dir)
+        cli.licensing(cli_target, args, system_user, system_passwd, reporting_dir)
+        cli.tw_list_users(cli_target, args, reporting_dir)
 
     if api_target:
 
@@ -278,7 +282,11 @@ if args.access_method == "all":
         api.audit(search, args, reporting_dir)
         api.baseline(disco, args, reporting_dir)
         api.cmdb_config(search, args, reporting_dir)
-        curl.platform_scripts(args, system_user, system_passwd, reporting_dir+"/platforms")
+        if curl_cmd:
+            curl.platform_scripts(args, system_user, system_passwd, reporting_dir+"/platforms")
+        api.modules(search, args, reporting_dir)
+        api.licensing(search, args, reporting_dir)     
+        reporting.devices(search, creds, args) 
 
 if args.access_method=="cli":
 
@@ -345,6 +353,15 @@ if args.access_method=="cli":
     if args.tideway == "vmware_tools":
         cli.vmware_tools(cli_target, args, tw_passwd, reporting_dir)
 
+    if args.tw_user:
+        cli.user_management(cli_target, args)
+
+    if args.servicecctl:
+        cli.service_management(cli_target, args)
+
+    if args.clear_queue:
+        cli.clear_queue(cli_target)
+
     if args.sysadmin == "audit":
         cli.audit(cli_target, args, system_user, system_passwd, reporting_dir)
 
@@ -361,28 +378,19 @@ if args.access_method=="cli":
         cli.export_platforms(cli_target, args, system_user, system_passwd, reporting_dir)
         curl.platform_scripts(args, system_user, system_passwd, reporting_dir+"/platforms")
 
+    if args.sysadmin == "knowledge":
+        cli.knowledge(cli_target, args, system_user, system_passwd, reporting_dir)
+    
+    if args.sysadmin == "licensing":
+        cli.licensing(cli_target, args, system_user, system_passwd, reporting_dir)
+
+    if args.sysadmin == "users":
+        cli.tw_list_users(cli_target, args, reporting_dir)
+
     ###########################################
-
-    if args.tw_user:
-        cli.user_management(args, cli_target)
-
-    if args.servicecctl:
-        cli.service_management(args, cli_target)
-
-    if args.clear_queue:
-        cli.clear_queue(cli_target)
-
-    if args.tw_list_users:
-        cli.tw_list_users(cli_target, reporting_dir)
-
-    if args.r_knowledgecli:
-        cli.knowledge(cli_target, system_user, system_passwd, reporting_dir)
 
     if args.r_successcli:
         reporting.successful_cli(cli_target, system_user, system_passwd, args, reporting_dir)
-
-    if args.r_license_export:
-        cli.licensing(cli_target, system_user, system_passwd, args, reporting_dir)
     
     if args.r_sensitivecli:
         cli.sensitive(cli_target,system_user, system_passwd, args, reporting_dir)
@@ -456,6 +464,28 @@ if args.access_method=="api":
 
     if args.sysadmin == "platforms":
         curl.platform_scripts(args, system_user, system_passwd, reporting_dir+"/platforms")
+
+    if args.sysadmin == "knowledge":
+        api.modules(search, args, reporting_dir)
+
+    if args.sysadmin == "licensing":
+        api.licensing(search, args, reporting_dir)
+
+    if args.excavate[0] == "device":
+        builder.get_device(search, creds, args)
+
+    if args.excavate[0] == "devices":
+        reporting.devices(search, creds, args)
+
+    if args.excavate[0] == "device_ids":
+        identities = builder.unique_identities(disco)
+        data = []
+        for identity in identities:
+            data.append([identity['originating_endpoint'],identity['list_of_ips'],identity['list_of_names']])
+        output.report(data, [ "Origating Endpoint", "List of IPs", "List of Names" ], args)
+
+    if args.excavate[0] == "ipaddr":
+        reporting.ipaddr(search, creds, args)
 
     ###########################################
 
@@ -536,13 +566,6 @@ if args.access_method=="api":
     if args.r_schedules:
         builder.scheduling(creds, search, args)
 
-    if args.r_device_ids:
-        identities = builder.unique_identities(disco)
-        data = []
-        for identity in identities:
-            data.append([identity['originating_endpoint'],identity['list_of_ips'],identity['list_of_names']])
-        output.report(data, [ "Origating Endpoint", "List of IPs", "List of Names" ], args)
-
     if args.r_overlaps:
         builder.overlapping(disco, args)
 
@@ -554,9 +577,6 @@ if args.access_method=="api":
     if args.r_cred_device:
         builder.get_credential(search, creds, args.r_cred_device, args)
 
-    if args.r_device:
-        builder.get_device(args.r_device, search, creds, args)
-
     if args.r_hostname:
         api.hostname(args.appliance,reporting_dir)
 
@@ -567,12 +587,6 @@ if args.access_method=="api":
         print("\nCredential Success")
         print("------------------")
         reporting.successful(creds, search, args)
-
-    if args.r_devices:
-        reporting.devices(search, creds, args)
-
-    if args.r_ipaddr:
-        reporting.ipaddr(args.r_ipaddr, search, creds, args)
 
     if args.r_disco_access:
         reporting.discovery_access(search, creds, args)
@@ -627,15 +641,6 @@ if args.access_method=="api":
 
     if args.r_software_users:
         api.software_users(search, reporting_dir, args.target)
-
-    if args.r_modules:
-        api.modules(search, reporting_dir, args.target)
-
-    if args.r_licensing_csv:
-        api.licensing_csv(search, reporting_dir, args.target)
-
-    if args.r_licensing:
-        api.licensing(search, reporting_dir, args.target)
 
 if cli_target:
     cli_target.close()

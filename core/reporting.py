@@ -534,7 +534,8 @@ def devices(twsearch, twcreds, args):
     print(msg)
     output.report(data, headers, args)
 
-def ipaddr(ipaddr, search, credentials, args):
+def ipaddr(search, credentials, args):
+    ipaddr = args.excavate[1]
     msg = "\nIP Address Lookup: %s" % ipaddr
     logger.info(msg)
     print(msg)

@@ -82,7 +82,7 @@ def login_target(client,args):
         print(msg)
         logger.warning(msg)
     
-    if syspass:
+    if client and syspass:
         msg = "\nChecking %s login for %s..." %(system_user,target)
         print(msg)
         logger.info(msg)
@@ -100,6 +100,10 @@ def login_target(client,args):
             msg = "Problem logging into %s\n%s" % (target,e)
             print(msg)
             logger.error(msg)
+    else:
+        msg = "System user auth not checked."
+        print(msg)
+        logger.warn(msg)
 
     return system_user, syspass
 

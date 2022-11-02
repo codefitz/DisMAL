@@ -8,7 +8,8 @@ from . import output
 
 logger = logging.getLogger("_curl_")
 
-def platform_script(disco,platform,sysuser,syspass):
+def platform_script(args,platform,sysuser,syspass):
+    disco = args.target
     msg = "Getting %s..."%platform
     logger.info(msg)
     passwd = ul.quote(syspass)

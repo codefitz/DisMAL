@@ -169,35 +169,50 @@ def define_txt(args,result,path,filename):
     else:
         print(result)
 
-def define_csv(args,head_ep,result_qry,path,file,target,type):
+def define_csv(args,head_ep,data,path,file,target,type):
     # Manage all Output options
     if type == "cmd":
         if args.access_method == "all":
-            cmd2csv(head_ep, result_qry, ":", path, target)
+            cmd2csv(head_ep, data, ":", path, target)
         elif args.output_file:
-            cmd2csv(head_ep, result_qry, ":", file, target)
+            cmd2csv(head_ep, data, ":", file, target)
         elif args.output_csv:
-            cmd2csv_out(head_ep, result_qry, ":")
+            cmd2csv_out(head_ep, data, ":")
         elif args.output_null:
             print("Report completed (null).")
         else:
-            print(result_qry)
+            print(data)
     elif type == "csv":
         if args.access_method == "all":
-            save2csv(result_qry, path, target)
+            save2csv(data, path, target)
         elif args.output_file:
-            save2csv(result_qry, file, target)
+            save2csv(data, file, target)
         elif args.output_csv:
-            print(result_qry)
+            print(data)
         elif args.output_null:
             print("Report completed (null).")
         else:
-            print(result_qry)
+            print(data)
     elif type == "query":
         if args.access_method == "all":
-            query2csv(head_ep, result_qry, path, target)
+            query2csv(head_ep, data, path, target)
         elif args.output_file:
-            query2csv(head_ep, result_qry, file, target)
+            query2csv(head_ep, data, file, target)
+        elif args.output_csv:
+            msg ="DisMAL: Output cannot be export to CLI."
+            logger.warning(msg)
+            print(msg)
+        elif args.output_null:
+            print("Report function completed (null).")
+        else:
+            msg ="DisMAL: Output cannot be export to CLI."
+            logger.warning(msg)
+            print(msg)
+    elif type == "csv_file":
+        if args.access_method == "all":
+            csv_file(data, head_ep, path)
+        elif args.output_file:
+            csv_file(data, head_ep, file)
         elif args.output_csv:
             msg ="DisMAL: Output cannot be export to CLI."
             logger.warning(msg)

@@ -4,7 +4,7 @@
 #
 # For use with BMC Discovery
 #
-vers = "0.0.8"
+vers = "0.0.9"
 
 import argparse
 import datetime
@@ -101,15 +101,6 @@ Management reports to export.
 "users"         - List of local UI logins
 \n
 ''',metavar='<report>')
-administration.add_argument('--audit',                  dest='r_audit', action='store_true', required=False, help='Export audit report.\n\n')
-administration.add_argument('--audit_cli',              dest='r_auditcli', action='store_true', required=False, help='Export audit report (CLI).\n\n')
-administration.add_argument('--baseline',               dest='r_baseline', action='store_true', required=False, help='Run the baseline command.\n\n')
-administration.add_argument('--baseline_cli',           dest='r_baselinecli', action='store_true', required=False, help='Run the CLI baseline command.\n\n')
-administration.add_argument('--cmdbsync',               dest='r_cmdb_config', action='store_true', required=False, help='CMDB sync details.\n\n')
-administration.add_argument('--cmdbsync_cli',           dest='r_cmdbsynccli', action='store_true', required=False, help='CMDB sync details (CLI).\n\n')
-administration.add_argument('--events',                 dest='tw_events', action='store_true', required=False, help='Export event logs.\n\n')
-administration.add_argument('--export_platforms',       dest='export_platforms', action='store_true', required=False, help='Export platform scripts.\n\n')
-administration.add_argument('--export_platforms_xml',   dest='export_platforms_xml', action='store_true', required=False, help='Export platform scripts as XML.\n\n')
 administration.add_argument('--knowledge_cli',          dest='r_knowledgecli', action='store_true', required=False, help='List Knowledge uploads (CLI).\n\n')
 administration.add_argument('--pattern_modules',        dest='r_modules', action='store_true', required=False, help='Summary of Pattern Modules (CLI).\n\n')
 administration.add_argument('--license_export',         dest='r_licensing', action='store_true', required=False, help='Export license details.\n\n')
@@ -231,6 +222,7 @@ cli_target = None
 if args.access_method=="api":
     api_target = access.api_target(args)
     disco, search, creds, vault, knowledge = api.init_endpoints(api_target, args)
+    system_user, system_passwd = access.login_target(None, args)
 
 ## Client
 if args.access_method=="cli":
@@ -273,6 +265,10 @@ if args.access_method == "all":
         cli.ui_errors(cli_target, args, reporting_dir)
         cli.vmware_tools(cli_target, args, tw_passwd, reporting_dir)
         cli.audit(cli_target, args, system_user, system_passwd, reporting_dir)
+        cli.baseline(cli_target, args, reporting_dir)
+        cli.cmdb_sync(cli_target, args, system_user, system_passwd, reporting_dir)
+        cli.tw_events(cli_target, args, system_user, system_passwd, reporting_dir)
+        cli.export_platforms(cli_target, args, system_user, system_passwd, reporting_dir)
 
         ######## API Management ########
 
@@ -280,6 +276,9 @@ if args.access_method == "all":
 
         api.admin(disco, args, reporting_dir)
         api.audit(search, args, reporting_dir)
+        api.baseline(disco, args, reporting_dir)
+        api.cmdb_config(search, args, reporting_dir)
+        curl.platform_scripts(args, system_user, system_passwd, reporting_dir+"/platforms")
 
 if args.access_method=="cli":
 
@@ -349,6 +348,19 @@ if args.access_method=="cli":
     if args.sysadmin == "audit":
         cli.audit(cli_target, args, system_user, system_passwd, reporting_dir)
 
+    if args.sysadmin == "baseline":
+        cli.baseline(cli_target, args, reporting_dir)
+
+    if args.sysadmin == "cmdbsync":
+        cli.cmdb_sync(cli_target, args, system_user, system_passwd, reporting_dir)
+
+    if args.sysadmin == "events":
+        cli.tw_events(cli_target, args, system_user, system_passwd, reporting_dir)
+
+    if args.sysadmin == "platforms":
+        cli.export_platforms(cli_target, args, system_user, system_passwd, reporting_dir)
+        curl.platform_scripts(args, system_user, system_passwd, reporting_dir+"/platforms")
+
     ###########################################
 
     if args.tw_user:
@@ -360,17 +372,11 @@ if args.access_method=="cli":
     if args.clear_queue:
         cli.clear_queue(cli_target)
 
-    if args.r_baselinecli:
-        cli.baseline(cli_target, args, reporting_dir)
-
     if args.tw_list_users:
         cli.tw_list_users(cli_target, reporting_dir)
 
     if args.r_knowledgecli:
         cli.knowledge(cli_target, system_user, system_passwd, reporting_dir)
-
-    if args.r_cmdbsynccli:
-        cli.cmdb_sync(cli_target, system_user, system_passwd, reporting_dir)
 
     if args.r_successcli:
         reporting.successful_cli(cli_target, system_user, system_passwd, args, reporting_dir)
@@ -432,24 +438,24 @@ if args.access_method=="cli":
     if args.r_modules:
         cli.module_summary(cli_target, system_user, system_passwd, args, reporting_dir)
 
-    if args.export_platforms:
-        curl.platform_scripts(args.target, system_user, system_passwd, reporting_dir+"/platforms")
-
-    if args.export_platforms_xml:
-        cli.export_platforms(cli_target, system_user, system_passwd, reporting_dir)
-
-    if args.tw_events:
-        cli.tw_events(cli_target, system_user, system_passwd, reporting_dir)
-
 if args.access_method=="api":
     
     ####### API Management #######
 
     if args.sysadmin == "api_version":
-        api.admin(disco.admin(), args, reporting_dir)
+        api.admin(disco, args, reporting_dir)
 
     if args.sysadmin == "audit":
         api.audit(search, args, reporting_dir)
+
+    if args.sysadmin == "baseline":
+        api.baseline(disco, args, reporting_dir)
+
+    if args.sysadmin == "cmdbsync":
+        api.cmdb_config(search, args, reporting_dir)
+
+    if args.sysadmin == "platforms":
+        curl.platform_scripts(args, system_user, system_passwd, reporting_dir+"/platforms")
 
     ###########################################
 
@@ -545,9 +551,6 @@ if args.access_method=="api":
     if args.a_query:
         api.query(search, args)
 
-    if args.r_baseline:
-        api.baseline(disco.baseline(), args, reporting_dir)
-
     if args.r_cred_device:
         builder.get_credential(search, creds, args.r_cred_device, args)
 
@@ -624,9 +627,6 @@ if args.access_method=="api":
 
     if args.r_software_users:
         api.software_users(search, reporting_dir, args.target)
-
-    if args.r_cmdb_config:
-        api.cmdb_config(search, reporting_dir, args.target)
 
     if args.r_modules:
         api.modules(search, reporting_dir, args.target)

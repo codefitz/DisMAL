@@ -235,6 +235,46 @@ def audit(client,args,user,passwd,dir):
     result = run_query(client,user,passwd,queries.hc_audit)
     output.define_csv(args,None,result,dir+defaults.audit_filename,args.output_file,args.target,"csv")
 
+def baseline(client,args,dir):
+    cmd = defaults.baseline_cmd
+    logger.info("Running %s"%cmd)
+    data = access.remote_cmd(cmd,client)
+    logger.debug("Baseline Ouptut:\n%s"%data)
+    header = defaults.baseline_header
+    checked = []
+    for line in data.split("\r\n"):
+        checklist = line.split("\n",2)[2]
+        for checks in checklist.split("\n"):
+            check = checks.split(":")
+            checked.append([s.strip() for s in check])
+    header.insert(0,"Discovery Instance")
+    for row in checked:
+        row.insert(0, args.target)
+    output.define_csv(args,header,checked,dir+defaults.baseline_filename,args.output_file,args.target,"csv")
+
+def cmdb_sync(client,args,user,passwd,dir):
+    cmd = '%s -u %s -p %s'%(defaults.cmdbsync_cmd,user,passwd)
+    logger.info("Running %s"%cmd)
+    result = access.remote_cmd(cmd,client)
+    logger.debug("CMDB Sync:\n%s"%result)
+    output.define_txt(args,result,dir+defaults.cmdbsync_filename,None)
+
+def tw_events(client,args,user,passwd,instance_dir):
+    cmd = '%s -u %s -p %s --list'%(defaults.tw_events_cmd,user,passwd)
+    logger.info("Running %s"%cmd)
+    result = access.remote_cmd(cmd,client)
+    logger.debug("tw_event_control:\n%s"%result)
+    output.define_txt(args,result,dir+defaults.tw_events_filename,None)
+
+def export_platforms(client,args,user,passwd,dir):
+    cmd = defaults.tw_platforms_cmd
+    logger.info("Running %s"%cmd)
+    current = access.remote_cmd('%s -u %s -p %s -o /usr/tideway/data/customer/platforms.xml && cat /usr/tideway/data/customer/platforms.xml'%(cmd,user,passwd),client)
+    default = access.remote_cmd('%s --default -u %s -p %s -o /usr/tideway/data/customer/platforms_default.xml && cat /usr/tideway/data/customer/platforms_default.xml'%(cmd,user,passwd),client)
+    logger.debug("Platforms:\n%s"%current)
+    output.define_txt(args,current,dir+defaults.current_platforms_filename,None)
+    output.define_txt(args,default,dir+defaults.default_platforms_filename,None)
+
 def run_query(client,sysuser,passwd,query):
     runQuery = 'tw_query -u %s -p %s --csv "%s"'%(sysuser,passwd,query)
     logger.info("Running query: %s"%query)
@@ -341,36 +381,12 @@ def clear_queue(client):
     elif gonogo == "No":
         print("Cancelled. No action taken.")
 
-def baseline(client,args,instance_dir):
-    cmd = 'tw_baseline --no-highlight'
-    logger.info("Running %s"%cmd)
-    data = access.remote_cmd(cmd,client)
-    logger.debug("Baseline Ouptut:\n%s"%data)
-    header = [ "Check", "Result", "Description" ]
-    checked = []
-    for line in data.split("\r\n"):
-        checklist = line.split("\n",2)[2]
-        for checks in checklist.split("\n"):
-            check = checks.split(":")
-            checked.append([s.strip() for s in check])
-    header.insert(0,"Discovery Instance")
-    for row in checked:
-        row.insert(0, args.target)
-    output.csv_file(checked, header, instance_dir+"/baseline.csv")
-
 def knowledge(client,sysuser,passwd,instance_dir):
     cmd = 'tw_pattern_management --list-uploads'
     logger.info("Running %s"%cmd)
     data = access.remote_cmd("%s -u %s -p %s"%(cmd,sysuser,passwd),client)
     logger.debug("Knowledge Ouptut:\n%s"%data)
     output.txt_dump(data,instance_dir+"/knowledge.txt")
-
-def cmdb_sync(client,sysuser,passwd,instance_dir):
-    cmd = 'tw_sync_control --list'
-    logger.info("Running %s"%cmd)
-    data = access.remote_cmd('%s -u %s -p %s'%(cmd,sysuser,passwd),client)
-    logger.debug("Taxonomy Deprecation:\n%s"%data)
-    output.txt_dump(data,instance_dir+"/cmdb_sync.txt")
 
 def licensing(client,sysuser,passwd,args,instance_dir):
     cmd = 'command -v tw_license_report && tw_license_report'
@@ -460,20 +476,3 @@ def tw_list_users(client,instance_dir):
     result = access.remote_cmd(cmd,client)
     logger.debug("tw_listusers:\n%s"%result)
     output.txt_dump(result,instance_dir+"/users.txt")
-
-def export_platforms(client,sysuser,passwd,instance_dir):
-    # Exports platform scripts, probably overkill unless customer is dedicated, heavily customised
-    cmd = 'tw_disco_export_platforms'
-    logger.info("Running %s"%cmd)
-    current = access.remote_cmd('%s -u %s -p %s -o /usr/tideway/data/customer/platforms.xml && cat /usr/tideway/data/customer/platforms.xml'%(cmd,sysuser,passwd),client)
-    default = access.remote_cmd('%s --default -u %s -p %s -o /usr/tideway/data/customer/platforms_default.xml && cat /usr/tideway/data/customer/platforms_default.xml'%(cmd,sysuser,passwd),client)
-    logger.debug("Platforms:\n%s"%current)
-    output.txt_dump(current,instance_dir+"/platforms.xml")
-    output.txt_dump(default,instance_dir+"/platforms_default.xml")
-
-def tw_events(client,sysuser,passwd,instance_dir):
-    cmd = 'tw_event_control'
-    logger.info("Running %s"%cmd)
-    result = access.remote_cmd('%s -u %s -p %s --list'%(cmd,sysuser,passwd),client)
-    logger.debug("tw_event_control:\n%s"%result)
-    output.txt_dump(result,instance_dir+"/events.txt")

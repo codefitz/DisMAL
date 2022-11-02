@@ -82,6 +82,40 @@ def admin(disco,args,dir):
 def audit(search,args,dir):
     output.define_csv(args,search,queries.hc_audit,dir+defaults.audit_filename,args.output_file,args.target,"query")
 
+def baseline(disco, args, dir):
+    data = disco.baseline()
+    logger.info("Checking Baseline...")
+    bl = get_json(data)
+    if bl:
+        baseline = json.loads(json.dumps(bl))
+        logger.debug('Baseline Status:\n%s'%bl)
+        # Last Message
+        try:
+            if 'summary' in baseline:
+                # Helix does not share the baseline
+                last_message = baseline['summary']['last_message']
+                # Failures
+                header = []
+                rows = []
+                if "FAILED" in baseline['results']:
+                    failures = baseline['results']['FAILED']
+                    header, rows = tools.json2csv(failures)
+                header.insert(0,"Discovery Instance")
+                for row in rows:
+                    row.insert(0, args.target)
+                output.define_csv(args,header,rows,dir+defaults.baseline_filename,args.output_file,args.target,"csv_file")
+        except Exception as e:
+            logger.error("Problem with baseline:\n%s\n%s"%(e.__class__,str(e)))
+            # Try dumping it
+            output.txt_dump(bl,dir+"/baseline_status.txt")
+    else:
+        last_message = bl
+        output.txt_dump(last_message,dir+"/baseline_status.txt")
+
+# CMDB Sync config
+def cmdb_config(search, args, dir):
+    output.define_csv(args,search,queries.cmdb_sync_config,dir+defaults.cmdbsync_filename,args.output_file,args.target,"query")
+
 def query(disco, args):
     results = []
     try:
@@ -107,35 +141,6 @@ def query(disco, args):
         msg = "No results found!\n"
         print(msg)
         logger.warning(msg)
-
-def baseline(data, args, instance_dir):
-    logger.info("Checking Baseline...")
-    bl = get_json(data)
-    if bl:
-        baseline = json.loads(json.dumps(bl))
-        logger.debug('Baseline Status:\n%s'%bl)
-        # Last Message
-        try:
-            if 'summary' in baseline:
-                # Helix does not share the baseline
-                last_message = baseline['summary']['last_message']
-                # Failures
-                header = []
-                data = []
-                if "FAILED" in baseline['results']:
-                    failures = baseline['results']['FAILED']
-                    header, data = tools.json2csv(failures)
-                header.insert(0,"Discovery Instance")
-                for row in data:
-                    row.insert(0, args.target)
-                output.csv_file(data, header, instance_dir+"/baseline.csv")
-        except Exception as e:
-            logger.error("Problem with baseline:\n%s\n%s"%(e.__class__,str(e)))
-            # Try dumping it
-            output.txt_dump(bl,instance_dir+"/baseline_status.txt")
-    else:
-        last_message = bl
-        output.txt_dump(last_message,instance_dir+"/baseline_status.txt")
 
 def hostname(appliance,instance_dir):
     output.txt_dump(appliance,instance_dir+"/hostname.txt")
@@ -373,10 +378,6 @@ def agents(twsearch, instance_dir, discovery):
 # Software and User Accounts
 def software_users(twsearch, instance_dir, discovery):
     output.query2csv(twsearch, queries.hc_user_accounts, instance_dir+"/dq_software_usernames.csv",discovery)
-
-# CMDB Sync config
-def cmdb_config(twsearch, instance_dir, discovery):
-    output.query2csv(twsearch, queries.cmdb_sync_config, instance_dir+"/dq_cmdb_sync_config.csv",discovery)
 
 # Pattern Module Summary
 def modules(twsearch, instance_dir, discovery):

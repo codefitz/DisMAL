@@ -1,5 +1,6 @@
 # Default configs for DisMAL
 
+from fileinput import filename
 import os
 
 # Config
@@ -20,10 +21,14 @@ consolidation_filename      = "/consolidation.txt"
 core_dumps_filename         = "/core_dumps.txt"
 crontab_filename            = "/crontab.txt"
 current_opts_filename       = "/tw_options_current.dict"
+current_platforms_filename  = "/platforms_current.xml"
+current_scans_filename      = "/current_scans.csv"
 default_opts_filename       = "/tw_options_default.dict"
+default_platforms_filename  = "/platforms_default.xml"
 disco_status_filename       = "/discovery_status.txt"
 disk_filename               = "/disk.csv"
 etc_passwd_filename         = "/etc_passwd.csv"
+exclude_ranges_filename     = "/exclude_ranges.csv"
 hostname_filename           = "/hostname.txt"
 ipaddr_filename             = "/ipaddr.txt"
 ldap_filename               = "/ldap.txt"
@@ -32,6 +37,8 @@ outposts_filename           = "/outposts.txt"
 reasoning_filename          = "/waiting.txt"
 reports_model_filename      = "/reports_model.txt"
 resolv_conf_filename        = "/resolv.conf"
+scan_ranges_filename        = "/scan_ranges.csv"
+sensitive_data_filename     = "/sensitive_data.csv"
 syslog_filename             = "/syslog.txt"
 tax_deprecation_filename    = "/tax_deprecation.txt"
 timezone_filename           = "/timezone.txt"
@@ -39,18 +46,17 @@ tls_certificates_filename   = "/tls_certificates.txt"
 tree_filename               = "/tree.csv"
 tw_ds_compact_filename      = "/tw_ds_compact.log"
 tw_ds_offline_filename      = "/tw_ds_offline_compact.log"
+tw_events_filename          = "/events.txt"
+tw_knowledge_filename       = "/knowledge.txt"
+tw_license_csv_filename     = "/license.csv"
+tw_license_raw_filename     = "/license.txt"
+tw_license_zip_filename     = "/license.zip"
+tw_listusers_filename       = "/users.txt"
 tw_options_filename         = "/tw_options.txt"
 ui_errors_filename          = "/ui_errors.txt"
 uname_filename              = "/uname.txt"
 vmware_tools_filename       = "/vmware_tools.txt"
-tw_events_filename          = "/events.txt"
-current_platforms_filename  = "/platforms_current.xml"
-default_platforms_filename  = "/platforms_default.xml"
-tw_knowledge_filename       = "/knowledge.txt"
-tw_license_raw_filename     = "/license.txt"
-tw_license_csv_filename     = "/license.csv"
-tw_license_zip_filename     = "/license.zip"
-tw_listusers_filename       = "/users.txt"
+eca_errors_filename         = "/dq_eca_errors.csv"
 
 # Headers
 baseline_header     = [ "Check", "Result", "Description" ]
@@ -75,6 +81,7 @@ get_opts_cmd            = 'python3 -c "from common.options.main import getOption
 hostname_cmd            = 'hostname'
 ipaddr_cmd              = 'hostname -I'
 ldap_cmd                = 'tw_secopts | grep LDAP_ENABLED'
+licensing_cmd           = 'command -v tw_license_report && tw_license_report'
 ntp_cmd                 = 'command -v timedatectl &> /dev/null && timedatectl status | grep "NTP" || ntpstat'
 outposts_cmd            = 'tw_reasoningstatus --discovery-outposts'
 reasoning_cmd           = 'tw_reasoningstatus --waiting-full'
@@ -87,13 +94,12 @@ tls_certificates_cmd    = 'openssl s_client -showcerts -connect'
 tree_cmd                = 'find /usr/tideway'
 tw_config_dump_cmd      = 'tw_config_dump'
 tw_crontab_cmd          = 'crontab -l'
+tw_events_cmd           = 'tw_event_control'
+tw_knowledge_cmd        = 'tw_pattern_management --list-uploads'
+tw_listusers_cmd        = 'tw_listusers'
 tw_options_cmd          = 'tw_options'
+tw_platforms_cmd        = 'tw_disco_export_platforms'
 tz_cmd                  = 'command -v timedatectl &> /dev/null && timedatectl status | grep "Time zone" || cat /etc/sysconfig/clock && date +%Z'
 ui_errors_cmd           = 'ls -l /usr/tideway/python/ui/web/ErrorMsgs/'
 uname_cmd               = 'uname -a'
 vmware_tools_cmd        = 'command -v systemctl && systemctl is-active vmware-tools'
-tw_events_cmd           = 'tw_event_control'
-tw_platforms_cmd        = 'tw_disco_export_platforms'
-tw_knowledge_cmd        = 'tw_pattern_management --list-uploads'
-licensing_cmd           = 'command -v tw_license_report && tw_license_report'
-tw_listusers_cmd        = 'tw_listusers'

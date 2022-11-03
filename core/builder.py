@@ -32,7 +32,8 @@ def get_credentials(entry):
     details = {"index":index,"uuid":uuid,"label":label,"username":username,"enabled":enabled,"iprange":iprange,"exclusions":exclusions,"types":types}
     return details
 
-def get_credential(twsearch, twcreds, uuid, args):
+def get_credential(twsearch, twcreds, args):
+    uuid = args.excavate[1]
     msg = "\nCredential Lookup: %s" % uuid
     logger.info(msg)
     print(msg)
@@ -136,7 +137,7 @@ def get_credential(twsearch, twcreds, uuid, args):
 
     return found
 
-def ordering(appliance, search, args):
+def ordering(appliance, search, args, apply):
 
     credlist = api.get_json(appliance.get_vault_credentials())
     msg = "Analysing current credential order...\n"
@@ -259,7 +260,12 @@ def ordering(appliance, search, args):
 
     data = []
 
-    if args.weigh:
+    if apply:
+        for weighted_cred in weighted:
+            logger.debug("Updating: %s"%(weighted_cred))
+            headers =  [ "New Index", "Credential" ]
+            appliance.update_cred(weighted_cred.get('uuid'),{"index":weighted_cred.get('index')})
+    else:
         headers = [ "Credential", "Current Index", "Weighting", "New Index" ]
         for cred in credlist:
             for weighted_cred in weighted:
@@ -272,23 +278,18 @@ def ordering(appliance, search, args):
                     msg = '%s: Index: %s, Weight: %s, New Index: %s' % (label, index, weight, new_index)
                     logger.info(msg)
                     data.append([label, index, weight, new_index])
-    else:
-        for weighted_cred in weighted:
-            logger.debug("Updating: %s"%(weighted_cred))
-            headers =  [ "New Index", "Credential" ]
-            appliance.update_cred(weighted_cred.get('uuid'),{"index":weighted_cred.get('index')})
 
-        # Refresh
-        credlist = api.get_json(appliance.get_vault_credentials())
-        msg = "New Credential Order:\n"
-        print(msg)
+    # Refresh
+    credlist = api.get_json(appliance.get_vault_credentials())
+    msg = "New Credential Order:\n"
+    print(msg)
+    logger.info(msg)
+    for cred in credlist:
+        label = cred.get('label')
+        index = cred.get('index')
+        msg = '%s) %s' % (index, label)
         logger.info(msg)
-        for cred in credlist:
-            label = cred.get('label')
-            index = cred.get('index')
-            msg = '%s) %s' % (index, label)
-            logger.info(msg)
-            data.append([index, label])
+        data.append([index, label])
 
     output.report(data, headers, args)
 

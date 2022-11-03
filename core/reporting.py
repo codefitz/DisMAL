@@ -12,7 +12,7 @@ import re
 import pandas as pd
 
 # Local
-from . import api, queries, tools, builder, output, access
+from . import api, queries, tools, builder, output, access, cli
 
 logger = logging.getLogger("_reporting_")
 
@@ -156,7 +156,7 @@ def successful(creds, search, args):
         print(msg)
     output.report(data, headers, args)
 
-def successful_cli(client, sysuser, passwd, args, reporting_dir):
+def successful_cli(client, args, sysuser, passwd, reporting_dir):
     credentials = access.remote_cmd('tw_vault_control --show --json -u %s -p %s'%(sysuser,passwd),client)
     credjson = []
     for cred in credentials.split("\n"):
@@ -1411,9 +1411,9 @@ def tpl_export(search, query, dir, method, client, sysuser, syspass):
                     f.close()
                 except Exception as e:
                     logger.error("Problem with TPL: %s\n%s\n%s\nRow Data:\n%s"%(filename,e.__class__,str(e),row))
-                    txt_dump(str(row),"%s/module_%s.tpl"%(tpldir,files))
+                    output.txt_dump(str(row),"%s/module_%s.tpl"%(tpldir,files))
         else:
-            txt_dump("No results.","%s/tpl_export.txt"%tpldir)
+            output.txt_dump("No results.","%s/tpl_export.txt"%tpldir)
     else:
         results = cli.run_query(client,sysuser,syspass,query)
         try:
@@ -1437,12 +1437,12 @@ def tpl_export(search, query, dir, method, client, sysuser, syspass):
                             f.close()
                         except Exception as e:
                             logger.error("Problem with TPL: %s\n%s\n%s\nRow Data:\n%s"%(filename,e.__class__,str(e),row))
-                            txt_dump(str(row),"%s/module_%s.tpl"%(tpldir,files))
+                            output.txt_dump(str(row),"%s/module_%s.tpl"%(tpldir,files))
                     except Exception as e:
                         logger.error("Problem with TPL:\n%s\n%s\nRow Data:\n%s"%(e.__class__,str(e),line))
                         # Dump
-                        txt_dump(str(line),"%s/module_%s.tpl"%(tpldir,files))
+                        output.txt_dump(str(line),"%s/module_%s.tpl"%(tpldir,files))
         except Exception as e:
             logger.error("Problem parsing data:\n%s\n%s"%(e.__class__,str(e)))
             # Try dumping it instead
-            txt_dump(results,"%s/tpl_export.txt"%tpldir)
+            output.txt_dump(results,"%s/tpl_export.txt"%tpldir)

@@ -8,7 +8,7 @@ import sys
 import ast
 
 # Local modules
-from . import access, output, queries, defaults
+from . import access, output, queries, defaults, reporting
 
 logger = logging.getLogger("_cli_")
 
@@ -313,7 +313,26 @@ def tw_list_users(client,args,dir):
     logger.debug("tw_listusers:\n%s"%result)
     output.define_txt(args,result,dir+defaults.tw_listusers_filename,None)
 
-def user_management(args, client):
+def schedules(client,args,user,passwd,dir):
+    result = run_query(client,user,passwd,queries.hc_scan_ranges)
+    output.define_csv(args,None,result,dir+defaults.scan_ranges_filename,args.output_file,args.target,"csv")
+
+def excludes(client,args,user,passwd,dir):
+    result = run_query(client,user,passwd,queries.hc_exclude_ranges)
+    output.define_csv(args,None,result,dir+defaults.exclude_ranges_filename,args.output_file,args.target,"csv")
+
+def sensitive(client,args,user,passwd,dir):
+    result = run_query(client,user,passwd,queries.hc_sensitive_data)
+    output.define_csv(args,None,result,dir+defaults.sensitive_data_filename,args.output_file,args.target,"csv")
+
+def tplexport(client,args,user,passwd,dir):
+    reporting.tpl_export(None, queries.hc_tpl_export, dir, "ssh", client, user, passwd)
+
+def eca_errors(client,args,user,passwd,dir):
+    result = run_query(client,user,passwd,queries.hc_eca_error)
+    output.define_csv(args,None,result,dir+defaults.eca_errors_filename,args.output_file,args.target,"csv")
+
+def user_management(client, args):
     login = args.tw_user
     msg = "Checking for user login %s...\n" % login
     logger.info(msg)
@@ -371,7 +390,7 @@ def user_management(args, client):
             break
         print(out)
 
-def service_management(args, client):
+def service_management(client, args):
     cmd = args.servicecctl
     msg = "Sending Command: tw_service_control --%s\n" % cmd
     logger.info(msg)
@@ -405,25 +424,6 @@ def clear_queue(client):
         service_management("start", client)
     elif gonogo == "No":
         print("Cancelled. No action taken.")
-
-def sensitive(client,sysuser,syspass,args,instance_dir):
-    result = run_query(client,sysuser,syspass,queries.hc_sensitive_data)
-    output.save2csv(result, instance_dir+"/dq_sensitive_data.csv",args.target)
-
-def tplexport(client,sysuser,syspass,instance_dir):
-    output.tpl_export(None, queries.hc_tpl_export, instance_dir, "ssh", client, syspass)
-
-def eca_errors(client,sysuser,syspass,args,instance_dir):
-    result = run_query(client,sysuser,syspass,queries.hc_eca_error)
-    output.save2csv(result, instance_dir+"/dq_eca_errors.csv",args.target)
-
-def schedules(client,sysuser,syspass,args,instance_dir):
-    result = run_query(client,sysuser,syspass,queries.hc_scan_ranges)
-    output.save2csv(result, instance_dir+"/dq_scan_ranges.csv",args.target)
-
-def excludes(client,sysuser,syspass,args,instance_dir):
-    result = run_query(client,sysuser,syspass,queries.hc_exclude_ranges)
-    output.save2csv(result, instance_dir+"/dq_exclude_ranges.csv",args.target)
 
 def open_ports(client,sysuser,syspass,args,instance_dir):
     result = run_query(client,sysuser,syspass,queries.hc_open_ports)

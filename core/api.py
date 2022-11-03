@@ -11,7 +11,7 @@ from pprint import pprint
 import pandas
 
 # Local
-from . import tools, output, builder, queries, defaults
+from . import tools, output, builder, queries, defaults, reporting
 
 logger = logging.getLogger("_api_")
 
@@ -160,6 +160,83 @@ def query(disco, args):
         print(msg)
         logger.warning(msg)
 
+def success(twcreds,twsearch,args,instance_dir):
+    reporting.successful(twcreds, twsearch, args)
+    df = pandas.read_csv(args.file)
+    df.insert(0, "Discovery Instance", args.target)
+    df.to_csv(instance_dir+"/credentials.csv", index=False)
+    os.remove(args.file)
+
+def schedules(search, args, dir):
+    output.define_csv(args,search,queries.hc_scan_ranges,dir+defaults.scan_ranges_filename,args.output_file,args.target,"query")
+
+def excludes(search, args, dir):
+    output.define_csv(args,search,queries.hc_exclude_ranges,dir+defaults.exclude_ranges_filename,args.output_file,args.target,"query")
+
+def discovery_runs(disco, args, dir):
+    logger.info("Checking Scan ranges...")
+    r = get_json(disco.get_discovery_runs)
+    if r:
+        runs = json.loads(json.dumps(r))
+        logger.debug('Runs:\s%s'%r)
+        header, rows = tools.json2csv(runs)
+        header.insert(0,"Discovery Instance")
+        for row in rows:
+            row.insert(0, args.target)
+        output.define_csv(args,None,rows,dir+defaults.current_scans_filename,args.output_file,args.target,"csv_file")
+
+def show_runs(disco, args):
+    results = []
+    try:
+        results = disco.get_discovery_runs
+    except Exception as e:
+        msg = "Not able to make api call.\nException: %s" %(e.__class__)
+        print(msg)
+        logger.error(msg)
+    if len(results.json()) > 0:
+        runs = []
+        headers =[]
+        for run in results.json():
+            disco_run = {}
+            for key in run:
+                disco_run.update({key:run[key]})
+                headers.append(key)
+            runs.append(disco_run)
+        headers = tools.sortlist(headers)
+        run_csvs = []
+        for run in runs:
+            run_csv = []
+            for header in headers:
+                value = run.get(header)
+                run_csv.append(value)
+            run_csvs.append(run_csv)
+        run_csvs.insert(0, headers)
+        if args.export:
+            w = csv.writer(sys.stdout)
+            w.writerows(run_csvs)
+        elif args.file:
+            with open(args.file, 'w', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerows(run_csvs)
+                msg = "Results written to %s" % args.file
+                print(msg)
+                logger.info(msg)
+        else:
+            pprint(results.json())
+    else:
+        msg = "No runs in progress."
+        print(msg)
+        logger.error(msg)
+
+def sensitive(search, args, dir):
+    output.define_csv(args,search,queries.hc_sensitive_data,dir+defaults.sensitive_data_filename,args.output_file,args.target,"query")
+
+def tpl_export(search, args, dir):
+    output.tpl_export(search, queries.hc_tpl_export, dir, "api", None, None)
+
+def eca_errors(search, args, dir):
+    output.define_csv(args,search,queries.hc_eca_error,dir+defaults.eca_errors_filename,args.output_file,args.target,"query")
+
 def hostname(appliance,instance_dir):
     output.txt_dump(appliance,instance_dir+"/hostname.txt")
 
@@ -181,19 +258,6 @@ def tku(twknowledge,instance_dir):
         tkus = (latest_tku, latest_edp, latest_storage)
         tku_level = "\n".join(map(str, tkus))
         output.txt_dump(tku_level,instance_dir+"/knowledge.txt")
-
-def discovery_runs(twdisco, args, instance_dir):
-# Current Scans
-    logger.info("Checking Scan ranges...")
-    r = get_json(twdisco.get_discovery_runs)
-    if r:
-        runs = json.loads(json.dumps(r))
-        logger.debug('Runs:\s%s'%r)
-        header, data = tools.json2csv(runs)
-        header.insert(0,"Discovery Instance")
-        for row in data:
-            row.insert(0, args.target)
-        output.csv_file(data, header, instance_dir+"/current_scans.csv")
 
 def cancel_run(disco, args):
     run_id = args.a_kill_run
@@ -230,14 +294,6 @@ def vault(twvault, args, instance_dir):
         if not vset:
             vault_status = "Vault open - no passphrase set"
         output.txt_dump(vault_status,instance_dir+"/vault.txt")
-
-    # Credential Success
-def success(twcreds,twsearch,args,instance_dir):
-    builder.successful(twcreds, twsearch, False, args)
-    df = pandas.read_csv(args.file)
-    df.insert(0, "Discovery Instance", args.target)
-    df.to_csv(instance_dir+"/credentials.csv", index=False)
-    os.remove(args.file)
 
 def remove_cred(appliance, cred):
     delete = appliance.delete_vault_credential(cred)
@@ -285,69 +341,6 @@ def search_results(api_endpoint,query):
         print(msg)
         logger.error(msg)
         return []
-
-def show_runs(disco, args):
-    results = []
-    try:
-        results = disco.get_discovery_runs
-    except Exception as e:
-        msg = "Not able to make api call.\nException: %s" %(e.__class__)
-        print(msg)
-        logger.error(msg)
-    if len(results.json()) > 0:
-        runs = []
-        headers =[]
-        for run in results.json():
-            disco_run = {}
-            for key in run:
-                disco_run.update({key:run[key]})
-                headers.append(key)
-            runs.append(disco_run)
-        headers = tools.sortlist(headers)
-        run_csvs = []
-        for run in runs:
-            run_csv = []
-            for header in headers:
-                value = run.get(header)
-                run_csv.append(value)
-            run_csvs.append(run_csv)
-        run_csvs.insert(0, headers)
-        if args.export:
-            w = csv.writer(sys.stdout)
-            w.writerows(run_csvs)
-        elif args.file:
-            with open(args.file, 'w', newline='') as file:
-                writer = csv.writer(file)
-                writer.writerows(run_csvs)
-                msg = "Results written to %s" % args.file
-                print(msg)
-                logger.info(msg)
-        else:
-            pprint(results.json())
-    else:
-        msg = "No runs in progress."
-        print(msg)
-        logger.error(msg)
-
-# Sensitive Data Report
-def sensitive(twsearch, instance_dir, discovery):
-    output.query2csv(twsearch, queries.hc_sensitive_data, instance_dir+"/dq_sensitive_data.csv",discovery)
-
-# TPL Export
-def tpl_export(twsearch, instance_dir):
-    output.tpl_export(twsearch, queries.hc_tpl_export, instance_dir, "api", None, None)
-
-# ECA Errors
-def eca_errors(twsearch, instance_dir, discovery):
-    output.query2csv(twsearch, queries.hc_eca_error, instance_dir+"/dq_eca_errors.csv",discovery)
-
-# Scan Ranges
-def schedules(twsearch, instance_dir, discovery):
-    output.query2csv(twsearch, queries.hc_scan_ranges, instance_dir+"/dq_scan_ranges.csv",discovery)
-
-# Exclude Ranges
-def excludes(twsearch, instance_dir, discovery):
-    output.query2csv(twsearch, queries.hc_exclude_ranges, instance_dir+"/dq_exclude_ranges.csv",discovery)
 
 # Open Service Ports
 def open_ports(twsearch, instance_dir, discovery):

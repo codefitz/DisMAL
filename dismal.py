@@ -4,7 +4,7 @@
 #
 # For use with BMC Discovery
 #
-vers = "0.1.0"
+vers = "0.1.1"
 
 import argparse
 import datetime
@@ -101,6 +101,7 @@ Management reports to export.
 "users"         - List of local UI logins
 \n
 ''',metavar='<report>')
+administration.add_argument('--query',              dest='a_query', type=str, required=False, help='Run an ad-hoc query.\n\n',metavar='<query string>')
 administration.add_argument('--cred_enable',        dest='a_enable', type=str, required=False, help='Enable/Disable a credential.\n\n',metavar='<UUID>')
 administration.add_argument('--cred_enable_list',   dest='f_enablelist', type=str, required=False, help='Specify a list of credentials to enable/disable.\n\n',metavar='<filename>')
 administration.add_argument('--cred_optimise',      dest='a_opt', action='store_true', required=False, help='Optimise credentials based on restricted ips, excluded ips, success/failure, privilege, type\n\n')
@@ -113,36 +114,25 @@ excavation = parser.add_argument_group("Excavation (Boosted Reports)")
 excavation.add_argument('--excavate', dest='excavate', type=str, required=False, help= '''
 Excavation reports - for automated beneficial reporting and deeper analysis.
 \nOptions:
-"device" <name>         - Report on a specific device node by name (Host, NetworkDevice, Printer, SNMPManagedDevice, StorageDevice, ManagementController)
-"devices"               - Report of unique device profiles - includes last DiscoveryAccess and last _successful_ DiscoveryAccess results with credential details
-"device_ids"            - Export list of unique device identities
-"ipaddr" <ip_address>   - Search specific IP address for DiscoveryAccess results
+"device" <name>             - Report on a specific device node by name (Host, NetworkDevice, Printer, SNMPManagedDevice, StorageDevice, ManagementController)
+"devices"                   - Report of unique device profiles - includes last DiscoveryAccess and last _successful_ DiscoveryAccess results with credential details
+"device_ids"                - Export list of unique device identities
+"ipaddr" <ip_address>       - Search specific IP address for DiscoveryAccess results
+"devices_with_cred" <UUID>  - Run devices report for a specific credential
+"suggest_cred_opt"          - Display suggested order of credentials based on restricted ips, excluded ips, success/failure, privilege, type
+"credential_success"        - Report on credential success with total number of accesses, success %% and ranges
+"schedules"                 - Export of schedules with additional list of which credentials will be used with scan/exclude
+"excludes"                  - Export of exclude schedules
+"overlapping_ips"           - Run overlapping range analysis report
+"discovery_access"          - Report of all DiscoveryAccesses and dropped endpoints with credential details, consistency if available
+"discovery_analysis"        - Report of unique DiscoveryAccesses and dropped endpoints with credential details, consistency analysis and end state change
+"active_runs"               - List active Discovery Runs
+"sensitive_data"            - Export Sensitive Data anaylsis
+"export_tpl"                - Export TPL
+"eca_errors"                - Export list of ECA Errors
 \n
 ''',metavar='<report> [value]',nargs='*')
-excavation.add_argument('--cred_device',            dest='r_cred_device', type=str, required=False, help='Run devices report for a specific credential\n\n',metavar='<UUID>')
-excavation.add_argument('--cred_order',             dest='r_weigh', action='store_true', required=False, help="Display suggested order of credentials based on restricted ips, excluded ips, success/failure, privilege, type\n\n")
-excavation.add_argument('--query',                  dest='a_query', type=str, required=False, help='Run a query.\n\n',metavar='<query string>')
-excavation.add_argument('--success',                dest='r_success',  action='store_true', required=False, help='Run credential success report.\n\n')
-excavation.add_argument('--successful',             dest='r_successful',  action='store_true', required=False, help='Run credential success report.\n\n')
-excavation.add_argument('--success_cli',            dest='r_successcli', action='store_true', required=False, help='Run credential success report (CLI).\n\n')
-# Export of schedules with additional list of credentials that will be used in range
-excavation.add_argument('--schedules',              dest='r_schedules', action='store_true', required=False, help='Analysis report on which credentials will be used by with scan/exclude.\n\n')
-excavation.add_argument('--schedules_cli',          dest='r_schedulescli', action='store_true', required=False, help='Export of scan schedules (CLI).\n\n')
-excavation.add_argument('--excludes',               dest='r_excludes', action='store_true', required=False, help='Export of exclude schedules.\n\n')
-excavation.add_argument('--excludes_cli',           dest='r_excludescli', action='store_true', required=False, help='Export of exclude schedules (CLI).\n\n')
-excavation.add_argument('--scan_overlaps',          dest='r_overlaps',  action='store_true', required=False, help='Run overlapping range analysis report.\n\n')
-# Report of all DiscoveryAccesses and Dropped Endpoints with credential details, consistency if available
-excavation.add_argument('--disco_access',           dest='r_disco_access',  action='store_true', required=False, help='Export all DiscoveryAccess including dropped endpoints.\n\n')
-# Report of unique DiscoveryAccesses and Dropped Endpoints with credential details, consistency analysis and end state change
-excavation.add_argument('--disco_analysis',         dest='r_disco_analysis',  action='store_true', required=False, help='Run analysis report on all DiscoveryAccess including dropped endpoints.\n\n')
-excavation.add_argument('--active_runs',            dest='r_activeruns', action='store_true', required=False, help='List active Discovery Runs.\n\n')
-excavation.add_argument('--discovery_runs',         dest='r_discoveryruns', action='store_true', required=False, help='Export active Discovery Runs.\n\n')
-excavation.add_argument('--sensitive_data',         dest='r_sensitive', action='store_true', required=False, help='Export Sensitive Data report.\n\n')
-excavation.add_argument('--sensitive_data_cli',     dest='r_sensitivecli', action='store_true', required=False, help='Export Sensitive Data report (CLI).\n\n')
-excavation.add_argument('--export_tpl',             dest='r_tpl_export', action='store_true', required=False, help='Export TPL.\n\n')
-excavation.add_argument('--export_tpl_cli',         dest='r_tplexportcli', action='store_true', required=False, help='Export TPL (CLI).\n\n')
-excavation.add_argument('--eca_errors',             dest='r_eca_errors', action='store_true', required=False, help='Export ECA Errors.\n\n')
-excavation.add_argument('--eca_errors_cli',         dest='r_ecaerrorscli', action='store_true', required=False, help='Export ECA Errors (CLI).\n\n')
+####
 excavation.add_argument('--open_ports',             dest='r_open_ports', action='store_true', required=False, help='Export of open ports analysis.\n\n')
 excavation.add_argument('--open_ports_cli',         dest='r_portscli', action='store_true', required=False, help='Export of open ports analysis (CLI).\n\n')
 excavation.add_argument('--host_utilisation',       dest='r_host_util', action='store_true', required=False, help='Export of Host utilisation.\n\n')
@@ -275,6 +265,12 @@ if args.access_method == "all":
         cli.knowledge(cli_target, args, system_user, system_passwd, reporting_dir)
         cli.licensing(cli_target, args, system_user, system_passwd, reporting_dir)
         cli.tw_list_users(cli_target, args, reporting_dir)
+        reporting.successful_cli(cli_target, args, system_user, system_passwd, reporting_dir)
+        cli.schedules(cli_target, args, system_user, system_passwd, reporting_dir)
+        cli.excludes(cli_target, args, system_user, system_passwd, reporting_dir)
+        cli.sensitive(cli_target, args, system_user, system_passwd, reporting_dir)
+        cli.tplexport(cli_target, args, system_user, system_passwd, reporting_dir)
+        cli.eca_errors(cli_target, args, system_user, system_passwd, reporting_dir)
 
     if api_target:
 
@@ -286,7 +282,18 @@ if args.access_method == "all":
             curl.platform_scripts(args, system_user, system_passwd, reporting_dir+"/platforms")
         api.modules(search, args, reporting_dir)
         api.licensing(search, args, reporting_dir)     
-        reporting.devices(search, creds, args) 
+        reporting.devices(search, creds, args)
+        builder.ordering(creds, search, args, False)
+        api.success(creds, search, args, reporting_dir)
+        builder.scheduling(creds, search, args)
+        api.excludes(search, args, reporting_dir)
+        builder.overlapping(disco, args)
+        reporting.discovery_access(search, creds, args)
+        reporting.discovery_analysis(search, creds, args)
+        api.show_runs(disco, args)
+        api.discovery_runs(disco, args, reporting_dir)
+        api.tpl_export(search, args, reporting_dir)
+        api.eca_errors(search, args, reporting_dir)
 
 if args.access_method=="cli":
 
@@ -353,14 +360,14 @@ if args.access_method=="cli":
     if args.tideway == "vmware_tools":
         cli.vmware_tools(cli_target, args, tw_passwd, reporting_dir)
 
+    if args.clear_queue:
+        cli.clear_queue(cli_target)
+
     if args.tw_user:
         cli.user_management(cli_target, args)
 
     if args.servicecctl:
         cli.service_management(cli_target, args)
-
-    if args.clear_queue:
-        cli.clear_queue(cli_target)
 
     if args.sysadmin == "audit":
         cli.audit(cli_target, args, system_user, system_passwd, reporting_dir)
@@ -387,25 +394,25 @@ if args.access_method=="cli":
     if args.sysadmin == "users":
         cli.tw_list_users(cli_target, args, reporting_dir)
 
+    if args.excavate[0] == "credential_success":
+        reporting.successful_cli(cli_target, args, system_user, system_passwd, reporting_dir)
+
+    if args.excavate[0] == "schedules":
+        cli.schedules(cli_target, args, system_user, system_passwd, reporting_dir)
+
+    if args.excavate[0] == "excludes":
+        cli.excludes(cli_target, args, system_user, system_passwd, reporting_dir)
+
+    if args.excavate[0] == "sensitive_data":
+        cli.sensitive(cli_target, args, system_user, system_passwd, reporting_dir)
+
+    if args.excavate[0] == "export_tpl":
+        cli.tplexport(cli_target, args, system_user, system_passwd, reporting_dir)
+
+    if args.excavate[0] == "eca_errors":
+        cli.eca_errors(cli_target, args, system_user, system_passwd, reporting_dir)
+
     ###########################################
-
-    if args.r_successcli:
-        reporting.successful_cli(cli_target, system_user, system_passwd, args, reporting_dir)
-    
-    if args.r_sensitivecli:
-        cli.sensitive(cli_target,system_user, system_passwd, args, reporting_dir)
-
-    if args.r_tplexportcli:
-        cli.tplexport(cli_target, system_user, system_passwd, reporting_dir)
-    
-    if args.r_ecaerrorscli:
-        cli.eca_errors(cli_target, system_user, system_passwd, args, reporting_dir)
-
-    if args.r_schedulescli:
-        cli.schedules(cli_target, system_user, system_passwd, args, reporting_dir)
-
-    if args.r_excludescli:
-        cli.excludes(cli_target, system_user, system_passwd, args, reporting_dir)
 
     if args.r_portscli:
         cli.open_ports(cli_target, system_user, system_passwd, args, reporting_dir)
@@ -471,66 +478,6 @@ if args.access_method=="api":
     if args.sysadmin == "licensing":
         api.licensing(search, args, reporting_dir)
 
-    if args.excavate[0] == "device":
-        builder.get_device(search, creds, args)
-
-    if args.excavate[0] == "devices":
-        reporting.devices(search, creds, args)
-
-    if args.excavate[0] == "device_ids":
-        identities = builder.unique_identities(disco)
-        data = []
-        for identity in identities:
-            data.append([identity['originating_endpoint'],identity['list_of_ips'],identity['list_of_names']])
-        output.report(data, [ "Origating Endpoint", "List of IPs", "List of Names" ], args)
-
-    if args.excavate[0] == "ipaddr":
-        reporting.ipaddr(search, creds, args)
-
-    ###########################################
-
-    if args.r_activeruns:
-        api.show_runs(disco, args)
-
-    if args.r_discoveryruns:
-        api.discovery_runs(disco, args, reporting_dir)
-
-    if args.a_kill_run:
-        api.cancel_run(disco, args)
-
-    if args.r_vault:
-        api.vault(vault, args, reporting_dir)
-
-    if args.r_successful:
-        print("\nCredential Success")
-        print("------------------")
-        api.success(creds, search, args, reporting_dir)
-
-    if args.a_removal:
-        lookup = builder.get_credential(search, creds, args.a_removal, args)
-        if lookup:
-            go_ahead = input("Are you sure you want to delete this credential? (Y/y) ")
-            if go_ahead == "y" or go_ahead == "Y":
-                success = api.remove_cred(creds, args)
-                if success:
-                    msg = "Credential %s deleted from %s." % (args.a_removal, args.target)
-                else:
-                    msg = "Credential %s was not deleted\n%s" % (args.a_removal, success)
-                print(msg)
-                logger.info(msg)
-
-    if args.f_remlist:
-        exists = os.path.isfile(args.f_remlist)
-        if exists:
-            with open(args.remlist) as f:
-                for line in f:
-                    success = api.remove_cred(creds, line.strip())
-                    if success:
-                        msg = "Credential %s deleted from %s." % (line.strip(), args.target)
-                    else:
-                        msg = "Credential %s was not deleted\n%s" % (line.strip(), success)
-                    logger.info(msg)
-
     if args.a_enable:
         active = api.update_cred(creds, args.a_enable)
         if active is not None:
@@ -561,53 +508,107 @@ if args.access_method=="api":
                         logger.info(msg)
 
     if args.a_opt:
-        builder.ordering(creds, search, args)
+        builder.ordering(creds, search, args, True)
 
-    if args.r_schedules:
-        builder.scheduling(creds, search, args)
+    if args.a_removal:
+        lookup = builder.get_credential(search, creds, args.a_removal, args)
+        if lookup:
+            go_ahead = input("Are you sure you want to delete this credential? (Y/y) ")
+            if go_ahead == "y" or go_ahead == "Y":
+                success = api.remove_cred(creds, args)
+                if success:
+                    msg = "Credential %s deleted from %s." % (args.a_removal, args.target)
+                else:
+                    msg = "Credential %s was not deleted\n%s" % (args.a_removal, success)
+                print(msg)
+                logger.info(msg)
 
-    if args.r_overlaps:
-        builder.overlapping(disco, args)
+    if args.f_remlist:
+        exists = os.path.isfile(args.f_remlist)
+        if exists:
+            with open(args.remlist) as f:
+                for line in f:
+                    success = api.remove_cred(creds, line.strip())
+                    if success:
+                        msg = "Credential %s deleted from %s." % (line.strip(), args.target)
+                    else:
+                        msg = "Credential %s was not deleted\n%s" % (line.strip(), success)
+                    logger.info(msg)
+        
+    if args.a_kill_run:
+        api.cancel_run(disco, args)
 
-    ####### API Reporting ########
-    
+    if args.excavate[0] == "device":
+        builder.get_device(search, creds, args)
+
+    if args.excavate[0] == "devices":
+        reporting.devices(search, creds, args)
+
+    if args.excavate[0] == "device_ids":
+        identities = builder.unique_identities(disco)
+        data = []
+        for identity in identities:
+            data.append([identity['originating_endpoint'],identity['list_of_ips'],identity['list_of_names']])
+        output.report(data, [ "Origating Endpoint", "List of IPs", "List of Names" ], args)
+
+    if args.excavate[0] == "ipaddr":
+        reporting.ipaddr(search, creds, args)
+
+    if args.excavate[0] == "devices_with_cred":
+        builder.get_credential(search, creds, args)
+
+    if args.excavate[0] == "suggested_cred_opt":
+        builder.ordering(creds, search, args, False)
+
     if args.a_query:
         api.query(search, args)
 
-    if args.r_cred_device:
-        builder.get_credential(search, creds, args.r_cred_device, args)
+    if args.excavate[0] == "credential_success":
+        api.success(creds, search, args, reporting_dir)
+
+    if args.excavate[0] == "schedules":
+        builder.scheduling(creds, search, args)
+
+    if args.excavate[0] == "excludes":
+        api.excludes(search, args, reporting_dir)
+
+    if args.excavate[0] == "overlapping_ips":
+        builder.overlapping(disco, args)
+
+    if args.excavate[0] == "discovery_access":
+        reporting.discovery_access(search, creds, args)
+
+    if args.excavate[0] == "discovery_analysis":
+        reporting.discovery_analysis(search, creds, args)
+
+    if args.excavate[0] == "active_runs":
+        api.show_runs(disco, args)
+        api.discovery_runs(disco, args, reporting_dir)
+
+    if args.excavate[0] == "sensitive_data":
+        api.sensitive(search, args, reporting_dir)
+
+    if args.excavate[0] == "export_tpl":
+        api.tpl_export(search, args, reporting_dir)
+
+    if args.excavate[0] == "eca_errors":
+        api.eca_errors(search, args, reporting_dir)
+
+    ###########################################
+
+    if args.r_vault:
+        api.vault(vault, args, reporting_dir)
+
+    ####### API Reporting ########
 
     if args.r_hostname:
         api.hostname(args.appliance,reporting_dir)
 
     if args.r_tku:
         api.tku(knowledge,reporting_dir)
-
-    if args.r_success:
-        print("\nCredential Success")
-        print("------------------")
-        reporting.successful(creds, search, args)
-
-    if args.r_disco_access:
-        reporting.discovery_access(search, creds, args)
-
-    if args.r_disco_analysis:
-        reporting.discovery_analysis(search, creds, args)
-
-    if args.r_sensitive:
-        api.sensitive(search, reporting_dir, args.target)
-
-    if args.r_tpl_export:
-        api.tpl_export(search, reporting_dir, args.target)
-
-    if args.r_eca_errors:
-        api.eca_errors(search, reporting_dir, args.target)
     
     if args.r_schedules:
         api.schedules(search, reporting_dir, args.target)
-    
-    if args.r_excludes:
-        api.excludes(search, reporting_dir, args.target)
 
     if args.r_open_ports:
         api.open_ports(search, reporting_dir, args.target)

@@ -332,6 +332,58 @@ def eca_errors(client,args,user,passwd,dir):
     result = run_query(client,user,passwd,queries.hc_eca_error)
     output.define_csv(args,None,result,dir+defaults.eca_errors_filename,args.output_file,args.target,"csv")
 
+def open_ports(client,args,user,passwd,dir):
+    result = run_query(client,user,passwd,queries.hc_open_ports)
+    output.define_csv(args,None,result,dir+defaults.open_ports_filename,args.output_file,args.target,"csv")
+
+def host_util(client,args,user,passwd,dir):
+    result = run_query(client,user,passwd,queries.hc_host_utilisation)
+    output.define_csv(args,None,result,dir+defaults.host_util_filename,args.output_file,args.target,"csv")
+
+def orphan_vms(client,args,user,passwd,dir):
+    result = run_query(client,user,passwd,queries.hc_orphan_vms)
+    output.define_csv(args,None,result,dir+defaults.orphan_vms_filename,args.output_file,args.target,"csv")
+
+def missing_vms(client,args,user,passwd,dir):
+    result = run_query(client,user,passwd,queries.hc_missing_vms)
+    output.define_csv(args,None,result,dir+defaults.mssing_vms_filename,args.output_file,args.target,"csv")
+
+def near_removal(client,args,user,passwd,dir):
+    result = run_query(client,user,passwd,queries.hc_near_removal)
+    output.define_csv(args,None,result,dir+defaults.near_removal_filename,args.output_file,args.target,"csv")
+
+def removed(client,args,user,passwd,dir):
+    result = run_query(client,user,passwd,queries.hc_removed)
+    output.define_csv(args,None,result,dir+defaults.removed_filename,args.output_file,args.target,"csv")
+
+def os_lifecycle(client,args,user,passwd,dir):
+    result = run_query(client,user,passwd,queries.hc_os_lifecycle)
+    output.define_csv(args,None,result,dir+defaults.os_lifecycle_filename,args.output_file,args.target,"csv")
+
+def software_lifecycle(client,args,user,passwd,dir):
+    result = run_query(client,user,passwd,queries.hc_software_lifecycle)
+    output.define_csv(args,None,result,dir+defaults.si_lifecycle_filename,args.output_file,args.target,"csv")
+
+def db_lifecycle(client,args,user,passwd,dir):
+    result = run_query(client,user,passwd,queries.hc_db_lifecycle)
+    output.define_csv(args,None,result,dir+defaults.db_lifecycle_filename,args.output_file,args.target,"csv")
+
+def unrecognised_snmp(client,args,user,passwd,dir):
+    result = run_query(client,user,passwd,queries.hc_snmp_devices)
+    output.define_csv(args,None,result,dir+defaults.snmp_unrecognised_filename,args.output_file,args.target,"csv")
+
+def installed_agents(client,args,user,passwd,dir):
+    result = run_query(client,user,passwd,queries.hc_agents)
+    output.define_csv(args,None,result,dir+defaults.installed_agents_filename,args.output_file,args.target,"csv")
+
+def software_usernames(client,args,user,passwd,dir):
+    result = run_query(client,user,passwd,queries.hc_user_accounts)
+    output.define_csv(args,None,result,dir+defaults.si_user_accounts_filename,args.output_file,args.target,"csv")
+
+def module_summary(client,args,user,passwd,dir):
+    result = run_query(client,user,passwd,queries.pm_summary)
+    output.define_csv(args,None,result,dir+defaults.pattern_modules_filename,args.output_file,args.target,"csv")
+
 def user_management(client, args):
     login = args.tw_user
     msg = "Checking for user login %s...\n" % login
@@ -424,55 +476,3 @@ def clear_queue(client):
         service_management("start", client)
     elif gonogo == "No":
         print("Cancelled. No action taken.")
-
-def open_ports(client,sysuser,syspass,args,instance_dir):
-    result = run_query(client,sysuser,syspass,queries.hc_open_ports)
-    output.save2csv(result, instance_dir+"/dq_open_ports.csv",args.target)
-
-def host_util(client,sysuser,syspass,args,instance_dir):
-    result = run_query(client,sysuser,syspass,queries.hc_host_utilisation)
-    output.save2csv(result, instance_dir+"/dq_host_utilisation.csv",args.target)
-
-def orphan_vms(client,sysuser,syspass,args,instance_dir):
-    result = run_query(client,sysuser,syspass,queries.hc_orphan_vms)
-    output.save2csv(result, instance_dir+"/dq_orphan_vms.csv",args.target)
-
-def missing_vms(client,sysuser,syspass,args,instance_dir):
-    result = run_query(client,sysuser,syspass,queries.hc_missing_vms)
-    output.save2csv(result, instance_dir+"/dq_missing_vms.csv",args.target)
-
-def near_removal(client,sysuser,syspass,args,instance_dir):
-    result = run_query(client,sysuser,syspass,queries.hc_near_removal)
-    output.save2csv(result, instance_dir+"/dq_near_removal.csv",args.target)
-
-def removed(client,sysuser,syspass,args,instance_dir):
-    result = run_query(client,sysuser,syspass,queries.hc_removed)
-    output.save2csv(result, instance_dir+"/hc_removed.csv",args.target)
-
-def os_lifecycle(client,sysuser,syspass,args,instance_dir):
-    result = run_query(client,sysuser,syspass,queries.hc_os_lifecycle)
-    output.save2csv(result, instance_dir+"/dq_os_lifecycle.csv",args.target)
-
-def software_lifecycle(client,sysuser,syspass,args,instance_dir):
-    result = run_query(client,sysuser,syspass,queries.hc_software_lifecycle)
-    output.save2csv(result, instance_dir+"/dq_software_lifecycle.csv",args.target)
-
-def db_lifecycle(client,sysuser,syspass,args,instance_dir):
-    result = run_query(client,sysuser,syspass,queries.hc_db_lifecycle)
-    output.save2csv(result, instance_dir+"/dq_db_lifecycle.csv",args.target)
-
-def unrecognised_snmp(client,sysuser,syspass,args,instance_dir):
-    result = run_query(client,sysuser,syspass,queries.hc_snmp_devices)
-    output.save2csv(result, instance_dir+"/dq_snmp_unrecognised.csv",args.target)
-
-def installed_agents(client,sysuser,syspass,args,instance_dir):
-    result = run_query(client,sysuser,syspass,queries.hc_agents)
-    output.save2csv(result, instance_dir+"/dq_installed_agents.csv",args.target)
-
-def software_usernames(client,sysuser,syspass,args,instance_dir):
-    result = run_query(client,sysuser,syspass,queries.hc_user_accounts)
-    output.save2csv(result, instance_dir+"/dq_software_usernames.csv",args.target)
-
-def module_summary(client,sysuser,syspass,args,instance_dir):
-    result = run_query(client,sysuser,syspass,queries.pm_summary)
-    output.save2csv(result, instance_dir+"/dq_pattern_modules.csv",args.target)

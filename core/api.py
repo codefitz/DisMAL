@@ -232,32 +232,65 @@ def sensitive(search, args, dir):
     output.define_csv(args,search,queries.hc_sensitive_data,dir+defaults.sensitive_data_filename,args.output_file,args.target,"query")
 
 def tpl_export(search, args, dir):
-    output.tpl_export(search, queries.hc_tpl_export, dir, "api", None, None)
+    reporting.tpl_export(search, queries.hc_tpl_export, dir, "api", None, None)
 
 def eca_errors(search, args, dir):
     output.define_csv(args,search,queries.hc_eca_error,dir+defaults.eca_errors_filename,args.output_file,args.target,"query")
 
-def hostname(appliance,instance_dir):
-    output.txt_dump(appliance,instance_dir+"/hostname.txt")
+def open_ports(search, args, dir):
+    output.define_csv(args,search,queries.hc_open_ports,dir+defaults.open_ports_filename,args.output_file,args.target,"query")
 
-def tku(twknowledge,instance_dir):
+def host_util(search, args, dir):
+    output.define_csv(args,search,queries.hc_host_utilisation,dir+defaults.host_util_filename,args.output_file,args.target,"query")
+
+def orphan_vms(search, args, dir):
+    output.define_csv(args,search,queries.hc_orphan_vms,dir+defaults.orphan_vms_filename,args.output_file,args.target,"query")
+
+def missing_vms(search, args, dir):
+    output.define_csv(args,search,queries.hc_missing_vms,dir+defaults.mssing_vms_filename,args.output_file,args.target,"query")
+
+def near_removal(search, args, dir):
+    output.define_csv(args,search,queries.hc_near_removal,dir+defaults.near_removal_filename,args.output_file,args.target,"query")
+
+def removed(search, args, dir):
+    output.define_csv(args,search,queries.hc_removed,dir+defaults.removed_filename,args.output_file,args.target,"query")
+
+def oslc(search, args, dir):
+    output.define_csv(args,search,queries.hc_os_lifecycle,dir+defaults.os_lifecycle_filename,args.output_file,args.target,"query")
+
+def slc(search, args, dir):
+    output.define_csv(args,search,queries.hc_software_lifecycle,dir+defaults.si_lifecycle_filename,args.output_file,args.target,"query")
+
+def dblc(search, args, dir):
+    output.define_csv(args,search,queries.hc_db_lifecycle,dir+defaults.db_lifecycle_filename,args.output_file,args.target,"query")
+
+def snmp(search, args, dir):
+    output.define_csv(args,search,queries.hc_snmp_devices,dir+defaults.snmp_unrecognised_filename,args.output_file,args.target,"query")
+
+def agents(search, args, dir):
+    output.define_csv(args,search,queries.hc_agents,dir+defaults.installed_agents_filename,args.output_file,args.target,"query")
+
+def software_users(search, args, dir):
+    output.define_csv(args,search,queries.hc_user_accounts,dir+defaults.si_user_accounts_filename,args.output_file,args.target,"query")
+
+def tku(knowledge, args, dir):
     logger.info("Checking Knowledge...")
-    k = get_json(twknowledge.get_knowledge)
+    k = get_json(knowledge.get_knowledge)
     if k:
-        knowledge = json.loads(json.dumps(k))
+        result = json.loads(json.dumps(k))
         logger.debug('Knowledge:\n%s'%k)
-        if 'latest_edp' in knowledge:
-            latest_edp = knowledge['latest_edp']['name']
+        if 'latest_edp' in result:
+            latest_edp = result['latest_edp']['name']
         else:
             latest_edp = "Not installed"
-        if 'latest_storage' in knowledge:
-            latest_storage = knowledge['latest_storage']['name']
+        if 'latest_storage' in result:
+            latest_storage = result['latest_storage']['name']
         else:
             latest_storage = "Not installed"
-        latest_tku = knowledge['latest_tku']['name']
+        latest_tku = result['latest_tku']['name']
         tkus = (latest_tku, latest_edp, latest_storage)
         tku_level = "\n".join(map(str, tkus))
-        output.txt_dump(tku_level,instance_dir+"/knowledge.txt")
+        output.define_txt(args,tku_level,dir+defaults.pattern_modules_filename,None)
 
 def cancel_run(disco, args):
     run_id = args.a_kill_run
@@ -278,22 +311,22 @@ def cancel_run(disco, args):
         logger.warning("Run not cancelled\n%s" % msg)
         return False
 
-def vault(twvault, args, instance_dir):
+def vault(vault, args, dir):
     logger.info("Checking Vault...")
-    v = get_json(twvault.get_vault)
+    v = get_json(vault.get_vault)
     if v:
-        vault = json.loads(json.dumps(v))
+        result = json.loads(json.dumps(v))
         logger.debug('Vault Status:\n%s'%v)
-        vopen = vault.get('open')
-        vsaved = vault.get('passphrase_saved')
-        vset = vault.get('passphrase_set')
+        vopen = result.get('open')
+        vsaved = result.get('passphrase_saved')
+        vset = result.get('passphrase_set')
         vault_status = "OK"
         if not vopen:
             if not vsaved:
                 vault_status = "Vault closed - Passphrase not saved"
         if not vset:
             vault_status = "Vault open - no passphrase set"
-        output.txt_dump(vault_status,instance_dir+"/vault.txt")
+        output.define_txt(args,vault_status,dir+defaults.vault_filename,None)
 
 def remove_cred(appliance, cred):
     delete = appliance.delete_vault_credential(cred)
@@ -342,50 +375,5 @@ def search_results(api_endpoint,query):
         logger.error(msg)
         return []
 
-# Open Service Ports
-def open_ports(twsearch, instance_dir, discovery):
-    output.query2csv(twsearch, queries.hc_open_ports, instance_dir+"/dq_open_ports.csv",discovery)
-
-# Host Utilisation
-def host_util(twsearch, instance_dir, discovery):
-    output.query2csv(twsearch, queries.hc_host_utilisation, instance_dir+"/dq_host_utilisation.csv",discovery)
-    
-# Orphan VMs
-def orphan_vms(twsearch, instance_dir, discovery):
-    output.query2csv(twsearch, queries.hc_orphan_vms, instance_dir+"/dq_orphan_vms.csv",discovery)
-
-# Missing VM Children
-def missing_vms(twsearch, instance_dir, discovery):
-    output.query2csv(twsearch, queries.hc_missing_vms, instance_dir+"/dq_missing_vms.csv",discovery)
-
-# Devices Near Removal
-def near_removal(twsearch, instance_dir, discovery):
-    output.query2csv(twsearch, queries.hc_near_removal, instance_dir+"/dq_near_removal.csv",discovery)
-
-# Last 7 Days Removed
-def removed(twsearch, instance_dir, discovery):
-    output.query2csv(twsearch, queries.hc_removed, instance_dir+"/dq_removed.csv",discovery)
-
-# OS Lifecycle
-def oslc(twsearch, instance_dir, discovery):
-    output.query2csv(twsearch, queries.hc_os_lifecycle, instance_dir+"/dq_os_lifecycle.csv",discovery)
-
-# Software Lifecycle
-def slc(twsearch, instance_dir, discovery):
-    output.query2csv(twsearch, queries.hc_software_lifecycle, instance_dir+"/dq_software_lifecycle.csv",discovery)
-
-# DB Lifecycle
-def dblc(twsearch, instance_dir, discovery):
-    output.query2csv(twsearch, queries.hc_db_lifecycle, instance_dir+"/dq_db_lifecycle.csv",discovery)
-
-# Unrecognised SNMP Devices
-def snmp(twsearch, instance_dir, discovery):
-    output.query2csv(twsearch, queries.hc_snmp_devices, instance_dir+"/dq_snmp_unrecognised.csv",discovery)
-
-# Installed Agents
-def agents(twsearch, instance_dir, discovery):
-    output.query2csv(twsearch, queries.hc_agents, instance_dir+"/dq_installed_agents.csv",discovery)
-
-# Software and User Accounts
-def software_users(twsearch, instance_dir, discovery):
-    output.query2csv(twsearch, queries.hc_user_accounts, instance_dir+"/dq_software_usernames.csv",discovery)
+def hostname(args,dir):
+    output.define_txt(args,args.target,dir+defaults.hostname_filename,None)

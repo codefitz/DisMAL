@@ -56,8 +56,23 @@ tw_options_filename         = "/tw_options.txt"
 ui_errors_filename          = "/ui_errors.txt"
 uname_filename              = "/uname.txt"
 vmware_tools_filename       = "/vmware_tools.txt"
-eca_errors_filename         = "/dq_eca_errors.csv"
-
+eca_errors_filename         = "/eca_errors.csv"
+open_ports_filename         = "/open_ports.csv"
+host_util_filename          = "/host_utilisation.csv"
+orphan_vms_filename         = "/dq_orphan_vms.csv"
+mssing_vms_filename         = "/missing_vms.csv"
+near_removal_filename       = "/near_removal.csv"
+removed_filename            = "/removed.csv"
+os_lifecycle_filename       = "/os_lifecycle.csv"
+si_lifecycle_filename       = "/software_lifecycle.csv"
+db_lifecycle_filename       = "/db_lifecycle.csv"
+snmp_unrecognised_filename  = "/snmp_unrecognised.csv"
+installed_agents_filename   = "/installed_agents.csv"
+si_user_accounts_filename   = "/software_usernames.csv"
+pattern_modules_filename    = "/pattern_modules.csv"
+vault_filename              = "/vault.txt"
+hostname_filename           = "/hostname.txt"
+    
 # Headers
 baseline_header     = [ "Check", "Result", "Description" ]
 df_h_header         = [ "fs", "mount", "size", "used", "available", "Used %" ]

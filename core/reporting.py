@@ -1,4 +1,4 @@
-# FuseMB Specific Functions
+# DisMAL Reporting Functions
 
 import datetime
 import logging

@@ -1,10 +1,10 @@
-# DisMAL Maindiscovery
+# DisMAL Toolkit
 # 
 # Author: Wes Moskal-Fitzpatrick
 #
 # For use with BMC Discovery
 #
-vers = "0.1.1"
+vers = "0.1.2"
 
 import argparse
 import datetime
@@ -57,7 +57,6 @@ cli_management = parser.add_argument_group("CLI Appliance Management")
 cli_management.add_argument('--tideway', dest='tideway', type=str, required=False, help= '''
 CLI management reports export.
 \nOptions:
-"all"           - Export all reports
 "certificates"  - TLS info
 "cli_users"     - CLI user logins
 "clustering"    - Cluster configuration
@@ -95,9 +94,9 @@ Management reports to export.
 "baseline"      - Run the baseline command
 "cmdbsync"      - CMDB sync details
 "events"        - Event logs
-"platforms"     - Platform scripts
 "knowledge"     - List Knowledge uploads
 "licensing"     - License reports
+"platforms"     - Platform scripts
 "users"         - List of local UI logins
 \n
 ''',metavar='<report>')
@@ -114,47 +113,40 @@ excavation = parser.add_argument_group("Excavation (Boosted Reports)")
 excavation.add_argument('--excavate', dest='excavate', type=str, required=False, help= '''
 Excavation reports - for automated beneficial reporting and deeper analysis.
 \nOptions:
-"device" <name>             - Report on a specific device node by name (Host, NetworkDevice, Printer, SNMPManagedDevice, StorageDevice, ManagementController)
-"devices"                   - Report of unique device profiles - includes last DiscoveryAccess and last _successful_ DiscoveryAccess results with credential details
-"device_ids"                - Export list of unique device identities
-"ipaddr" <ip_address>       - Search specific IP address for DiscoveryAccess results
-"devices_with_cred" <UUID>  - Run devices report for a specific credential
-"suggest_cred_opt"          - Display suggested order of credentials based on restricted ips, excluded ips, success/failure, privilege, type
+"active_runs"               - List active Discovery Runs
 "credential_success"        - Report on credential success with total number of accesses, success %% and ranges
-"schedules"                 - Export of schedules with additional list of which credentials will be used with scan/exclude
-"excludes"                  - Export of exclude schedules
-"overlapping_ips"           - Run overlapping range analysis report
+"db_lifecycle"              - Export Database lifecycle report
+"device" <name>             - Report on a specific device node by name (Host, NetworkDevice, Printer, SNMPManagedDevice, StorageDevice, ManagementController)
+"device_ids"                - Export list of unique device identities
+"devices"                   - Report of unique device profiles - includes last DiscoveryAccess and last _successful_ DiscoveryAccess results with credential details
+"devices_with_cred" <UUID>  - Run devices report for a specific credential
 "discovery_access"          - Report of all DiscoveryAccesses and dropped endpoints with credential details, consistency if available
 "discovery_analysis"        - Report of unique DiscoveryAccesses and dropped endpoints with credential details, consistency analysis and end state change
-"active_runs"               - List active Discovery Runs
-"sensitive_data"            - Export Sensitive Data anaylsis
-"export_tpl"                - Export TPL
 "eca_errors"                - Export list of ECA Errors
+"excludes"                  - Export of exclude schedules
+"export_tpl"                - Export TPL
+"host_utilisation"          - Export of Hosts which appear to be underutilised (less than 3 running SIs)
+"hostname"                  - Print hostname
+"installed_agents"          - Analysis of installed agents
+"ipaddr" <ip_address>       - Search specific IP address for DiscoveryAccess results
+"missing_vms"               - Report of Hypervisor Hosts that have VMs which have not been discovered
+"near_removal"              - Export list of devices near removal
+"open_ports"                - Export of open ports analysis
+"orphan_vms"                - Report of Virtual Machines that are not related to a container Host
+"os_lifecycle"              - Export OS lifecycle report
+"overlapping_ips"           - Run overlapping range analysis report
+"pattern_modules"           - Summary of installed pattern modules
+"removed"                   - Export list of devices removed in the last 7 days (aged out)
+"schedules"                 - Export of schedules with additional list of which credentials will be used with scan/exclude
+"sensitive_data"            - Export Sensitive Data anaylsis
+"si_lifecycle"              - Export SoftwareInstance lifecycle report
+"si_user_accounts"          - Software with running process usernames
+"suggest_cred_opt"          - Display suggested order of credentials based on restricted ips, excluded ips, success/failure, privilege, type
+"tku"                       - TKU version summary
+"unrecognised_snmp"         - Report of unrecognised SNMP devices (Model > Device)
+"vault"                     - Vault details
 \n
 ''',metavar='<report> [value]',nargs='*')
-####
-excavation.add_argument('--open_ports',             dest='r_open_ports', action='store_true', required=False, help='Export of open ports analysis.\n\n')
-excavation.add_argument('--open_ports_cli',         dest='r_portscli', action='store_true', required=False, help='Export of open ports analysis (CLI).\n\n')
-excavation.add_argument('--host_utilisation',       dest='r_host_util', action='store_true', required=False, help='Export of Host utilisation.\n\n')
-excavation.add_argument('--host_utilisation_cli',   dest='r_utilisationcli', action='store_true', required=False, help='Export of Host utilisation (CLI).\n\n')
-excavation.add_argument('--orphan_vms',             dest='r_orphan_vms', action='store_true', required=False, help='Export of orphan VMs.\n\n')
-excavation.add_argument('--orphan_vms_cli',         dest='r_orphanvmscli', action='store_true', required=False, help='Export of orphan VMs (CLI).\n\n')
-excavation.add_argument('--missing_vms',            dest='r_missing_vms', action='store_true', required=False, help='Export of missing VMs.\n\n')
-excavation.add_argument('--missing_vms_cli',        dest='r_missingvmscli', action='store_true', required=False, help='Export of missing VMs (CLI).\n\n')
-excavation.add_argument('--near_removal',           dest='r_near_removal', action='store_true', required=False, help='Export of devices near removal.\n\n')
-excavation.add_argument('--near_removal_cli',       dest='r_nearremcli', action='store_true', required=False, help='Export of devices near removal (CLI).\n\n')
-excavation.add_argument('--removed',                dest='r_removed', action='store_true', required=False, help='Export of devices removed recently.\n\n')
-excavation.add_argument('--removed_cli',            dest='r_removedcli', action='store_true', required=False, help='Export of devices removed recently (CLI).\n\n')
-excavation.add_argument('--os_lifecycle_cli',       dest='r_oslc', action='store_true', required=False, help='Export of OS lifecycle report (CLI).\n\n')
-excavation.add_argument('--software_lifecycle_cli', dest='r_slc', action='store_true', required=False, help='Export of software lifecycle report (CLI).\n\n')
-excavation.add_argument('--database_lifecycle_cli', dest='r_dblc', action='store_true', required=False, help='Export of database lifecycle report (CLI).\n\n')
-excavation.add_argument('--unrecognised_cli',       dest='r_snmp', action='store_true', required=False, help='Export of unrecognised devices (CLI).\n\n')
-excavation.add_argument('--software_agents_cli',    dest='r_agents', action='store_true', required=False, help='Analysis of installed agents (CLI).\n\n')
-excavation.add_argument('--software_users',         dest='r_software_users', action='store_true', required=False, help='Software with running process usernames.\n\n')
-excavation.add_argument('--software_users_cli',     dest='r_softuser', action='store_true', required=False, help='Software with running process usernames (CLI).\n\n')
-excavation.add_argument('--tku',                    dest='r_tku', action='store_true', required=False, help='Export TKU summary.\n\n')
-excavation.add_argument('--vault',                  dest='r_vault', action='store_true', required=False, help='Export vault details.\n\n')
-excavation.add_argument('--hostname',               dest='r_hostname', action='store_true', required=False, help='Export hostname.\n\n')
 
 global args
 args = parser.parse_args()
@@ -271,6 +263,19 @@ if args.access_method == "all":
         cli.sensitive(cli_target, args, system_user, system_passwd, reporting_dir)
         cli.tplexport(cli_target, args, system_user, system_passwd, reporting_dir)
         cli.eca_errors(cli_target, args, system_user, system_passwd, reporting_dir)
+        cli.open_ports(cli_target, args, system_user, system_passwd, reporting_dir)
+        cli.host_util(cli_target, args, system_user, system_passwd, reporting_dir)
+        cli.orphan_vms(cli_target, args, system_user, system_passwd, reporting_dir)
+        cli.missing_vms(cli_target, args, system_user, system_passwd, reporting_dir)
+        cli.near_removal(cli_target, args, system_user, system_passwd, reporting_dir)
+        cli.removed(cli_target, args, system_user, system_passwd, reporting_dir)
+        cli.os_lifecycle(cli_target, args, system_user, system_passwd, reporting_dir)
+        cli.software_lifecycle(cli_target, args, system_user, system_passwd, reporting_dir)
+        cli.db_lifecycle(cli_target, args, system_user, system_passwd, reporting_dir)
+        cli.unrecognised_snmp(cli_target, args, system_user, system_passwd, reporting_dir)
+        cli.installed_agents(cli_target, args, system_user, system_passwd, reporting_dir)
+        cli.software_usernames(cli_target, args, system_user, system_passwd, reporting_dir)
+        cli.module_summary(cli_target, args, system_user, system_passwd, reporting_dir)
 
     if api_target:
 
@@ -294,6 +299,19 @@ if args.access_method == "all":
         api.discovery_runs(disco, args, reporting_dir)
         api.tpl_export(search, args, reporting_dir)
         api.eca_errors(search, args, reporting_dir)
+        api.open_ports(search, args, reporting_dir)
+        api.host_util(search, args, reporting_dir)
+        api.orphan_vms(search, args, reporting_dir)
+        api.missing_vms(search, args, reporting_dir)
+        api.near_removal(search, args, reporting_dir)
+        api.removed(search, args, reporting_dir)
+        api.snmp(search, args, reporting_dir)
+        api.oslc(search, args, reporting_dir)
+        api.slc(search, args, reporting_dir)
+        api.dblc(search, args, reporting_dir)
+        api.agents(search, args, reporting_dir)
+        api.software_users(search, args, reporting_dir)
+        api.tku(knowledge,reporting_dir)
 
 if args.access_method=="cli":
 
@@ -412,50 +430,46 @@ if args.access_method=="cli":
     if args.excavate[0] == "eca_errors":
         cli.eca_errors(cli_target, args, system_user, system_passwd, reporting_dir)
 
-    ###########################################
+    if args.excavate[0] == "open_ports":
+        cli.open_ports(cli_target, args, system_user, system_passwd, reporting_dir)
+    
+    if args.excavate[0] == "host_utilisation":
+        cli.host_util(cli_target, args, system_user, system_passwd, reporting_dir)
 
-    if args.r_portscli:
-        cli.open_ports(cli_target, system_user, system_passwd, args, reporting_dir)
+    if args.excavate[0] == "orphan_vms":
+        cli.orphan_vms(cli_target, args, system_user, system_passwd, reporting_dir)
 
-    if args.r_utilisationcli:
-        cli.host_util(cli_target, system_user, system_passwd, args, reporting_dir)
+    if args.excavate[0] == "missing_vms":
+        cli.missing_vms(cli_target, args, system_user, system_passwd, reporting_dir)
 
-    if args.r_orphanvmscli:
-        cli.orphan_vms(cli_target, system_user, system_passwd, args, reporting_dir)
+    if args.excavate[0] == "near_removal":
+        cli.near_removal(cli_target, args, system_user, system_passwd, reporting_dir)
 
-    if args.r_missingvmscli:
-        cli.missing_vms(cli_target, system_user, system_passwd, args, reporting_dir)
+    if args.excavate[0] == "removed":
+        cli.removed(cli_target, args, system_user, system_passwd, reporting_dir)
 
-    if args.r_nearremcli:
-        cli.near_removal(cli_target, system_user, system_passwd, args, reporting_dir)
+    if args.excavate[0] == "os_lifecycle":
+        cli.os_lifecycle(cli_target, args, system_user, system_passwd, reporting_dir)
 
-    if args.r_removedcli:
-        cli.removed(cli_target, system_user, system_passwd, args, reporting_dir)
+    if args.excavate[0] == "software_lifecycle":
+        cli.software_lifecycle(cli_target, args, system_user, system_passwd, reporting_dir)
 
-    if args.r_oslc:
-        cli.os_lifecycle(cli_target, system_user, system_passwd, args, reporting_dir)
+    if args.excavate[0] == "db_lifecycle":
+        cli.db_lifecycle(cli_target, args, system_user, system_passwd, reporting_dir)
 
-    if args.r_slc:
-        cli.software_lifecycle(cli_target, system_user, system_passwd, args, reporting_dir)
+    if args.excavate[0] == "unrecogised_snmp":
+        cli.unrecognised_snmp(cli_target, args, system_user, system_passwd, reporting_dir)
 
-    if args.r_dblc:
-        cli.db_lifecycle(cli_target, system_user, system_passwd, args, reporting_dir)
+    if args.excavate[0] == "installed_agents":
+        cli.installed_agents(cli_target, args, system_user, system_passwd, reporting_dir)
 
-    if args.r_snmp:
-        cli.unrecognised_snmp(cli_target, system_user, system_passwd, args, reporting_dir)
+    if args.excavate[0] == "si_user_accounts":
+        cli.software_usernames(cli_target, args, system_user, system_passwd, reporting_dir)
 
-    if args.r_agents:
-        cli.installed_agents(cli_target, system_user, system_passwd, args, reporting_dir)
-
-    if args.r_softuser:
-        cli.software_usernames(cli_target, system_user, system_passwd, args, reporting_dir)
-
-    if args.r_modules:
-        cli.module_summary(cli_target, system_user, system_passwd, args, reporting_dir)
+    if args.excavate[0] == "pattern_modules":
+        cli.module_summary(cli_target, args, system_user, system_passwd, reporting_dir)
 
 if args.access_method=="api":
-    
-    ####### API Management #######
 
     if args.sysadmin == "api_version":
         api.admin(disco, args, reporting_dir)
@@ -594,54 +608,57 @@ if args.access_method=="api":
     if args.excavate[0] == "eca_errors":
         api.eca_errors(search, args, reporting_dir)
 
-    ###########################################
+    if args.excavate[0] == "open_ports":
+        api.open_ports(search, args, reporting_dir)
 
-    if args.r_vault:
+    if args.excavate[0] == "host_utilisation":
+        api.host_util(search, args, reporting_dir)
+
+    if args.excavate[0] == "orphan_vms":
+        api.orphan_vms(search, args, reporting_dir)
+
+    if args.excavate[0] == "missing_vms":
+        api.missing_vms(search, args, reporting_dir)
+    
+    if args.excavate[0] == "near_removal":
+        api.near_removal(search, args, reporting_dir)
+    
+    if args.excavate[0] == "removed":
+        api.removed(search, args, reporting_dir)
+    
+    if args.excavate[0] == "os_lifecycle":
+        api.oslc(search, args, reporting_dir)
+    
+    if args.excavate[0] == "software_lifecycle":
+        api.slc(search, args, reporting_dir)
+    
+    if args.excavate[0] == "db_lifecycle":
+        api.dblc(search, args, reporting_dir)
+    
+    if args.excavate[0] == "unrecogised_snmp":
+        api.snmp(search, args, reporting_dir)
+        
+    if args.excavate[0] == "installed_agents":
+        api.agents(search, args, reporting_dir)
+    
+    if args.excavate[0] == "si_user_accounts":
+        api.software_users(search, args, reporting_dir)
+    
+    if args.excavate[0] == "pattern_modules":
+        #TODO: This report has been overlooked
+        api.tku(knowledge,args, reporting_dir)
+
+    if args.excavate[0] == "tku":
+        api.tku(knowledge,args, reporting_dir)
+
+    if args.excavate[0] == "vault":
         api.vault(vault, args, reporting_dir)
-
-    ####### API Reporting ########
-
-    if args.r_hostname:
-        api.hostname(args.appliance,reporting_dir)
-
-    if args.r_tku:
-        api.tku(knowledge,reporting_dir)
+    
+    if args.excavate[0] == "hostname":
+        api.hostname(args, reporting_dir)
     
     if args.r_schedules:
         api.schedules(search, reporting_dir, args.target)
-
-    if args.r_open_ports:
-        api.open_ports(search, reporting_dir, args.target)
-
-    if args.r_host_util:
-        api.host_util(search, reporting_dir, args.target)
-
-    if args.r_orphan_vms:
-        api.orphan_vms(search, reporting_dir, args.target)
-
-    if args.r_missing_vms:
-        api.missing_vms(search, reporting_dir, args.target)
-    
-    if args.r_near_removal:
-        api.near_removal(search, reporting_dir, args.target)
-
-    if args.r_removed:
-        api.removed(search, reporting_dir, args.target)
-
-    if args.r_oslc:
-        api.oslc(search, reporting_dir, args.target)
-
-    if args.r_slc:
-        api.slc(search, reporting_dir, args.target)
-
-    if args.r_dblc:
-        api.dblc(search, reporting_dir, args.target)
-
-    if args.r_agents:
-        api.agents(search, reporting_dir, args.target)
-
-    if args.r_software_users:
-        api.software_users(search, reporting_dir, args.target)
 
 if cli_target:
     cli_target.close()

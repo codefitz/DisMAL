@@ -1,4 +1,4 @@
-# Curl Functions for FuseMB
+# Curl Functions for DisMAL
 
 import subprocess
 import logging

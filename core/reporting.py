@@ -27,9 +27,9 @@ def successful(creds, search, args):
     devinfosux = {}
     credfail_results = {}
 
-    credsux_results = api.search_results(search,queries.s_credential_success)
-    devinfosux = api.search_results(search,queries.s_deviceinfo_success)
-    credfail_results = api.search_results(search,queries.s_credential_failure)
+    credsux_results = api.search_results(search,queries.credential_success)
+    devinfosux = api.search_results(search,queries.deviceinfo_success)
+    credfail_results = api.search_results(search,queries.credential_failure)
 
     data = []
     headers = []
@@ -43,8 +43,8 @@ def successful(creds, search, args):
     failCreds = tools.session_get(credfail_results)
 
     # Include Scan Ranges and Excludes
-    scan_ranges = api.get_json(search.search(queries.s_scanrange,format="object",limit=500))
-    excludes = api.get_json(search.search(queries.s_excludes,format="object",limit=500))
+    scan_ranges = api.get_json(search.search(queries.scanrange,format="object",limit=500))
+    excludes = api.get_json(search.search(queries.excludes,format="object",limit=500))
 
     timer_count = 0
     for cred in vaultcreds:
@@ -189,9 +189,9 @@ def successful_cli(client, args, sysuser, passwd, reporting_dir):
         failure = 0
         sessions = 0
         devinfos = 0
-        credsux = access.remote_cmd('tw_query -u %s -p %s --csv %s'%(sysuser,passwd,queries.s_credential_success),client)
-        devinfosux = access.remote_cmd('tw_query -u %s -p %s --csv %s'%(sysuser,passwd,queries.s_deviceinfo_success),client)
-        credfail = access.remote_cmd('tw_query -u %s -p %s --csv %s'%(sysuser,passwd,queries.s_credential_failure),client)
+        credsux = access.remote_cmd('tw_query -u %s -p %s --csv %s'%(sysuser,passwd,queries.credential_success),client)
+        devinfosux = access.remote_cmd('tw_query -u %s -p %s --csv %s'%(sysuser,passwd,queries.deviceinfo_success),client)
+        credfail = access.remote_cmd('tw_query -u %s -p %s --csv %s'%(sysuser,passwd,queries.credential_failure),client)
         for line in devinfosux.split("\n"):
             if uuid in line:
                 msg = "Successful UUID found in line: %s\n"%line
@@ -246,7 +246,7 @@ def devices(twsearch, twcreds, args):
 
     ### list of unique identities
     identities = builder.unique_identities(twsearch)
-    results = api.search_results(twsearch,queries.s_deviceInfo)
+    results = api.search_results(twsearch,queries.deviceInfo)
 
     devices = []
 
@@ -571,7 +571,7 @@ def ipaddr(search, credentials, args):
 
     devResults = api.search_results(search,devices)
     accessResults = api.search_results(search,accesses)
-    dropped = api.search_results(search,queries.s_dropped_endpoints)
+    dropped = api.search_results(search,queries.dropped_endpoints)
 
     devices_found = []
     if len(devResults) == 1:
@@ -691,8 +691,8 @@ def discovery_access(twsearch, twcreds, args):
 
     ### list of unique identities
     identities = builder.unique_identities(twsearch)
-    discos = api.search_results(twsearch,queries.s_last_disco)
-    dropped = api.search_results(twsearch,queries.s_dropped_endpoints)
+    discos = api.search_results(twsearch,queries.last_disco)
+    dropped = api.search_results(twsearch,queries.dropped_endpoints)
 
     disco_data = []
     unique_endpoints = []
@@ -1028,8 +1028,8 @@ def discovery_analysis(twsearch, twcreds, args):
 
     ### list of unique identities
     identities = builder.unique_identities(twsearch)
-    discos = api.search_results(twsearch,queries.s_last_disco)
-    dropped = api.search_results(twsearch,queries.s_dropped_endpoints)
+    discos = api.search_results(twsearch,queries.last_disco)
+    dropped = api.search_results(twsearch,queries.dropped_endpoints)
 
     disco_data = []
     unique_endpoints = []

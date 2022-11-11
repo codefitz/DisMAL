@@ -1,18 +1,18 @@
 # Discovery API queries for DisMAL
 
-s_credential_success = """
+credential_success = """
                             search SessionResult where success
                             show (slave or credential) as 'UUID',
                             session_type as 'Session_Type'
                             processwith countUnique(1,0)
                         """
-s_credential_failure = """
+credential_failure = """
                             search SessionResult where not success
                             show (slave or credential) as 'UUID',
                             session_type as 'Session_Type'
                             processwith countUnique(1,0)
                         """
-s_deviceinfo_success = """
+deviceinfo_success = """
                           search DeviceInfo where method_success and __had_inference
                           and nodecount(traverse DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess
                                             traverse DiscoveryAccess:Metadata:Detail:SessionResult) = 0
@@ -20,7 +20,7 @@ s_deviceinfo_success = """
                           access_method as 'Session_Type'
                           process with countUnique(1,0)
                        """
-s_deviceInfo = {"query":
+deviceInfo = {"query":
                         """
                             search DeviceInfo
                             ORDER BY hostname
@@ -58,7 +58,7 @@ s_deviceInfo = {"query":
                             process with unique()
                         """
                 }
-s_da_ip_lookup = {
+da_ip_lookup = {
                     "query":
                             """
                                 search DiscoveryAccess
@@ -93,7 +93,7 @@ s_da_ip_lookup = {
                                 #::InferredElement:.#DeviceWithInterface:DeviceInterface:InterfaceOfDevice:NetworkInterface.ip_addr as 'NIC_IPs'
                             """
                 }
-s_excludes = {"""
+excludes = {"""
                         search in '_System' ExcludeRange
                         show
                         exrange_id as 'ID',
@@ -101,7 +101,7 @@ s_excludes = {"""
                         range_strings as 'Scan_Range',
                         recurrenceDescription(schedule) as 'Date_Rules'
                     """}
-s_scanrange = {
+scanrange = {
                 "query":
                 """
                 search ScanRange where scan_type = 'Scheduled'
@@ -113,7 +113,7 @@ s_scanrange = {
                 recurrenceDescription(schedule) as 'Date_Rules'
                 """
                }
-s_last_disco = {
+last_disco = {
             "query":"""
                     search DiscoveryAccess where endtime
                     show
@@ -164,12 +164,12 @@ s_last_disco = {
                     #::InferredElement:.#DeviceWithInterface:DeviceInterface:InterfaceOfDevice:NetworkInterface.ip_addr as 'NIC_IPs'
 """
 }
-s_ip_schedules = """search DiscoveryAccess
+ip_schedules = """search DiscoveryAccess
                     show endpoint,
                     nodecount(traverse Member:List:List:DiscoveryRun where scan_type = 'Scheduled') as 'schedules'
                     process with unique()"""
 
-s_dropped_endpoints = """
+dropped_endpoints = """
                     search DroppedEndpoints
                     show explode endpoints as 'Endpoint',
                     reason as 'Reason_Not_Updated',
@@ -180,7 +180,7 @@ s_dropped_endpoints = """
                     #EndpointRange:EndpointRange:DiscoveryRun:DiscoveryRun.label as "Run"
                 """
 
-hc_sensitive_data = """
+sensitive_data = """
                         search DiscoveredProcess
                         where ((args has subword 'user' or args has substring 'username')
                             and (args has subword 'pass' or args has substring 'password'))
@@ -197,7 +197,7 @@ hc_sensitive_data = """
                         extract(args, regex '(?i)(password.*?\\S+|\\s-p.*?\\S+)', raw '\\1') as 'Matched Password String'
                     """
 
-hc_tpl_export = """
+tpl_export = """
                     search KnowledgeUpload
                     where not origin = 'TKU'
                     traverse Upload:UploadContents:UploadItem:PatternModule
@@ -206,7 +206,7 @@ hc_tpl_export = """
                     content
                 """
 
-hc_eca_error = """
+eca_error = """
                     search ECAError
                     show
                     summary,
@@ -216,7 +216,7 @@ hc_eca_error = """
                     #:::DiscoveryAccess.starttime as 'Discovery Start Time'
                """
 
-hc_scan_ranges = """
+scan_ranges = """
                     search ScanRange
                     where not scan_type = 'Snapshot'
                     show
@@ -229,7 +229,7 @@ hc_scan_ranges = """
                     enabled as 'enabled'
                  """
 
-hc_exclude_ranges = """
+exclude_ranges = """
                         search in '_System' ExcludeRange
                         show
                         name as 'Label',
@@ -239,7 +239,7 @@ hc_exclude_ranges = """
                         fullFoundationName(created_by) as 'User'
                     """
 
-hc_id_change = """
+id_change = """
                     search flags(find_relationships) EndpointIdentity
                     order by endpoint, creationTime(#) desc
                     show
@@ -253,7 +253,7 @@ hc_id_change = """
                     kind(#:Next:.#) as 'Next Kind'
                """
 
-hc_open_ports = """
+open_ports = """
                     search DiscoveredListeningPort
                     with
                     ((local_port  = 161) and 'SNMP'
@@ -275,7 +275,7 @@ hc_open_ports = """
                     @openports as 'Default Service Port Open'
                     process with countUnique(0)
                 """
-hc_host_utilisation = """
+host_utilisation = """
                         search Host where type <> 'Hypervisor'
                         show
                         hostname,
@@ -290,7 +290,7 @@ hc_host_utilisation = """
                         nodecount(traverse :::DiscoveryAccess where _last_marker traverse :::ServiceList traverse :::DiscoveredService where state = 'RUNNING') as 'Running Services (Windows)'
                       """
 
-hc_orphan_vms = """
+orphan_vms = """
                     search Host
                     where virtual
                     and nodecount(traverse ContainedHost:HostContainment:HostContainer:VirtualMachine) = 0
@@ -306,7 +306,7 @@ hc_orphan_vms = """
                     vm_class
                 """
 
-hc_audit = """
+audit = """
             search in 'Audit' UserEventAuditRecord
             where not (user matches '^\[\w+\]$')
             show
@@ -318,7 +318,7 @@ hc_audit = """
             ip_addr as 'Ip Addr'
            """
 
-hc_near_removal = """
+near_removal = """
                     search flags(no_segment) Host, StorageSystem, Printer
                     with value(getOption('MIN_FAILED_ACCESSES_BEFORE_DESTROY') + age_count) as scans,
                     value(abs(last_update_success) / 10000000) as lus,
@@ -340,7 +340,7 @@ hc_near_removal = """
                     or 'Next unsuccessful scan') as 'Removal Eligibility'
                   """
 
-hc_removed = """
+removed = """
                 search flags(include_destroyed, exclude_current, no_segment) Host, Printer, StorageSystem
                 with kind(#Previous:::.#) as pk,
                 value(#Previous:EndpointIdentity:Next:.name) as ph,
@@ -361,7 +361,7 @@ hc_removed = """
                 time(destructionTime(#)) as 'Destroyed When'
              """
 
-hc_os_lifecycle = """
+os_lifecycle = """
                     search Host
                     where #ElementWithDetail:SupportDetail:OSDetail:SupportDetail.retirement_date
                         or #ElementWithDetail:SupportDetail:OSDetail:SupportDetail.end_support_date
@@ -400,7 +400,7 @@ hc_os_lifecycle = """
                     taxonomy 'summary_no_name'
                   """
 
-hc_software_lifecycle = """
+software_lifecycle = """
                             search SoftwareInstance
                             where
                             #ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.retirement_date
@@ -442,7 +442,7 @@ hc_software_lifecycle = """
                             #:HostedSoftware:Host:Host.name as 'Host'
                         """
 
-hc_db_lifecycle = """
+db_lifecycle = """
                     search Pattern
                     where
                     'Relational Database Management Systems' in categories
@@ -486,7 +486,7 @@ hc_db_lifecycle = """
                     #:HostedSoftware:Host:Host.name as 'Host'
                 """
 
-hc_license = """
+licenses = """
                 search Host
                 where not (host_type has subword 'desktop' or host_type has subword 'client')
                 show
@@ -497,7 +497,7 @@ hc_license = """
                 processwith unique(0)
              """
 
-hc_snmp_devices = """
+snmp_devices = """
                     search DiscoveryAccess where
                     _last_marker defined
                     and endtime defined
@@ -515,7 +515,7 @@ hc_snmp_devices = """
                     process with countUnique()
                   """
 
-hc_missing_vms = """
+missing_vms = """
                     search VirtualMachine
                     where nodecount(traverse HostContainer:HostContainment:ContainedHost:) = 0
                     show
@@ -527,7 +527,7 @@ hc_missing_vms = """
                     (vm_status or cloud and "Cloud Hosted") as 'Status'
                 """
 
-hc_agents = """
+agents = """
                 search Host
                 with
                 nodecount(traverse Host:HostedSoftware::SoftwareInstance where type = 'Microsoft System Center Configuration Manager Client') as SCCM,
@@ -557,7 +557,7 @@ hc_agents = """
                 (@Symantec and 'Yes' or '-') as 'Symantec'
             """
 
-hc_user_accounts = """
+user_accounts = """
                         search SoftwareInstance
                         show
                         name as "Software_Instance",
@@ -571,7 +571,7 @@ cmdb_sync_config = """
                         SEARCH IN '_System' CMDBSyncConfig
                    """
 
-pm_summary =    """
+patterns =    """
                     search PatternModule
                     show origin as 'Origin',
                     tree_path as 'Tree_Path',

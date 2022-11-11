@@ -245,7 +245,7 @@ def syslog(client,args,passwd,dir):
     output.define_txt(args,status,dir+defaults.syslog_filename,None)
 
 def audit(client,args,user,passwd,dir):
-    result = run_query(client,user,passwd,queries.hc_audit)
+    result = run_query(client,user,passwd,queries.audit)
     output.define_csv(args,None,result,dir+defaults.audit_filename,args.output_file,args.target,"csv")
 
 def baseline(client,args,dir):
@@ -272,7 +272,7 @@ def cmdb_sync(client,args,user,passwd,dir):
     logger.debug("CMDB Sync:\n%s"%result)
     output.define_txt(args,result,dir+defaults.cmdbsync_filename,None)
 
-def tw_events(client,args,user,passwd,instance_dir):
+def tw_events(client,args,user,passwd,dir):
     cmd = '%s -u %s -p %s --list'%(defaults.tw_events_cmd,user,passwd)
     logger.info("Running %s"%cmd)
     result = access.remote_cmd(cmd,client)
@@ -301,7 +301,7 @@ def licensing(client,args,user,passwd,dir):
     result = access.remote_cmd('%s -u %s -p %s'%(cmd,user,passwd),client)
     logger.debug("Licenses:\n%s"%result)
     if not result:
-        result = run_query(client,user,passwd,queries.hc_license)
+        result = run_query(client,user,passwd,queries.licenses)
         output.define_csv(args,None,result,dir+defaults.tw_license_csv_filename,args.output_file,args.target,"csv")
     else:
         output.define_txt(args,result,dir+defaults.tw_license_raw_filename,None)
@@ -314,74 +314,74 @@ def tw_list_users(client,args,dir):
     output.define_txt(args,result,dir+defaults.tw_listusers_filename,None)
 
 def schedules(client,args,user,passwd,dir):
-    result = run_query(client,user,passwd,queries.hc_scan_ranges)
+    result = run_query(client,user,passwd,queries.scan_ranges)
     output.define_csv(args,None,result,dir+defaults.scan_ranges_filename,args.output_file,args.target,"csv")
 
 def excludes(client,args,user,passwd,dir):
-    result = run_query(client,user,passwd,queries.hc_exclude_ranges)
+    result = run_query(client,user,passwd,queries.exclude_ranges)
     output.define_csv(args,None,result,dir+defaults.exclude_ranges_filename,args.output_file,args.target,"csv")
 
 def sensitive(client,args,user,passwd,dir):
-    result = run_query(client,user,passwd,queries.hc_sensitive_data)
+    result = run_query(client,user,passwd,queries.sensitive_data)
     output.define_csv(args,None,result,dir+defaults.sensitive_data_filename,args.output_file,args.target,"csv")
 
 def tplexport(client,args,user,passwd,dir):
-    reporting.tpl_export(None, queries.hc_tpl_export, dir, "ssh", client, user, passwd)
+    reporting.tpl_export(None, queries.tpl_export, dir, "ssh", client, user, passwd)
 
 def eca_errors(client,args,user,passwd,dir):
-    result = run_query(client,user,passwd,queries.hc_eca_error)
+    result = run_query(client,user,passwd,queries.eca_error)
     output.define_csv(args,None,result,dir+defaults.eca_errors_filename,args.output_file,args.target,"csv")
 
 def open_ports(client,args,user,passwd,dir):
-    result = run_query(client,user,passwd,queries.hc_open_ports)
+    result = run_query(client,user,passwd,queries.open_ports)
     output.define_csv(args,None,result,dir+defaults.open_ports_filename,args.output_file,args.target,"csv")
 
 def host_util(client,args,user,passwd,dir):
-    result = run_query(client,user,passwd,queries.hc_host_utilisation)
+    result = run_query(client,user,passwd,queries.host_utilisation)
     output.define_csv(args,None,result,dir+defaults.host_util_filename,args.output_file,args.target,"csv")
 
 def orphan_vms(client,args,user,passwd,dir):
-    result = run_query(client,user,passwd,queries.hc_orphan_vms)
+    result = run_query(client,user,passwd,queries.orphan_vms)
     output.define_csv(args,None,result,dir+defaults.orphan_vms_filename,args.output_file,args.target,"csv")
 
 def missing_vms(client,args,user,passwd,dir):
-    result = run_query(client,user,passwd,queries.hc_missing_vms)
+    result = run_query(client,user,passwd,queries.missing_vms)
     output.define_csv(args,None,result,dir+defaults.mssing_vms_filename,args.output_file,args.target,"csv")
 
 def near_removal(client,args,user,passwd,dir):
-    result = run_query(client,user,passwd,queries.hc_near_removal)
+    result = run_query(client,user,passwd,queries.near_removal)
     output.define_csv(args,None,result,dir+defaults.near_removal_filename,args.output_file,args.target,"csv")
 
 def removed(client,args,user,passwd,dir):
-    result = run_query(client,user,passwd,queries.hc_removed)
+    result = run_query(client,user,passwd,queries.removed)
     output.define_csv(args,None,result,dir+defaults.removed_filename,args.output_file,args.target,"csv")
 
 def os_lifecycle(client,args,user,passwd,dir):
-    result = run_query(client,user,passwd,queries.hc_os_lifecycle)
+    result = run_query(client,user,passwd,queries.os_lifecycle)
     output.define_csv(args,None,result,dir+defaults.os_lifecycle_filename,args.output_file,args.target,"csv")
 
 def software_lifecycle(client,args,user,passwd,dir):
-    result = run_query(client,user,passwd,queries.hc_software_lifecycle)
+    result = run_query(client,user,passwd,queries.software_lifecycle)
     output.define_csv(args,None,result,dir+defaults.si_lifecycle_filename,args.output_file,args.target,"csv")
 
 def db_lifecycle(client,args,user,passwd,dir):
-    result = run_query(client,user,passwd,queries.hc_db_lifecycle)
+    result = run_query(client,user,passwd,queries.db_lifecycle)
     output.define_csv(args,None,result,dir+defaults.db_lifecycle_filename,args.output_file,args.target,"csv")
 
 def unrecognised_snmp(client,args,user,passwd,dir):
-    result = run_query(client,user,passwd,queries.hc_snmp_devices)
+    result = run_query(client,user,passwd,queries.snmp_devices)
     output.define_csv(args,None,result,dir+defaults.snmp_unrecognised_filename,args.output_file,args.target,"csv")
 
 def installed_agents(client,args,user,passwd,dir):
-    result = run_query(client,user,passwd,queries.hc_agents)
+    result = run_query(client,user,passwd,queries.agents)
     output.define_csv(args,None,result,dir+defaults.installed_agents_filename,args.output_file,args.target,"csv")
 
 def software_usernames(client,args,user,passwd,dir):
-    result = run_query(client,user,passwd,queries.hc_user_accounts)
+    result = run_query(client,user,passwd,queries.user_accounts)
     output.define_csv(args,None,result,dir+defaults.si_user_accounts_filename,args.output_file,args.target,"csv")
 
 def module_summary(client,args,user,passwd,dir):
-    result = run_query(client,user,passwd,queries.pm_summary)
+    result = run_query(client,user,passwd,queries.patterns)
     output.define_csv(args,None,result,dir+defaults.pattern_modules_filename,args.output_file,args.target,"csv")
 
 def user_management(client, args):

@@ -4,7 +4,7 @@
 #
 # For use with BMC Discovery
 #
-vers = "0.1.2"
+vers = "0.1.3"
 
 import argparse
 import datetime
@@ -292,7 +292,7 @@ if args.access_method == "all":
         api.success(creds, search, args, reporting_dir)
         builder.scheduling(creds, search, args)
         api.excludes(search, args, reporting_dir)
-        builder.overlapping(disco, args)
+        builder.overlapping(search, args)
         reporting.discovery_access(search, creds, args)
         reporting.discovery_analysis(search, creds, args)
         api.show_runs(disco, args)
@@ -311,7 +311,7 @@ if args.access_method == "all":
         api.dblc(search, args, reporting_dir)
         api.agents(search, args, reporting_dir)
         api.software_users(search, args, reporting_dir)
-        api.tku(knowledge,reporting_dir)
+        api.tku(knowledge, args, reporting_dir)
 
 if args.access_method=="cli":
 
@@ -587,7 +587,7 @@ if args.access_method=="api":
         api.excludes(search, args, reporting_dir)
 
     if args.excavate[0] == "overlapping_ips":
-        builder.overlapping(disco, args)
+        builder.overlapping(search, args)
 
     if args.excavate[0] == "discovery_access":
         reporting.discovery_access(search, creds, args)
@@ -649,7 +649,7 @@ if args.access_method=="api":
         api.tku(knowledge,args, reporting_dir)
 
     if args.excavate[0] == "tku":
-        api.tku(knowledge,args, reporting_dir)
+        api.tku(knowledge, args, reporting_dir)
 
     if args.excavate[0] == "vault":
         api.vault(vault, args, reporting_dir)

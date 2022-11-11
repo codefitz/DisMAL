@@ -80,7 +80,7 @@ def admin(disco,args,dir):
     output.define_txt(args,json.dumps(result['versions']),dir+defaults.api_filename,None)
 
 def audit(search,args,dir):
-    output.define_csv(args,search,queries.hc_audit,dir+defaults.audit_filename,args.output_file,args.target,"query")
+    output.define_csv(args,search,queries.audit,dir+defaults.audit_filename,args.output_file,args.target,"query")
 
 def baseline(disco, args, dir):
     data = disco.baseline()
@@ -116,7 +116,7 @@ def cmdb_config(search, args, dir):
     output.define_csv(args,search,queries.cmdb_sync_config,dir+defaults.cmdbsync_filename,args.output_file,args.target,"query")
 
 def modules(search, args, dir):
-    output.define_csv(args,search,queries.pm_summary,dir+defaults.tw_knowledge_filename,args.output_file,args.target,"query")
+    output.define_csv(args,search,queries.patterns,dir+defaults.tw_knowledge_filename,args.output_file,args.target,"query")
 
 def licensing(disco, args, dir):
     try:
@@ -160,18 +160,19 @@ def query(disco, args):
         print(msg)
         logger.warning(msg)
 
-def success(twcreds,twsearch,args,instance_dir):
+def success(twcreds,twsearch,args,dir):
     reporting.successful(twcreds, twsearch, args)
-    df = pandas.read_csv(args.file)
-    df.insert(0, "Discovery Instance", args.target)
-    df.to_csv(instance_dir+"/credentials.csv", index=False)
-    os.remove(args.file)
+    #if args.output_file:
+    #    df = pandas.read_csv(args.output_file)
+    #    df.insert(0, "Discovery Instance", args.target)
+    #    df.to_csv(dir+defaults.success_filename, index=False)
+    #    os.remove(args.output_file)
 
 def schedules(search, args, dir):
-    output.define_csv(args,search,queries.hc_scan_ranges,dir+defaults.scan_ranges_filename,args.output_file,args.target,"query")
+    output.define_csv(args,search,queries.scan_ranges,dir+defaults.scan_ranges_filename,args.output_file,args.target,"query")
 
 def excludes(search, args, dir):
-    output.define_csv(args,search,queries.hc_exclude_ranges,dir+defaults.exclude_ranges_filename,args.output_file,args.target,"query")
+    output.define_csv(args,search,queries.exclude_ranges,dir+defaults.exclude_ranges_filename,args.output_file,args.target,"query")
 
 def discovery_runs(disco, args, dir):
     logger.info("Checking Scan ranges...")
@@ -229,49 +230,49 @@ def show_runs(disco, args):
         logger.error(msg)
 
 def sensitive(search, args, dir):
-    output.define_csv(args,search,queries.hc_sensitive_data,dir+defaults.sensitive_data_filename,args.output_file,args.target,"query")
+    output.define_csv(args,search,queries.sensitive_data,dir+defaults.sensitive_data_filename,args.output_file,args.target,"query")
 
 def tpl_export(search, args, dir):
-    reporting.tpl_export(search, queries.hc_tpl_export, dir, "api", None, None)
+    reporting.tpl_export(search, queries.tpl_export, dir, "api", None, None, None)
 
 def eca_errors(search, args, dir):
-    output.define_csv(args,search,queries.hc_eca_error,dir+defaults.eca_errors_filename,args.output_file,args.target,"query")
+    output.define_csv(args,search,queries.eca_error,dir+defaults.eca_errors_filename,args.output_file,args.target,"query")
 
 def open_ports(search, args, dir):
-    output.define_csv(args,search,queries.hc_open_ports,dir+defaults.open_ports_filename,args.output_file,args.target,"query")
+    output.define_csv(args,search,queries.open_ports,dir+defaults.open_ports_filename,args.output_file,args.target,"query")
 
 def host_util(search, args, dir):
-    output.define_csv(args,search,queries.hc_host_utilisation,dir+defaults.host_util_filename,args.output_file,args.target,"query")
+    output.define_csv(args,search,queries.host_utilisation,dir+defaults.host_util_filename,args.output_file,args.target,"query")
 
 def orphan_vms(search, args, dir):
-    output.define_csv(args,search,queries.hc_orphan_vms,dir+defaults.orphan_vms_filename,args.output_file,args.target,"query")
+    output.define_csv(args,search,queries.orphan_vms,dir+defaults.orphan_vms_filename,args.output_file,args.target,"query")
 
 def missing_vms(search, args, dir):
-    output.define_csv(args,search,queries.hc_missing_vms,dir+defaults.mssing_vms_filename,args.output_file,args.target,"query")
+    output.define_csv(args,search,queries.missing_vms,dir+defaults.mssing_vms_filename,args.output_file,args.target,"query")
 
 def near_removal(search, args, dir):
-    output.define_csv(args,search,queries.hc_near_removal,dir+defaults.near_removal_filename,args.output_file,args.target,"query")
+    output.define_csv(args,search,queries.near_removal,dir+defaults.near_removal_filename,args.output_file,args.target,"query")
 
 def removed(search, args, dir):
-    output.define_csv(args,search,queries.hc_removed,dir+defaults.removed_filename,args.output_file,args.target,"query")
+    output.define_csv(args,search,queries.removed,dir+defaults.removed_filename,args.output_file,args.target,"query")
 
 def oslc(search, args, dir):
-    output.define_csv(args,search,queries.hc_os_lifecycle,dir+defaults.os_lifecycle_filename,args.output_file,args.target,"query")
+    output.define_csv(args,search,queries.os_lifecycle,dir+defaults.os_lifecycle_filename,args.output_file,args.target,"query")
 
 def slc(search, args, dir):
-    output.define_csv(args,search,queries.hc_software_lifecycle,dir+defaults.si_lifecycle_filename,args.output_file,args.target,"query")
+    output.define_csv(args,search,queries.software_lifecycle,dir+defaults.si_lifecycle_filename,args.output_file,args.target,"query")
 
 def dblc(search, args, dir):
-    output.define_csv(args,search,queries.hc_db_lifecycle,dir+defaults.db_lifecycle_filename,args.output_file,args.target,"query")
+    output.define_csv(args,search,queries.db_lifecycle,dir+defaults.db_lifecycle_filename,args.output_file,args.target,"query")
 
 def snmp(search, args, dir):
-    output.define_csv(args,search,queries.hc_snmp_devices,dir+defaults.snmp_unrecognised_filename,args.output_file,args.target,"query")
+    output.define_csv(args,search,queries.snmp_devices,dir+defaults.snmp_unrecognised_filename,args.output_file,args.target,"query")
 
 def agents(search, args, dir):
-    output.define_csv(args,search,queries.hc_agents,dir+defaults.installed_agents_filename,args.output_file,args.target,"query")
+    output.define_csv(args,search,queries.agents,dir+defaults.installed_agents_filename,args.output_file,args.target,"query")
 
 def software_users(search, args, dir):
-    output.define_csv(args,search,queries.hc_user_accounts,dir+defaults.si_user_accounts_filename,args.output_file,args.target,"query")
+    output.define_csv(args,search,queries.user_accounts,dir+defaults.si_user_accounts_filename,args.output_file,args.target,"query")
 
 def tku(knowledge, args, dir):
     logger.info("Checking Knowledge...")

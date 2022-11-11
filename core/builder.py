@@ -137,9 +137,9 @@ def get_credential(twsearch, twcreds, args):
 
     return found
 
-def ordering(appliance, search, args, apply):
+def ordering(creds, search, args, apply):
 
-    credlist = api.get_json(appliance.get_vault_credentials())
+    credlist = api.get_json(creds.get_vault_credentials)
     msg = "Analysing current credential order...\n"
     print(msg)
     logger.info(msg)
@@ -150,10 +150,10 @@ def ordering(appliance, search, args, apply):
         weighting = 100
         label = cred.get('label')
         index = cred.get('index')
-        if not args.weigh:
-            msg = '%s) %s' % (index, label)
-            print(msg)
-            logger.info(msg)
+        #if not args.weigh:
+        #    msg = '%s) %s' % (index, label)
+        #    print(msg)
+        #    logger.info(msg)
         
         # Weightings
 
@@ -264,7 +264,7 @@ def ordering(appliance, search, args, apply):
         for weighted_cred in weighted:
             logger.debug("Updating: %s"%(weighted_cred))
             headers =  [ "New Index", "Credential" ]
-            appliance.update_cred(weighted_cred.get('uuid'),{"index":weighted_cred.get('index')})
+            creds.update_cred(weighted_cred.get('uuid'),{"index":weighted_cred.get('index')})
     else:
         headers = [ "Credential", "Current Index", "Weighting", "New Index" ]
         for cred in credlist:
@@ -280,7 +280,7 @@ def ordering(appliance, search, args, apply):
                     data.append([label, index, weight, new_index])
 
     # Refresh
-    credlist = api.get_json(appliance.get_vault_credentials())
+    credlist = api.get_json(creds.get_vault_credentials)
     msg = "New Credential Order:\n"
     print(msg)
     logger.info(msg)
@@ -407,6 +407,7 @@ def scheduling(vault, search, args):
     print("\nScheduled Runs with Credentials")
     print("-------------------------------")
     logger.info("Running Schedules Report...")
+    msg = None
 
     vaultcreds = api.get_json(vault.get_vault_credentials)
 
@@ -425,7 +426,7 @@ def scheduling(vault, search, args):
         credential_ips.append([uuid,list_of_ips,label])
     print(os.linesep,end="\r")
 
-    excludes = search.search(queries.s_excludes,format="object")
+    excludes = search.search(queries.excludes,format="object")
 
     # Build the results
 
@@ -469,7 +470,7 @@ def scheduling(vault, search, args):
     if timer_count > 0:
         print(os.linesep,end="\r")
     
-    scan_ranges = api.get_json(search.search(queries.s_scanrange,format="object"))
+    scan_ranges = api.get_json(search.search(queries.scanrange,format="object"))
 
     # Build the results
 
@@ -526,8 +527,8 @@ def unique_identities(search):
 
     logger.info("Running: Unique Identities report...")
 
-    devices = api.search_results(search,queries.s_deviceInfo)
-    da_results = api.search_results(search,queries.s_da_ip_lookup)
+    devices = api.search_results(search,queries.deviceInfo)
+    da_results = api.search_results(search,queries.da_ip_lookup)
 
     ### list of unique endpoints
     unique_endpoints = []
@@ -633,7 +634,7 @@ def overlapping(tw_search, args):
     print("---------------------------")
     logger.info("Running: Overlapping Report...")
 
-    scan_ranges = api.get_json(tw_search.search(queries.s_scanrange,format="object"))
+    scan_ranges = api.get_json(tw_search.search(queries.scanrange,format="object"))
 
     # Build the results
 
@@ -642,6 +643,7 @@ def overlapping(tw_search, args):
     range_ips = []
     full_range = []
     scheduled_ip_list = []
+    matched_runs = []
 
     timer_count = 0
     for result in results.get('results'):
@@ -685,7 +687,7 @@ def overlapping(tw_search, args):
         matched_runs = tools.sortdic(runs)
         logger.debug("Matched Runs: %s"%(matched_runs))
 
-    excludes = api.get_json(tw_search.search(queries.s_excludes,format="object"))
+    excludes = api.get_json(tw_search.search(queries.excludes,format="object"))
     e = excludes[0]
     for result in e.get('results'):
         r = result['Scan_Range'][0]
@@ -698,7 +700,7 @@ def overlapping(tw_search, args):
 
     # Check for missing IPs
     missing_ips = []
-    ip_schedules = api.search_results(tw_search,queries.s_ip_schedules)
+    ip_schedules = api.search_results(tw_search,queries.ip_schedules)
     for ip_sched in ip_schedules:
         endpoint = tools.getr(ip_sched,'endpoint')
         if endpoint not in scheduled_ip_list:

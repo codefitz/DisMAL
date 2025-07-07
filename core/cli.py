@@ -33,7 +33,7 @@ def certificates(client,args,dir):
     output.define_txt(args,result,dir+defaults.tls_certificates_filename,None)
 
 def etc_passwd(client,args,dir):
-    cmd = defaults.ect_passwd_cmd
+    cmd = defaults.etc_passwd_cmd
     logger.info("Running %s"%cmd)
     result = access.remote_cmd(cmd,client)
     logger.debug("/etc/passwd:\n%s"%result)
@@ -346,7 +346,7 @@ def orphan_vms(client,args,user,passwd,dir):
 
 def missing_vms(client,args,user,passwd,dir):
     result = run_query(client,user,passwd,queries.missing_vms)
-    output.define_csv(args,None,result,dir+defaults.mssing_vms_filename,args.output_file,args.target,"csv")
+    output.define_csv(args,None,result,dir+defaults.missing_vms_filename,args.output_file,args.target,"csv")
 
 def near_removal(client,args,user,passwd,dir):
     result = run_query(client,user,passwd,queries.near_removal)

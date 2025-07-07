@@ -73,7 +73,7 @@ def save2csv(clidata, filename, appliance):
                 try:
                     columns = [c.strip() for c in line.split(',')]
                     columns.insert(0, appliance)
-                    data.append( tools.dequote(columns) )
+                    data.append([tools.dequote(c) for c in columns])
                 except Exception as e:
                     logger.error("Problem writing line to CSV:\n%s\n%s\n%s"%(line,e.__class__,str(e)))
                     # Try dumping it instead

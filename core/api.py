@@ -248,7 +248,7 @@ def orphan_vms(search, args, dir):
     output.define_csv(args,search,queries.orphan_vms,dir+defaults.orphan_vms_filename,args.output_file,args.target,"query")
 
 def missing_vms(search, args, dir):
-    output.define_csv(args,search,queries.missing_vms,dir+defaults.mssing_vms_filename,args.output_file,args.target,"query")
+    output.define_csv(args,search,queries.missing_vms,dir+defaults.missing_vms_filename,args.output_file,args.target,"query")
 
 def near_removal(search, args, dir):
     output.define_csv(args,search,queries.near_removal,dir+defaults.near_removal_filename,args.output_file,args.target,"query")

@@ -154,3 +154,4 @@ cython_debug/
 # Outputs/testing
 *.token
 *.csv
+.DS_Store

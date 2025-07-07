@@ -540,7 +540,7 @@ if args.access_method=="api":
     if args.f_remlist:
         exists = os.path.isfile(args.f_remlist)
         if exists:
-            with open(args.remlist) as f:
+            with open(args.f_remlist) as f:
                 for line in f:
                     success = api.remove_cred(creds, line.strip())
                     if success:

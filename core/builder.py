@@ -738,7 +738,7 @@ def get_scans(results, list_of_ranges):
         msg = "Result: %s" % result
         logger.debug(msg)
         ranges = result.get('Scan_Range')
-        if ranges and ranges is list:
+        if ranges and isinstance(ranges, list):
             for scan_range in ranges:
                 msg = "Scan Range: %s" % scan_range
                 logger.debug(msg)

@@ -144,6 +144,12 @@ def ordering(creds, search, args, apply):
     print(msg)
     logger.info(msg)
 
+    if not credlist:
+        msg = "Credential list could not be retrieved."
+        print(msg)
+        logger.error(msg)
+        return
+
     cred_weighting = []
     
     for cred in credlist:

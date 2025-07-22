@@ -134,12 +134,13 @@ def licensing(disco, args, dir):
             if chunk:  # filter out keep-alive new chunks
                 handle.write(chunk)
 
-def query(disco, args):
+def query(search, args):
+    """Run an ad-hoc query against the search endpoint."""
     results = []
     try:
-        results = disco.search_bulk(args.a_query,limit=500)
+        results = search.search_bulk(args.a_query, limit=500)
     except Exception as e:
-        msg = "Not able to make api call.\nQuery: %s\nException: %s" %(args.a_query,e.__class__)
+        msg = "Not able to make api call.\nQuery: %s\nException: %s" % (args.a_query, e.__class__)
         print(msg)
         logger.error(msg)
     if len(results) > 0:

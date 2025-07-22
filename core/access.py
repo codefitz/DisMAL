@@ -111,7 +111,7 @@ def login_target(client, args):
     else:
         msg = "System user auth not checked."
         print(msg)
-        logger.warn(msg)
+        logger.warning(msg)
 
     return system_user, syspass
 

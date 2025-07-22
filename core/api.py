@@ -249,24 +249,22 @@ def show_runs(disco, args):
         print(msg)
         logger.error(msg)
         return
-
-    processed = []
+    parsed_runs = []
     headers = []
     for run in runs:
         disco_run = {}
         for key in run:
             disco_run.update({key: run[key]})
             headers.append(key)
-        processed.append(disco_run)
-
+        parsed_runs.append(disco_run)
     headers = tools.sortlist(headers)
     run_csvs = []
-    for run in processed:
+    for run in parsed_runs:
         run_csv = []
         for header in headers:
-            run_csv.append(run.get(header))
+            value = run.get(header)
+            run_csv.append(value)
         run_csvs.append(run_csv)
-
     run_csvs.insert(0, headers)
     if args.export:
         w = csv.writer(sys.stdout)

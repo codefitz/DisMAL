@@ -48,12 +48,11 @@ def test_search_results_fallback():
 
 
 def test_show_runs_handles_bad_response(capsys):
-    resp = DummyResponse(401, reason="Unauthorized")
+    resp = DummyResponse(401, 'not-json', reason="Unauthorized")
     disco = DummyDisco(resp)
     args = types.SimpleNamespace(export=False, file=None)
 
-    # Should not raise even though the response is 401/invalid
     show_runs(disco, args)
 
-    out, _ = capsys.readouterr()
-    assert "No runs in progress" in out
+    captured = capsys.readouterr()
+    assert "No runs in progress." in captured.out

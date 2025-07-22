@@ -17,35 +17,45 @@ logger = logging.getLogger("_api_")
 
 def init_endpoints(api_target, args):
     try:
+        logger.debug("Requesting discovery endpoint from %s", args.target)
         disco = api_target.discovery()
+        logger.debug("Discovery endpoint obtained: %s", disco)
     except:
         msg = "Error getting Discovery endpoint from %s\n" % (args.target)
         print(msg)
         logger.error(msg)
         sys.exit(1)
     try:
+        logger.debug("Requesting data endpoint from %s", args.target)
         search = api_target.data()
+        logger.debug("Data endpoint obtained: %s", search)
     except:
         msg = "Error getting Data endpoint from %s\n" % (args.target)
         print(msg)
         logger.error(msg)
         sys.exit(1)
     try:
+        logger.debug("Requesting credentials endpoint from %s", args.target)
         creds = api_target.credentials()
+        logger.debug("Credentials endpoint obtained: %s", creds)
     except:
         msg = "Error getting Credentials endpoint from %s\n" % (args.target)
         print(msg)
         logger.error(msg)
         sys.exit(1)
     try:
+        logger.debug("Requesting vault endpoint from %s", args.target)
         vault = api_target.vault()
+        logger.debug("Vault endpoint obtained: %s", vault)
     except:
         msg = "Error getting Vault endpoint from %s\n" % (args.target)
         print(msg)
         logger.error(msg)
         sys.exit(1)
     try:
+        logger.debug("Requesting knowledge endpoint from %s", args.target)
         knowledge = api_target.knowledge()
+        logger.debug("Knowledge endpoint obtained: %s", knowledge)
     except:
         msg = "Error getting Knowledge endpoint from %s\n" % (args.target)
         print(msg)

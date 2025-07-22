@@ -710,6 +710,7 @@ def discovery_access(twsearch, twcreds, args):
 
     disco_data = []
     unique_endpoints = []
+    headers = []
 
     # Get a list of Unique IPs
     for result in discos:
@@ -1047,6 +1048,7 @@ def discovery_analysis(twsearch, twcreds, args):
 
     disco_data = []
     unique_endpoints = []
+    headers = []
 
     # Get a list of Unique IPs
     for result in discos:

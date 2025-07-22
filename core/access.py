@@ -14,6 +14,9 @@ logger = logging.getLogger("_access_")
 
 def api_version(tw):
     """Return (about, version) tuple or (None, None) on failure."""
+    host = getattr(tw, "host", getattr(tw, "url", "unknown"))
+    token_present = bool(getattr(tw, "token", None))
+    logger.debug("Calling tw.about() [host=%s, token_provided=%s]", host, token_present)
     try:
         about = tw.about()
     except Exception as e:  # pragma: no cover - network errors
@@ -193,6 +196,7 @@ def api_target(args):
         msg = "\nChecking for Discovery API on %s..." % target
         print(msg)
         logger.info(msg)
+        logger.debug("Creating appliance object for %s (token provided: %s)", target, bool(token))
         disco = tideway.appliance(target,token)
 
         try:
@@ -201,8 +205,19 @@ def api_target(args):
                 msg = "About: %s\n" % about.json()
                 logger.info(msg)
             if apiver:
+                logger.debug(
+                    "Creating appliance object for %s with api_version=%s (token provided: %s)",
+                    target,
+                    apiver,
+                    bool(token),
+                )
                 disco = tideway.appliance(target, token, api_version=apiver)
             else:
+                logger.debug(
+                    "Creating appliance object for %s with default API version (token provided: %s)",
+                    target,
+                    bool(token),
+                )
                 disco = tideway.appliance(target, token)
             msg = "API found on %s." % target
             logger.info(msg)
@@ -212,6 +227,11 @@ def api_target(args):
             logger.error(msg)
 
         if disco:
+            logger.debug(
+                "Calling disco.swagger() for %s (token provided: %s)",
+                target,
+                bool(token),
+            )
             swagger = disco.swagger()
             if swagger.ok:
                 msg = "Successful API call to %s" % swagger.url

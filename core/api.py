@@ -102,13 +102,26 @@ def get_json(api_endpoint):
             print(msg)
             logger.error(msg)
 
+    if logger.isEnabledFor(logging.DEBUG):
+        try:
+            logger.debug("API response text from %s:\n%s" % (url, api_endpoint.text))
+        except Exception:
+            pass
+
     try:
-        return api_endpoint.json()
+        data = api_endpoint.json()
     except Exception as e:  # pragma: no cover - unexpected JSON issues
         msg = "Error decoding JSON from %s: %s" % (url, str(e))
         print(msg)
         logger.error(msg)
         return {}
+    else:
+        if logger.isEnabledFor(logging.DEBUG):
+            try:
+                logger.debug("Decoded JSON from %s:\n%s" % (url, json.dumps(data, indent=2)))
+            except Exception:
+                pass
+        return data
 
 def admin(disco,args,dir):
     data = disco.admin()

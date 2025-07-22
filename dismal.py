@@ -50,7 +50,8 @@ outputs.add_argument('--null',          dest='output_null',  action='store_true'
 
 # Hidden Options
 parser.add_argument('-k', '--keep-awake',   dest='wakey', action='store_true', required=False, help=argparse.SUPPRESS)
-parser.add_argument('--debug',              dest='debugging',  action='store_true', required=False, help=argparse.SUPPRESS)
+parser.add_argument('--debug',              dest='debugging',  action='store_true', required=False,
+                    help='Enable debug logging including full API responses.\n\n')
 
 # CLI Appliance Management
 cli_management = parser.add_argument_group("CLI Appliance Management")
@@ -183,9 +184,10 @@ if args.target:
     if not os.path.exists(reporting_dir):
         os.makedirs(reporting_dir)
 
-logging.basicConfig(level=logging.INFO, filename=logfile, filemode='w',force=True)
+logging.basicConfig(level=logging.INFO, filename=logfile, filemode='w', force=True)
 logger = logging.getLogger("_dismal_")
 if args.debugging:
+    logging.getLogger().setLevel(logging.DEBUG)
     logger.setLevel(logging.DEBUG)
 
 logger.info("DisMAL Version %s"%vers)

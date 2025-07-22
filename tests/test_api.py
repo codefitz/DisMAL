@@ -28,7 +28,10 @@ class DummySearch:
 
 class DummyDisco:
     def __init__(self, response):
-        self.get_discovery_runs = response
+        self._response = response
+    @property
+    def get_discovery_runs(self):
+        return self._response
 
 def test_get_json_success():
     resp = DummyResponse(200, '{"a":1}')

@@ -112,6 +112,7 @@ administration.add_argument('--kill_run',           dest='a_kill_run', type=str,
 excavation = parser.add_argument_group("Excavation (Boosted Reports)")
 excavation.add_argument('--excavate', dest='excavate', type=str, required=False, help= '''
 Excavation reports - for automated beneficial reporting and deeper analysis.
+Providing no <report> or using "default" will run all options that do not require a value.
 \nOptions:
 "active_runs"               - List active Discovery Runs
 "credential_success"        - Report on credential success with total number of accesses, success %% and ranges
@@ -145,11 +146,18 @@ Excavation reports - for automated beneficial reporting and deeper analysis.
 "tku"                       - TKU version summary
 "unrecognised_snmp"         - Report of unrecognised SNMP devices (Model > Device)
 "vault"                     - Vault details
+"default"                   - Run all options that do not require a value
 \n
 ''',metavar='<report> [value]',nargs='*')
 
 global args
 args = parser.parse_args()
+
+# Detect if --excavate was provided with no report or with 'default'
+excavate_default = False
+if args.excavate is not None:
+    if len(args.excavate) == 0 or args.excavate[0] == "default":
+        excavate_default = True
 
 if args.version:
     print(vers)
@@ -412,61 +420,61 @@ if args.access_method=="cli":
     if args.sysadmin == "users":
         cli.tw_list_users(cli_target, args, reporting_dir)
 
-    if args.excavate and args.excavate[0] == "credential_success":
+    if excavate_default or (args.excavate and args.excavate[0] == "credential_success"):
         reporting.successful_cli(cli_target, args, system_user, system_passwd, reporting_dir)
 
-    if args.excavate and args.excavate[0] == "schedules":
+    if excavate_default or (args.excavate and args.excavate[0] == "schedules"):
         cli.schedules(cli_target, args, system_user, system_passwd, reporting_dir)
 
-    if args.excavate and args.excavate[0] == "excludes":
+    if excavate_default or (args.excavate and args.excavate[0] == "excludes"):
         cli.excludes(cli_target, args, system_user, system_passwd, reporting_dir)
 
-    if args.excavate and args.excavate[0] == "sensitive_data":
+    if excavate_default or (args.excavate and args.excavate[0] == "sensitive_data"):
         cli.sensitive(cli_target, args, system_user, system_passwd, reporting_dir)
 
-    if args.excavate and args.excavate[0] == "export_tpl":
+    if excavate_default or (args.excavate and args.excavate[0] == "export_tpl"):
         cli.tplexport(cli_target, args, system_user, system_passwd, reporting_dir)
 
-    if args.excavate and args.excavate[0] == "eca_errors":
+    if excavate_default or (args.excavate and args.excavate[0] == "eca_errors"):
         cli.eca_errors(cli_target, args, system_user, system_passwd, reporting_dir)
 
-    if args.excavate and args.excavate[0] == "open_ports":
+    if excavate_default or (args.excavate and args.excavate[0] == "open_ports"):
         cli.open_ports(cli_target, args, system_user, system_passwd, reporting_dir)
     
-    if args.excavate and args.excavate[0] == "host_utilisation":
+    if excavate_default or (args.excavate and args.excavate[0] == "host_utilisation"):
         cli.host_util(cli_target, args, system_user, system_passwd, reporting_dir)
 
-    if args.excavate and args.excavate[0] == "orphan_vms":
+    if excavate_default or (args.excavate and args.excavate[0] == "orphan_vms"):
         cli.orphan_vms(cli_target, args, system_user, system_passwd, reporting_dir)
 
-    if args.excavate and args.excavate[0] == "missing_vms":
+    if excavate_default or (args.excavate and args.excavate[0] == "missing_vms"):
         cli.missing_vms(cli_target, args, system_user, system_passwd, reporting_dir)
 
-    if args.excavate and args.excavate[0] == "near_removal":
+    if excavate_default or (args.excavate and args.excavate[0] == "near_removal"):
         cli.near_removal(cli_target, args, system_user, system_passwd, reporting_dir)
 
-    if args.excavate and args.excavate[0] == "removed":
+    if excavate_default or (args.excavate and args.excavate[0] == "removed"):
         cli.removed(cli_target, args, system_user, system_passwd, reporting_dir)
 
-    if args.excavate and args.excavate[0] == "os_lifecycle":
+    if excavate_default or (args.excavate and args.excavate[0] == "os_lifecycle"):
         cli.os_lifecycle(cli_target, args, system_user, system_passwd, reporting_dir)
 
-    if args.excavate and args.excavate[0] == "software_lifecycle":
+    if excavate_default or (args.excavate and args.excavate[0] == "software_lifecycle"):
         cli.software_lifecycle(cli_target, args, system_user, system_passwd, reporting_dir)
 
-    if args.excavate and args.excavate[0] == "db_lifecycle":
+    if excavate_default or (args.excavate and args.excavate[0] == "db_lifecycle"):
         cli.db_lifecycle(cli_target, args, system_user, system_passwd, reporting_dir)
 
-    if args.excavate and args.excavate[0] == "unrecogised_snmp":
+    if excavate_default or (args.excavate and args.excavate[0] == "unrecogised_snmp"):
         cli.unrecognised_snmp(cli_target, args, system_user, system_passwd, reporting_dir)
 
-    if args.excavate and args.excavate[0] == "installed_agents":
+    if excavate_default or (args.excavate and args.excavate[0] == "installed_agents"):
         cli.installed_agents(cli_target, args, system_user, system_passwd, reporting_dir)
 
-    if args.excavate and args.excavate[0] == "si_user_accounts":
+    if excavate_default or (args.excavate and args.excavate[0] == "si_user_accounts"):
         cli.software_usernames(cli_target, args, system_user, system_passwd, reporting_dir)
 
-    if args.excavate and args.excavate[0] == "pattern_modules":
+    if excavate_default or (args.excavate and args.excavate[0] == "pattern_modules"):
         cli.module_summary(cli_target, args, system_user, system_passwd, reporting_dir)
 
 if args.access_method=="api":
@@ -555,10 +563,10 @@ if args.access_method=="api":
     if args.excavate and args.excavate[0] == "device":
         builder.get_device(search, creds, args)
 
-    if args.excavate and args.excavate[0] == "devices":
+    if excavate_default or (args.excavate and args.excavate[0] == "devices"):
         reporting.devices(search, creds, args)
 
-    if args.excavate and args.excavate[0] == "device_ids":
+    if excavate_default or (args.excavate and args.excavate[0] == "device_ids"):
         identities = builder.unique_identities(disco)
         data = []
         for identity in identities:
@@ -571,90 +579,90 @@ if args.access_method=="api":
     if args.excavate and args.excavate[0] == "devices_with_cred":
         builder.get_credential(search, creds, args)
 
-    if args.excavate and args.excavate[0] == "suggested_cred_opt":
+    if excavate_default or (args.excavate and args.excavate[0] == "suggested_cred_opt"):
         builder.ordering(creds, search, args, False)
 
     if args.a_query:
         api.query(search, args)
 
-    if args.excavate and args.excavate[0] == "credential_success":
+    if excavate_default or (args.excavate and args.excavate[0] == "credential_success"):
         api.success(creds, search, args, reporting_dir)
 
-    if args.excavate and args.excavate[0] == "schedules":
+    if excavate_default or (args.excavate and args.excavate[0] == "schedules"):
         builder.scheduling(creds, search, args)
 
-    if args.excavate and args.excavate[0] == "excludes":
+    if excavate_default or (args.excavate and args.excavate[0] == "excludes"):
         api.excludes(search, args, reporting_dir)
 
-    if args.excavate and args.excavate[0] == "overlapping_ips":
+    if excavate_default or (args.excavate and args.excavate[0] == "overlapping_ips"):
         builder.overlapping(search, args)
 
-    if args.excavate and args.excavate[0] == "discovery_access":
+    if excavate_default or (args.excavate and args.excavate[0] == "discovery_access"):
         reporting.discovery_access(search, creds, args)
 
-    if args.excavate and args.excavate[0] == "discovery_analysis":
+    if excavate_default or (args.excavate and args.excavate[0] == "discovery_analysis"):
         reporting.discovery_analysis(search, creds, args)
 
-    if args.excavate and args.excavate[0] == "active_runs":
+    if excavate_default or (args.excavate and args.excavate[0] == "active_runs"):
         api.show_runs(disco, args)
         api.discovery_runs(disco, args, reporting_dir)
 
-    if args.excavate and args.excavate[0] == "sensitive_data":
+    if excavate_default or (args.excavate and args.excavate[0] == "sensitive_data"):
         api.sensitive(search, args, reporting_dir)
 
-    if args.excavate and args.excavate[0] == "export_tpl":
+    if excavate_default or (args.excavate and args.excavate[0] == "export_tpl"):
         api.tpl_export(search, args, reporting_dir)
 
-    if args.excavate and args.excavate[0] == "eca_errors":
+    if excavate_default or (args.excavate and args.excavate[0] == "eca_errors"):
         api.eca_errors(search, args, reporting_dir)
 
-    if args.excavate and args.excavate[0] == "open_ports":
+    if excavate_default or (args.excavate and args.excavate[0] == "open_ports"):
         api.open_ports(search, args, reporting_dir)
 
-    if args.excavate and args.excavate[0] == "host_utilisation":
+    if excavate_default or (args.excavate and args.excavate[0] == "host_utilisation"):
         api.host_util(search, args, reporting_dir)
 
-    if args.excavate and args.excavate[0] == "orphan_vms":
+    if excavate_default or (args.excavate and args.excavate[0] == "orphan_vms"):
         api.orphan_vms(search, args, reporting_dir)
 
-    if args.excavate and args.excavate[0] == "missing_vms":
+    if excavate_default or (args.excavate and args.excavate[0] == "missing_vms"):
         api.missing_vms(search, args, reporting_dir)
     
-    if args.excavate and args.excavate[0] == "near_removal":
+    if excavate_default or (args.excavate and args.excavate[0] == "near_removal"):
         api.near_removal(search, args, reporting_dir)
     
-    if args.excavate and args.excavate[0] == "removed":
+    if excavate_default or (args.excavate and args.excavate[0] == "removed"):
         api.removed(search, args, reporting_dir)
     
-    if args.excavate and args.excavate[0] == "os_lifecycle":
+    if excavate_default or (args.excavate and args.excavate[0] == "os_lifecycle"):
         api.oslc(search, args, reporting_dir)
     
-    if args.excavate and args.excavate[0] == "software_lifecycle":
+    if excavate_default or (args.excavate and args.excavate[0] == "software_lifecycle"):
         api.slc(search, args, reporting_dir)
     
-    if args.excavate and args.excavate[0] == "db_lifecycle":
+    if excavate_default or (args.excavate and args.excavate[0] == "db_lifecycle"):
         api.dblc(search, args, reporting_dir)
     
-    if args.excavate and args.excavate[0] == "unrecogised_snmp":
+    if excavate_default or (args.excavate and args.excavate[0] == "unrecogised_snmp"):
         api.snmp(search, args, reporting_dir)
         
-    if args.excavate and args.excavate[0] == "installed_agents":
+    if excavate_default or (args.excavate and args.excavate[0] == "installed_agents"):
         api.agents(search, args, reporting_dir)
     
-    if args.excavate and args.excavate[0] == "si_user_accounts":
+    if excavate_default or (args.excavate and args.excavate[0] == "si_user_accounts"):
         api.software_users(search, args, reporting_dir)
     
-    if args.excavate and args.excavate[0] == "pattern_modules":
+    if excavate_default or (args.excavate and args.excavate[0] == "pattern_modules"):
         #TODO: This report has been overlooked
         api.tku(knowledge,args, reporting_dir)
 
-    if args.excavate and args.excavate[0] == "tku":
+    if excavate_default or (args.excavate and args.excavate[0] == "tku"):
         api.tku(knowledge, args, reporting_dir)
 
-    if args.excavate and args.excavate[0] == "vault":
+    if excavate_default or (args.excavate and args.excavate[0] == "vault"):
         api.vault(vault, args, reporting_dir)
     
-    if args.excavate and args.excavate[0] == "hostname":
+    if excavate_default or (args.excavate and args.excavate[0] == "hostname"):
         api.hostname(args, reporting_dir)
 
 if cli_target:

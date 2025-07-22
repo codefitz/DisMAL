@@ -13,10 +13,24 @@ import paramiko
 logger = logging.getLogger("_access_")
 
 def api_version(tw):
-    about = tw.about()
-    if about.ok:
-        version = about.json()['api_versions'][-1]
-        return(about, version)
+    """Return (about, version) tuple or (None, None) on failure."""
+    try:
+        about = tw.about()
+    except Exception as e:  # pragma: no cover - network errors
+        logger.error("Problem retrieving API version: %s", e)
+        return None, None
+
+    if not about.ok:
+        logger.error("About call failed: %s - %s", about.status_code, about.reason)
+        return None, None
+
+    try:
+        version = about.json().get("api_versions", [])[-1]
+    except Exception as e:
+        logger.error("Error parsing about information: %s", e)
+        version = None
+
+    return about, version
 
 def ping(target):
     current_os = platform.system().lower()
@@ -183,14 +197,15 @@ def api_target(args):
 
         try:
             about, apiver = api_version(disco)
-            msg = "About: %s\n"%about.json()
-            logger.info(msg)
+            if about is not None:
+                msg = "About: %s\n" % about.json()
+                logger.info(msg)
             if apiver:
-                disco = tideway.appliance(target,token,api_version=apiver)
+                disco = tideway.appliance(target, token, api_version=apiver)
             else:
-                disco = tideway.appliance(target,token)
+                disco = tideway.appliance(target, token)
             msg = "API found on %s." % target
-            logger.info(msg)            
+            logger.info(msg)
         except OSError as e:
             msg = "Error connecting to %s\n%s\n" % (target,e)
             print(msg)

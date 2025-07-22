@@ -137,9 +137,10 @@ def admin(disco,args,dir):
     logger.debug("Calling disco.admin() with no parameters")
     data = disco.admin()
     logger.debug(
-        "disco.admin() response ok=%s status=%s",
+        "disco.admin() response ok=%s status=%s text=%s",
         getattr(data, "ok", "N/A"),
         getattr(data, "status_code", "N/A"),
+        getattr(data, "text", "N/A"),
     )
     result = get_json(data)
     os_version = result['versions']['os_updates']
@@ -154,9 +155,10 @@ def baseline(disco, args, dir):
     logger.debug("Calling disco.baseline() with no parameters")
     data = disco.baseline()
     logger.debug(
-        "disco.baseline() response ok=%s status=%s",
+        "disco.baseline() response ok=%s status=%s text=%s",
         getattr(data, "ok", "N/A"),
         getattr(data, "status_code", "N/A"),
+        getattr(data, "text", "N/A"),
     )
     logger.info("Checking Baseline...")
     bl = get_json(data)
@@ -198,9 +200,10 @@ def licensing(disco, args, dir):
         logger.debug("Calling disco.licensing(content_type='csv')")
         r = disco.licensing(content_type="csv")
         logger.debug(
-            "disco.licensing() response ok=%s status=%s",
+            "disco.licensing() response ok=%s status=%s text=%s",
             getattr(r, "ok", "N/A"),
             getattr(r, "status_code", "N/A"),
+            getattr(r, "text", "N/A"),
         )
         handle = open("%s%s"%(dir,defaults.tw_license_zip_filename), "wb")
         for chunk in r.iter_content(chunk_size=512):
@@ -211,9 +214,10 @@ def licensing(disco, args, dir):
         logger.debug("Calling disco.licensing() with no parameters")
         r = disco.licensing()
         logger.debug(
-            "disco.licensing() response ok=%s status=%s",
+            "disco.licensing() response ok=%s status=%s text=%s",
             getattr(r, "ok", "N/A"),
             getattr(r, "status_code", "N/A"),
+            getattr(r, "text", "N/A"),
         )
         handle = open("%s%s"%(dir,defaults.tw_license_raw_filename), "wb")
         for chunk in r.iter_content(chunk_size=512):
@@ -269,9 +273,10 @@ def discovery_runs(disco, args, dir):
     logger.debug("Calling disco.get_discovery_runs")
     api_response = disco.get_discovery_runs
     logger.debug(
-        "disco.get_discovery_runs response ok=%s status=%s",
+        "disco.get_discovery_runs response ok=%s status=%s text=%s",
         getattr(api_response, "ok", "N/A"),
         getattr(api_response, "status_code", "N/A"),
+        getattr(api_response, "text", "N/A"),
     )
     r = get_json(api_response)
     if r:
@@ -287,9 +292,10 @@ def show_runs(disco, args):
     logger.debug("Calling disco.get_discovery_runs")
     api_response = disco.get_discovery_runs
     logger.debug(
-        "disco.get_discovery_runs response ok=%s status=%s",
+        "disco.get_discovery_runs response ok=%s status=%s text=%s",
         getattr(api_response, "ok", "N/A"),
         getattr(api_response, "status_code", "N/A"),
+        getattr(api_response, "text", "N/A"),
     )
     runs = get_json(api_response)
     if not runs:
@@ -377,9 +383,10 @@ def tku(knowledge, args, dir):
     logger.debug("Calling knowledge.get_knowledge")
     api_response = knowledge.get_knowledge
     logger.debug(
-        "knowledge.get_knowledge response ok=%s status=%s",
+        "knowledge.get_knowledge response ok=%s status=%s text=%s",
         getattr(api_response, "ok", "N/A"),
         getattr(api_response, "status_code", "N/A"),
+        getattr(api_response, "text", "N/A"),
     )
     k = get_json(api_response)
     if k:
@@ -405,9 +412,10 @@ def cancel_run(disco, args):
     )
     cancel = disco.patch_discovery_run(run_id, {"cancelled": True})
     logger.debug(
-        "disco.patch_discovery_run response ok=%s status=%s",
+        "disco.patch_discovery_run response ok=%s status=%s text=%s",
         getattr(cancel, "ok", "N/A"),
         getattr(cancel, "status_code", "N/A"),
+        getattr(cancel, "text", "N/A"),
     )
     if cancel.ok:
         msg = "Cancelled Run %s.\n" % run_id
@@ -430,9 +438,10 @@ def vault(vault, args, dir):
     logger.debug("Calling vault.get_vault")
     api_response = vault.get_vault
     logger.debug(
-        "vault.get_vault response ok=%s status=%s",
+        "vault.get_vault response ok=%s status=%s text=%s",
         getattr(api_response, "ok", "N/A"),
         getattr(api_response, "status_code", "N/A"),
+        getattr(api_response, "text", "N/A"),
     )
     v = get_json(api_response)
     if v:
@@ -453,9 +462,10 @@ def remove_cred(appliance, cred):
     logger.debug("Calling appliance.delete_vault_credential(%s)", cred)
     delete = appliance.delete_vault_credential(cred)
     logger.debug(
-        "delete_vault_credential response ok=%s status=%s",
+        "delete_vault_credential response ok=%s status=%s text=%s",
         getattr(delete, "ok", "N/A"),
         getattr(delete, "status_code", "N/A"),
+        getattr(delete, "text", "N/A"),
     )
     if delete.ok:
         msg = "Credential UUID %s deleted.\n" % cred
@@ -477,9 +487,10 @@ def update_cred(appliance, uuid):
     logger.debug("Calling appliance.get_vault_credential(%s)", uuid)
     lookup = appliance.get_vault_credential(uuid)
     logger.debug(
-        "get_vault_credential response ok=%s status=%s",
+        "get_vault_credential response ok=%s status=%s text=%s",
         getattr(lookup, "ok", "N/A"),
         getattr(lookup, "status_code", "N/A"),
+        getattr(lookup, "text", "N/A"),
     )
     lookupjson = get_json(lookup)
     if 'message' in lookupjson:
@@ -498,9 +509,10 @@ def update_cred(appliance, uuid):
             )
             resp = appliance.patch_vault_credential(uuid,{"enabled":False})
             logger.debug(
-                "patch_vault_credential response ok=%s status=%s",
+                "patch_vault_credential response ok=%s status=%s text=%s",
                 getattr(resp, "ok", "N/A"),
                 getattr(resp, "status_code", "N/A"),
+                getattr(resp, "text", "N/A"),
             )
             active = False
         else:
@@ -510,9 +522,10 @@ def update_cred(appliance, uuid):
             )
             resp = appliance.patch_vault_credential(uuid,{"enabled":True})
             logger.debug(
-                "patch_vault_credential response ok=%s status=%s",
+                "patch_vault_credential response ok=%s status=%s text=%s",
                 getattr(resp, "ok", "N/A"),
                 getattr(resp, "status_code", "N/A"),
+                getattr(resp, "text", "N/A"),
             )
             active = True
     return active

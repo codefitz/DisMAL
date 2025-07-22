@@ -656,9 +656,6 @@ if args.access_method=="api":
     
     if args.excavate and args.excavate[0] == "hostname":
         api.hostname(args, reporting_dir)
-    
-    if args.r_schedules:
-        api.schedules(search, reporting_dir, args.target)
 
 if cli_target:
     cli_target.close()

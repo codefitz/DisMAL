@@ -16,7 +16,12 @@ def api_version(tw):
     about = tw.about()
     if about.ok:
         version = about.json()['api_versions'][-1]
-        return(about, version)
+        return about, version
+    logger.error(
+        "Failed to get about information: %s",
+        getattr(about, "reason", "unknown"),
+    )
+    return None, None
 
 def ping(target):
     current_os = platform.system().lower()
@@ -183,14 +188,15 @@ def api_target(args):
 
         try:
             about, apiver = api_version(disco)
-            msg = "About: %s\n"%about.json()
-            logger.info(msg)
-            if apiver:
-                disco = tideway.appliance(target,token,api_version=apiver)
-            else:
-                disco = tideway.appliance(target,token)
-            msg = "API found on %s." % target
-            logger.info(msg)            
+            if about is not None:
+                msg = "About: %s\n" % about.json()
+                logger.info(msg)
+                if apiver:
+                    disco = tideway.appliance(target, token, api_version=apiver)
+                else:
+                    disco = tideway.appliance(target, token)
+                msg = "API found on %s." % target
+                logger.info(msg)
         except OSError as e:
             msg = "Error connecting to %s\n%s\n" % (target,e)
             print(msg)

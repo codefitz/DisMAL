@@ -416,6 +416,9 @@ def scheduling(vault, search, args):
     msg = None
 
     vaultcreds = api.get_json(vault.get_vault_credentials)
+    if not vaultcreds or not isinstance(vaultcreds, list):
+        logger.error("Vault credentials could not be retrieved")
+        return
 
     credential_ips = []
     timer_count = 0
@@ -432,11 +435,21 @@ def scheduling(vault, search, args):
         credential_ips.append([uuid,list_of_ips,label])
     print(os.linesep,end="\r")
 
-    excludes = search.search(queries.excludes,format="object")
+    excludes_resp = search.search(queries.excludes,format="object")
+    excludes = api.get_json(excludes_resp)
+    if not excludes or not isinstance(excludes, list):
+        logger.error("Failed to retrieve excludes")
+        return
+    if len(excludes) == 0:
+        logger.error("No excludes returned")
+        return
 
     # Build the results
 
-    results = excludes.json()[0]
+    results = excludes[0]
+    if not isinstance(results, dict) or 'results' not in results:
+        logger.error("Invalid excludes result structure")
+        return
     data = []
     exclude_ips = []
 
@@ -476,11 +489,21 @@ def scheduling(vault, search, args):
     if timer_count > 0:
         print(os.linesep,end="\r")
     
-    scan_ranges = api.get_json(search.search(queries.scanrange,format="object"))
+    scan_resp = search.search(queries.scanrange,format="object")
+    scan_ranges = api.get_json(scan_resp)
+    if not scan_ranges or not isinstance(scan_ranges, list):
+        logger.error("Failed to retrieve scan ranges")
+        return
+    if len(scan_ranges) == 0:
+        logger.error("No scan ranges returned")
+        return
 
     # Build the results
 
     results = scan_ranges[0]
+    if not isinstance(results, dict) or 'results' not in results:
+        logger.error("Invalid scan range result structure")
+        return
 
     range_ips = []
     timer_count = 0

@@ -54,22 +54,61 @@ def init_endpoints(api_target, args):
     return disco, search, creds, vault, knowledge
 
 def get_json(api_endpoint):
+    """Return JSON data from a request object.
+
+    The ``tideway`` library lazily performs the HTTP request when an attribute
+    such as ``status_code`` is accessed.  Because of this we must be prepared
+    for network related exceptions to be raised here.  Any errors result in an
+    empty dictionary being returned so callers can handle the failure
+    gracefully.
+    """
+
+    # If the endpoint is callable (for example a property), call it first
+    if callable(api_endpoint):
+        try:
+            api_endpoint = api_endpoint()
+        except Exception as e:  # pragma: no cover - network errors
+            msg = (
+                "Not able to make api call.\nException: %s\n%s"
+                % (e.__class__, str(e))
+            )
+            print(msg)
+            logger.error(msg)
+            return {}
+
+    if not hasattr(api_endpoint, "status_code"):
+        logger.error("Invalid API endpoint provided to get_json")
+        return {}
+
     status_code = api_endpoint.status_code
-    api_json = {}
+    url = getattr(api_endpoint, "url", "unknown")
+
     if status_code == 200:
-        msg = "Called API endpoint: %s\nStatus: %s - %s\n" % (api_endpoint.url,status_code,api_endpoint.ok)
+        msg = "Called API endpoint: %s\nStatus: %s - %s\n" % (
+            url,
+            status_code,
+            api_endpoint.ok,
+        )
         logger.info(msg)
-        api_json = api_endpoint.json()
-    elif status_code == 404:
-        msg = "Failed to get API endpoint: %s\nReason: %s - %s\n" % (api_endpoint.url,status_code,api_endpoint.reason)
-        logger.warning(msg)
-        api_json = api_endpoint.json()
     else:
-        msg = "Failed to get API endpoint: %s\nReason: %s - %s\n" % (api_endpoint.url,status_code,api_endpoint.reason)
+        msg = "Failed to get API endpoint: %s\nReason: %s - %s\n" % (
+            url,
+            status_code,
+            api_endpoint.reason,
+        )
+        if status_code == 404:
+            logger.warning(msg)
+        else:
+            print(msg)
+            logger.error(msg)
+
+    try:
+        return api_endpoint.json()
+    except Exception as e:  # pragma: no cover - unexpected JSON issues
+        msg = "Error decoding JSON from %s: %s" % (url, str(e))
         print(msg)
         logger.error(msg)
-        return False
-    return api_json
+        return {}
 
 def admin(disco,args,dir):
     data = disco.admin()
@@ -138,7 +177,10 @@ def query(search, args):
     """Run an ad-hoc query against the search endpoint."""
     results = []
     try:
-        results = search.search_bulk(args.a_query, limit=500)
+        if hasattr(search, "search_bulk"):
+            results = search.search_bulk(args.a_query, limit=500)
+        else:
+            results = search.search(args.a_query, format="object", limit=500)
     except Exception as e:
         msg = "Not able to make api call.\nQuery: %s\nException: %s" % (args.a_query, e.__class__)
         print(msg)
@@ -180,7 +222,7 @@ def discovery_runs(disco, args, dir):
     r = get_json(disco.get_discovery_runs)
     if r:
         runs = json.loads(json.dumps(r))
-        logger.debug('Runs:\s%s'%r)
+        logger.debug('Runs:\n%s' % r)
         header, rows = tools.json2csv(runs)
         header.insert(0,"Discovery Instance")
         for row in rows:
@@ -370,13 +412,22 @@ def update_cred(appliance, uuid):
 
 def search_results(api_endpoint,query):
     try:
-        results = api_endpoint.search_bulk(query, format="object", limit=500)
+        if hasattr(api_endpoint, "search_bulk"):
+            results = api_endpoint.search_bulk(query, format="object", limit=500)
+        else:
+            results = api_endpoint.search(query, format="object", limit=500)
         # Depending on the version of the `tideway` library the call above may
         # return either a `requests.Response` object or the decoded JSON
         # directly.  Normalise the output so callers always get Python data
         # structures.
         if hasattr(results, "json"):
-            return results.json()
+            try:
+                return results.json()
+            except Exception as e:
+                msg = "Error decoding JSON from search results: %s" % str(e)
+                print(msg)
+                logger.error(msg)
+                return []
         return results
     except Exception as e:
         msg = "Not able to make api call.\nQuery: %s\nException: %s\n%s" %(query,e.__class__,str(e))

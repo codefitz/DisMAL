@@ -266,8 +266,236 @@ def search_results(api_endpoint, query):
         return []
 
 def success(twcreds, twsearch, args, dir):
-    from core import reporting
-    reporting.successful(twcreds, twsearch, args)
+    """Run the credential success report inline without importing reporting."""
+    from core import builder, queries, tools, output
+
+    msg = "Running: Success Report )"
+    logger.info(msg)
+
+    vaultcreds = get_json(twcreds.get_vault_credentials)
+    logger.debug('List Credentials:' + json.dumps(vaultcreds))
+
+    credsux_results = search_results(twsearch, queries.credential_success)
+    devinfosux = search_results(twsearch, queries.deviceinfo_success)
+    credfail_results = search_results(twsearch, queries.credential_failure)
+
+    data = []
+    headers = []
+
+    logger.info('Successful SessionResults:' + json.dumps(credsux_results))
+    logger.info('Successful DeviceInfos:' + json.dumps(devinfosux))
+    logger.info('Failures:' + json.dumps(credfail_results))
+
+    suxCreds = tools.session_get(credsux_results)
+    suxDev = tools.session_get(devinfosux)
+    failCreds = tools.session_get(credfail_results)
+
+    # Include Scan Ranges and Excludes
+    scan_resp = twsearch.search(queries.scanrange, format="object", limit=500)
+    scan_ranges = get_json(scan_resp)
+    excludes_resp = twsearch.search(queries.excludes, format="object", limit=500)
+    excludes = get_json(excludes_resp)
+    if not scan_ranges or not isinstance(scan_ranges, list):
+        logger.error("Failed to retrieve scan ranges")
+        return
+    if not excludes or not isinstance(excludes, list):
+        logger.error("Failed to retrieve excludes")
+        return
+    if len(scan_ranges) == 0 or len(excludes) == 0:
+        logger.error("No scan or exclude data returned")
+        return
+
+    timer_count = 0
+    for cred in vaultcreds:
+        timer_count = tools.completage(
+            "Gathering Credentials", len(vaultcreds), timer_count
+        )
+
+        msg = "Analysing Credential:%s\n" % cred.get('uuid')
+        logger.debug(msg)
+
+        detail = builder.get_credentials(cred)
+
+        uuid = detail.get('uuid')
+        index = tools.getr(detail, 'index', 0)
+
+        ip_range = tools.getr(detail, 'iprange', None)
+        list_of_ranges = tools.range_to_ips(ip_range)
+        ip_exclude = tools.getr(detail, 'exclusions', None)
+        enabled = tools.getr(detail, 'enabled')
+        if enabled:
+            status = "Enabled"
+        else:
+            status = "Disabled"
+
+        active = False
+        success = 0
+        fails = 0
+        session = None
+        percent = None
+        failure = [None, 0]
+        sessions = [None, 0]
+        devinfos = [None, 0]
+        try:
+            sessions = suxCreds[uuid]
+            active = True
+            msg = "Sessions found, Active: %s" % sessions
+            logger.debug(msg)
+        except KeyError:
+            pass
+        try:
+            devinfos = suxDev[uuid]
+            active = True
+            msg = "DeviceInfos found, Active: %s" % devinfos
+            logger.debug(msg)
+        except KeyError:
+            pass
+        try:
+            failure = failCreds[uuid]
+            active = True
+            msg = "Failures found, Active: %s" % failure
+            logger.debug(msg)
+        except KeyError:
+            pass
+
+        if sessions[0] and devinfos[0]:
+            seshcount = int(sessions[1])
+            devcount = int(devinfos[1])
+            success = seshcount + devcount
+            session = sessions[0] or devinfos[0]
+            msg = "Sessions and DevInfos: %s" % success
+            logger.debug(msg)
+        elif sessions[0]:
+            success = sessions[1]
+            session = sessions[0]
+            msg = "Sessions only: %s" % success
+            logger.debug(msg)
+        elif devinfos[0]:
+            success = devinfos[1]
+            session = devinfos[0]
+            msg = "DevInfos only: %s" % success
+            logger.debug(msg)
+
+        scan_ranges_res = scan_ranges[0]
+        excludes_res = excludes[0]
+
+        scheduled_scans = builder.get_scans(
+            scan_ranges_res.get('results'), list_of_ranges
+        )
+        logger.debug("Scheduled Scans List" % scheduled_scans)
+
+        excluded_scans = builder.get_scans(
+            excludes_res.get('results'), list_of_ranges
+        )
+        logger.debug("Excluded Scans List" % excluded_scans)
+
+        if failure[1]:
+            fails = failure[1]
+            logger.debug("Failures:%s" % fails)
+
+        total = success + fails
+        if total > 0:
+            logger.debug("Success:%s\nTotal:%s" % (success, total))
+            percent = "{0:.0%}".format(success / (total))
+
+        msg = None
+        if args.output_file or args.output_csv:
+            if active:
+                data.append(
+                    [
+                        detail.get('label'),
+                        index,
+                        uuid,
+                        detail.get('username'),
+                        session or failure[0],
+                        success,
+                        failure[1],
+                        percent,
+                        status,
+                        ip_range,
+                        ip_exclude,
+                        scheduled_scans if scheduled_scans else None,
+                        excluded_scans if excluded_scans else None,
+                    ]
+                )
+            else:
+                data.append(
+                    [
+                        detail.get('label'),
+                        index,
+                        uuid,
+                        detail.get('username'),
+                        detail.get('types'),
+                        None,
+                        None,
+                        "0%",
+                        "Credential appears to not be in use (%s)" % status,
+                        ip_range,
+                        ip_exclude,
+                        scheduled_scans if scheduled_scans else None,
+                        excluded_scans if excluded_scans else None,
+                    ]
+                )
+            headers = [
+                "Credential",
+                "Index",
+                "UUID",
+                "Login ID",
+                "Protocol",
+                "Successes",
+                "Failures",
+                "Success %",
+                "State",
+                "Ranges",
+                "Excludes",
+                "Scheduled Scans",
+                "Exclusion Lists",
+            ]
+        else:
+            if active:
+                data.append(
+                    [
+                        detail.get('label'),
+                        index,
+                        uuid,
+                        detail.get('username'),
+                        session or failure[0],
+                        success,
+                        failure[1],
+                        percent,
+                        status,
+                    ]
+                )
+            else:
+                data.append(
+                    [
+                        detail.get('label'),
+                        index,
+                        uuid,
+                        detail.get('username'),
+                        detail.get('types'),
+                        None,
+                        None,
+                        "0%",
+                        "Credential appears to not be in use (%s)" % status,
+                    ]
+                )
+            headers = [
+                "Credential",
+                "Index",
+                "UUID",
+                "Login ID",
+                "Protocol",
+                "Successes",
+                "Failures",
+                "Success %",
+                "State",
+            ]
+    print(os.linesep, end="\r")
+
+    if msg:
+        print(msg)
+    output.report(data, headers, args)
 
 
 

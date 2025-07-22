@@ -567,7 +567,7 @@ if args.access_method=="api":
         reporting.devices(search, creds, args)
 
     if excavate_default or (args.excavate and args.excavate[0] == "device_ids"):
-        identities = builder.unique_identities(disco)
+        identities = builder.unique_identities(search)
         data = []
         for identity in identities:
             data.append([identity['originating_endpoint'],identity['list_of_ips'],identity['list_of_names']])

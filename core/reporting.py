@@ -249,6 +249,8 @@ def devices(twsearch, twcreds, args):
     results = api.search_results(twsearch,queries.deviceInfo)
 
     devices = []
+    msg = None
+    headers = []
 
     # Build the results
 
@@ -531,7 +533,8 @@ def devices(twsearch, twcreds, args):
                     "last_access_method"
                     ]
 
-    print(msg)
+    if msg:
+        print(msg)
     output.report(data, headers, args)
 
 def ipaddr(search, credentials, args):

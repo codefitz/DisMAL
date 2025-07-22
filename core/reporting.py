@@ -43,8 +43,19 @@ def successful(creds, search, args):
     failCreds = tools.session_get(credfail_results)
 
     # Include Scan Ranges and Excludes
-    scan_ranges = api.get_json(search.search(queries.scanrange,format="object",limit=500))
-    excludes = api.get_json(search.search(queries.excludes,format="object",limit=500))
+    scan_resp = search.search(queries.scanrange,format="object",limit=500)
+    scan_ranges = api.get_json(scan_resp)
+    excludes_resp = search.search(queries.excludes,format="object",limit=500)
+    excludes = api.get_json(excludes_resp)
+    if not scan_ranges or not isinstance(scan_ranges, list):
+        logger.error("Failed to retrieve scan ranges")
+        return
+    if not excludes or not isinstance(excludes, list):
+        logger.error("Failed to retrieve excludes")
+        return
+    if len(scan_ranges) == 0 or len(excludes) == 0:
+        logger.error("No scan or exclude data returned")
+        return
 
     timer_count = 0
     for cred in vaultcreds:

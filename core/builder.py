@@ -309,16 +309,23 @@ def get_device(search, credentials, args):
                 "query":
                 "search flags(no_segment) Host, NetworkDevice, Printer, SNMPManagedDevice, StorageDevice, ManagementController where name = '%s' show name, os, kind(#) as 'nodekind'" % dev
                }
-    devResults = api.get_json(search.search(devJSON,format="object"))
-    devTotal = devResults[0]['count']
+    dev_resp = search.search(devJSON,format="object")
+    devResults = api.get_json(dev_resp)
+    devTotal = 0
+    if not devResults or not isinstance(devResults, list):
+        logger.error("Failed to retrieve device lookup results")
+    elif len(devResults) > 0 and isinstance(devResults[0], dict):
+        devTotal = devResults[0].get('count', 0)
     logger.debug("Devices Total: %s"%(devTotal))
 
     if devTotal > 0:
-        os = devResults[0]['results'][0]['os']
-        kind = devResults[0]['results'][0]['nodekind']
-        msg = "\nNodekind: %s\nOperating System: %s\n" % (kind,os)
-        logger.info(msg)
-        print(msg)
+        first = devResults[0]
+        if isinstance(first, dict) and first.get('results'):
+            os = first['results'][0].get('os')
+            kind = first['results'][0].get('nodekind')
+            msg = "\nNodekind: %s\nOperating System: %s\n" % (kind, os)
+            logger.info(msg)
+            print(msg)
     else:
         msg = "\nDevice not found!\n"
         logger.warning(msg)
@@ -663,11 +670,21 @@ def overlapping(tw_search, args):
     print("---------------------------")
     logger.info("Running: Overlapping Report...")
 
-    scan_ranges = api.get_json(tw_search.search(queries.scanrange,format="object"))
+    scan_resp = tw_search.search(queries.scanrange,format="object")
+    scan_ranges = api.get_json(scan_resp)
+    if not scan_ranges or not isinstance(scan_ranges, list):
+        logger.error("Failed to retrieve scan ranges")
+        return
+    if len(scan_ranges) == 0:
+        logger.error("No scan ranges returned")
+        return
 
     # Build the results
 
     results = scan_ranges[0]
+    if not isinstance(results, dict) or 'results' not in results:
+        logger.error("Invalid scan range result structure")
+        return
 
     range_ips = []
     full_range = []
@@ -716,8 +733,19 @@ def overlapping(tw_search, args):
         matched_runs = tools.sortdic(runs)
         logger.debug("Matched Runs: %s"%(matched_runs))
 
-    excludes = api.get_json(tw_search.search(queries.excludes,format="object"))
+    excludes_resp = tw_search.search(queries.excludes,format="object")
+    excludes = api.get_json(excludes_resp)
+    if not excludes or not isinstance(excludes, list):
+        logger.error("Failed to retrieve excludes")
+        return
+    if len(excludes) == 0:
+        logger.error("No excludes returned")
+        return
+
     e = excludes[0]
+    if not isinstance(e, dict) or 'results' not in e:
+        logger.error("Invalid excludes result structure")
+        return
     for result in e.get('results'):
         r = result['Scan_Range'][0]
         list_of_ips = tools.range_to_ips(r)

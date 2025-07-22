@@ -67,9 +67,8 @@ def login_target(client,args):
         if args.f_passwd:
             exists = os.path.isfile(args.f_passwd)
             if exists:
-                f=open(args.f_passwd, 'r')
-                passwd=f.read()
-                f.close()
+                with open(args.f_passwd, 'r') as f:
+                    syspass = f.read().strip()
             else:
                 msg = "Login password file not found!\n"
                 print(msg)

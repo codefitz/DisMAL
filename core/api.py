@@ -237,10 +237,12 @@ def show_runs(disco, args):
         msg = "Not able to make api call.\nException: %s" %(e.__class__)
         print(msg)
         logger.error(msg)
-    if len(results.json()) > 0:
+
+    runs_json = get_json(results)
+    if runs_json:
         runs = []
-        headers =[]
-        for run in results.json():
+        headers = []
+        for run in runs_json:
             disco_run = {}
             for key in run:
                 disco_run.update({key:run[key]})
@@ -266,7 +268,7 @@ def show_runs(disco, args):
                 print(msg)
                 logger.info(msg)
         else:
-            pprint(results.json())
+            pprint(runs_json)
     else:
         msg = "No runs in progress."
         print(msg)

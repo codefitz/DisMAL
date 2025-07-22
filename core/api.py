@@ -509,6 +509,11 @@ def update_cred(appliance, uuid):
 
 def search_results(api_endpoint,query):
     try:
+        if logger.isEnabledFor(logging.DEBUG):
+            try:
+                logger.debug("Search query: %s" % query)
+            except Exception:
+                pass
         if hasattr(api_endpoint, "search_bulk"):
             results = api_endpoint.search_bulk(query, format="object", limit=500)
         else:
@@ -518,14 +523,32 @@ def search_results(api_endpoint,query):
         # directly.  Normalise the output so callers always get Python data
         # structures.
         if hasattr(results, "json"):
+            if logger.isEnabledFor(logging.DEBUG):
+                try:
+                    logger.debug("Raw search response: %s" % results.text)
+                except Exception:
+                    pass
             try:
-                return results.json()
+                data = results.json()
             except Exception as e:
                 msg = "Error decoding JSON from search results: %s" % str(e)
                 print(msg)
                 logger.error(msg)
                 return []
-        return results
+            else:
+                if logger.isEnabledFor(logging.DEBUG):
+                    try:
+                        logger.debug("Parsed results length: %s" % len(data))
+                    except Exception:
+                        pass
+                return data
+        else:
+            if logger.isEnabledFor(logging.DEBUG):
+                try:
+                    logger.debug("Parsed results length: %s" % len(results))
+                except Exception:
+                    pass
+            return results
     except Exception as e:
         msg = "Not able to make api call.\nQuery: %s\nException: %s\n%s" %(query,e.__class__,str(e))
         print(msg)

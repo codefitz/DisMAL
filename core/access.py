@@ -58,11 +58,15 @@ def remote_cmd(cmd, client):
         output = error
     return output
 
-def login_target(client,args):
+def login_target(client, args):
     target = args.target
     system_user = args.username
     syspass = args.password
-    
+
+    # If no credentials are provided at all, don't prompt
+    if not system_user and not syspass and not args.f_passwd:
+        return None, None
+
     if not syspass:
         if args.f_passwd:
             exists = os.path.isfile(args.f_passwd)
@@ -73,20 +77,25 @@ def login_target(client,args):
                 msg = "Login password file not found!\n"
                 print(msg)
                 logger.error(msg)
-        else:
-            syspass = getpass.getpass(prompt='Please enter your system administrator password (enter=skip): ')
-    
-    if not syspass:
+        elif system_user:
+            syspass = getpass.getpass(
+                prompt='Please enter your system administrator password (enter=skip): '
+            )
+
+    if system_user and not syspass:
         msg = "No system user password supplied."
         print(msg)
         logger.warning(msg)
-    
-    if client and syspass:
-        msg = "\nChecking %s login for %s..." %(system_user,target)
+
+    if client and system_user and syspass:
+        msg = "\nChecking %s login for %s..." % (system_user, target)
         print(msg)
         logger.info(msg)
         try:
-            result = remote_cmd("tw_options -u %s -p %s > /dev/null && echo $?"%(system_user,syspass), client)
+            result = remote_cmd(
+                "tw_options -u %s -p %s > /dev/null && echo $?" % (system_user, syspass),
+                client,
+            )
             if result == "ERROR: Authentication unsuccessful":
                 print(result)
                 logger.error(msg)
@@ -96,7 +105,7 @@ def login_target(client,args):
                 logger.info(result)
                 logger.info(msg)
         except Exception as e:
-            msg = "Problem logging into %s\n%s" % (target,e)
+            msg = "Problem logging into %s\n%s" % (target, e)
             print(msg)
             logger.error(msg)
     else:

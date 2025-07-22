@@ -23,7 +23,7 @@ def ping(target):
     if current_os == "windows":
         parameters = "-n 1 -w 2"
         null = "$null"
-    elif current_os == "Linux":
+    elif current_os == "linux":
         parameters = "-c 1 -w2"
         null = "/dev/null"
     else: # Mac

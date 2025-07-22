@@ -309,7 +309,9 @@ def get_device(search, credentials, args):
                 "query":
                 "search flags(no_segment) Host, NetworkDevice, Printer, SNMPManagedDevice, StorageDevice, ManagementController where name = '%s' show name, os, kind(#) as 'nodekind'" % dev
                }
+    logger.debug("Executing device search query for %s: %s", dev, devJSON.get("query"))
     dev_resp = search.search(devJSON,format="object")
+    logger.debug("Device search HTTP status: %s", getattr(dev_resp, "status_code", "n/a"))
     devResults = api.get_json(dev_resp)
     devTotal = 0
     if not devResults or not isinstance(devResults, list):
@@ -442,7 +444,9 @@ def scheduling(vault, search, args):
         credential_ips.append([uuid,list_of_ips,label])
     print(os.linesep,end="\r")
 
+    logger.debug("Executing excludes query: %s", queries.excludes)
     excludes_resp = search.search(queries.excludes,format="object")
+    logger.debug("Excludes search HTTP status: %s", getattr(excludes_resp, "status_code", "n/a"))
     excludes = api.get_json(excludes_resp)
     if not excludes or not isinstance(excludes, list):
         logger.error("Failed to retrieve excludes")
@@ -496,7 +500,9 @@ def scheduling(vault, search, args):
     if timer_count > 0:
         print(os.linesep,end="\r")
     
+    logger.debug("Executing scan range query: %s", queries.scanrange.get("query", queries.scanrange))
     scan_resp = search.search(queries.scanrange,format="object")
+    logger.debug("Scan range search HTTP status: %s", getattr(scan_resp, "status_code", "n/a"))
     scan_ranges = api.get_json(scan_resp)
     if not scan_ranges or not isinstance(scan_ranges, list):
         logger.error("Failed to retrieve scan ranges")
@@ -670,7 +676,9 @@ def overlapping(tw_search, args):
     print("---------------------------")
     logger.info("Running: Overlapping Report...")
 
+    logger.debug("Executing scan range query: %s", queries.scanrange.get("query", queries.scanrange))
     scan_resp = tw_search.search(queries.scanrange,format="object")
+    logger.debug("Scan range search HTTP status: %s", getattr(scan_resp, "status_code", "n/a"))
     scan_ranges = api.get_json(scan_resp)
     if not scan_ranges or not isinstance(scan_ranges, list):
         logger.error("Failed to retrieve scan ranges")
@@ -733,7 +741,9 @@ def overlapping(tw_search, args):
         matched_runs = tools.sortdic(runs)
         logger.debug("Matched Runs: %s"%(matched_runs))
 
+    logger.debug("Executing excludes query: %s", queries.excludes)
     excludes_resp = tw_search.search(queries.excludes,format="object")
+    logger.debug("Excludes search HTTP status: %s", getattr(excludes_resp, "status_code", "n/a"))
     excludes = api.get_json(excludes_resp)
     if not excludes or not isinstance(excludes, list):
         logger.error("Failed to retrieve excludes")

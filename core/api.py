@@ -370,7 +370,14 @@ def update_cred(appliance, uuid):
 
 def search_results(api_endpoint,query):
     try:
-        return api_endpoint.search_bulk(query, format="object",limit=500)
+        results = api_endpoint.search_bulk(query, format="object", limit=500)
+        # Depending on the version of the `tideway` library the call above may
+        # return either a `requests.Response` object or the decoded JSON
+        # directly.  Normalise the output so callers always get Python data
+        # structures.
+        if hasattr(results, "json"):
+            return results.json()
+        return results
     except Exception as e:
         msg = "Not able to make api call.\nQuery: %s\nException: %s\n%s" %(query,e.__class__,str(e))
         print(msg)

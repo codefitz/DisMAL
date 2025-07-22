@@ -230,47 +230,41 @@ def discovery_runs(disco, args, dir):
         output.define_csv(args,None,rows,dir+defaults.current_scans_filename,args.output_file,args.target,"csv_file")
 
 def show_runs(disco, args):
-    results = []
-    try:
-        results = disco.get_discovery_runs
-    except Exception as e:
-        msg = "Not able to make api call.\nException: %s" %(e.__class__)
-        print(msg)
-        logger.error(msg)
-    if len(results.json()) > 0:
-        runs = []
-        headers =[]
-        for run in results.json():
-            disco_run = {}
-            for key in run:
-                disco_run.update({key:run[key]})
-                headers.append(key)
-            runs.append(disco_run)
-        headers = tools.sortlist(headers)
-        run_csvs = []
-        for run in runs:
-            run_csv = []
-            for header in headers:
-                value = run.get(header)
-                run_csv.append(value)
-            run_csvs.append(run_csv)
-        run_csvs.insert(0, headers)
-        if args.export:
-            w = csv.writer(sys.stdout)
-            w.writerows(run_csvs)
-        elif args.file:
-            with open(args.file, 'w', newline='') as file:
-                writer = csv.writer(file)
-                writer.writerows(run_csvs)
-                msg = "Results written to %s" % args.file
-                print(msg)
-                logger.info(msg)
-        else:
-            pprint(results.json())
-    else:
+    runs = get_json(disco.get_discovery_runs)
+    if not runs:
         msg = "No runs in progress."
         print(msg)
         logger.error(msg)
+        return
+    parsed_runs = []
+    headers = []
+    for run in runs:
+        disco_run = {}
+        for key in run:
+            disco_run.update({key: run[key]})
+            headers.append(key)
+        parsed_runs.append(disco_run)
+    headers = tools.sortlist(headers)
+    run_csvs = []
+    for run in parsed_runs:
+        run_csv = []
+        for header in headers:
+            value = run.get(header)
+            run_csv.append(value)
+        run_csvs.append(run_csv)
+    run_csvs.insert(0, headers)
+    if args.export:
+        w = csv.writer(sys.stdout)
+        w.writerows(run_csvs)
+    elif args.file:
+        with open(args.file, "w", newline="") as file:
+            writer = csv.writer(file)
+            writer.writerows(run_csvs)
+            msg = "Results written to %s" % args.file
+            print(msg)
+            logger.info(msg)
+    else:
+        pprint(runs)
 
 def sensitive(search, args, dir):
     output.define_csv(args,search,queries.sensitive_data,dir+defaults.sensitive_data_filename,args.output_file,args.target,"query")

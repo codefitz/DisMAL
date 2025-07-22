@@ -24,7 +24,11 @@ def api_version(tw):
         return None, None
 
     if not about.ok:
-        logger.error("About call failed: %s - %s", about.status_code, about.reason)
+        logger.error(
+            "About call failed: %s - %s",
+            getattr(about, "status_code", "unknown"),
+            about.reason,
+        )
         return None, None
 
     try:

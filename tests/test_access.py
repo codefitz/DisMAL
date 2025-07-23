@@ -9,6 +9,7 @@ sys.modules.setdefault("paramiko", types.SimpleNamespace())
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
+import pytest
 import core.access as access
 
 class DummyResponse:
@@ -45,3 +46,15 @@ def test_api_target_handles_missing_about(monkeypatch):
     monkeypatch.setattr(access.tideway, "appliance", lambda *a, **k: dummy_app, raising=False)
     result = access.api_target(args)
     assert result is dummy_app
+
+
+def test_api_target_token_is_file(tmp_path, capsys):
+    file_path = tmp_path / "token.txt"
+    file_path.write_text("abc")
+    args = types.SimpleNamespace(target="t", token=str(file_path), f_token=None)
+
+    with pytest.raises(SystemExit):
+        access.api_target(args)
+
+    captured = capsys.readouterr()
+    assert "token_file" in captured.out

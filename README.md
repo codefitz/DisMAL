@@ -42,3 +42,7 @@ python3 dismal.py --access_method cli \
 
 The options `-P`, `-T` and `-W` can be used to read the UI password, API token
 and tideway password from files instead of providing them inline.
+
+By default, reports are written to an `output_<appliance>` directory in the
+current working directory. Use the `--stdout` option to suppress file output and
+print results directly to the terminal.

@@ -177,6 +177,16 @@ def api_target(args):
     disco = None
     use_api = False
 
+    # If a file path is accidentally provided via -t/--token, warn the user
+    if token and os.path.isfile(token):
+        msg = (
+            "Token argument appears to be a file. "
+            "Use -T/--token_file to specify a token file."
+        )
+        print(msg)
+        logger.error(msg)
+        sys.exit(1)
+
     if args.f_token:
         exists = os.path.isfile(args.f_token)
         if exists:
@@ -184,7 +194,9 @@ def api_target(args):
             token=f.read().strip()
             f.close()
         else:
-            msg = "Token file not found!\n"
+            msg = "Token file not found!"
+            if args.f_token and not os.path.isfile(args.f_token):
+                msg += " Did you mean to use -t/--token?"
             print(msg)
             logger.error(msg)
 

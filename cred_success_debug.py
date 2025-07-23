@@ -274,7 +274,8 @@ def success(twcreds, twsearch, args, dir):
 
     vaultcreds = get_json(twcreds.get_vault_credentials)
     print("vaultcreds Type: ", type(vaultcreds))
-    print("vaultcreds JSON: ", vaultcreds.json())
+    print("vaultcreds JSON: ", vaultcreds)
+
     logger.debug('List Credentials:' + json.dumps(vaultcreds))
 
     credsux_results = search_results(twsearch, queries.credential_success)
@@ -530,9 +531,16 @@ def main():
     api_target_obj = api_target(args)
     disco, search, creds, _, _ = init_endpoints(api_target_obj, args)
 
+    # Short API call test
+    import tideway
+    tw = tideway.appliance(args.target,args.token)
+    print("Attempting to get credentials from appliance: ", api_target_obj)
+    tw_creds = tw.credentials()
+    print("tw_creds JSON: ", tw_creds.get_vault_credentials.json())
+    ###    # Short API call
+
     # Execute the credential success report
     success(creds, search, args, '.')
-
 
 if __name__ == '__main__':
     main()

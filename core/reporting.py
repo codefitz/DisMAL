@@ -43,19 +43,24 @@ def successful(creds, search, args):
     failCreds = tools.session_get(credfail_results)
 
     # Include Scan Ranges and Excludes
-    scan_resp = search.search(queries.scanrange,format="object",limit=500)
+    scan_resp = search.search(queries.scanrange, format="object", limit=500)
     scan_ranges = api.get_json(scan_resp)
-    excludes_resp = search.search(queries.excludes,format="object",limit=500)
+    excludes_resp = search.search(queries.excludes, format="object", limit=500)
     excludes = api.get_json(excludes_resp)
+
     if not scan_ranges or not isinstance(scan_ranges, list):
-        logger.error("Failed to retrieve scan ranges")
-        return
+        logger.warning("Failed to retrieve scan ranges; column will be blank")
+        scan_ranges = [{"results": []}]
+    elif len(scan_ranges) == 0:
+        logger.warning("No scan ranges returned; column will be blank")
+        scan_ranges = [{"results": []}]
+
     if not excludes or not isinstance(excludes, list):
-        logger.error("Failed to retrieve excludes")
-        return
-    if len(scan_ranges) == 0 or len(excludes) == 0:
-        logger.error("No scan or exclude data returned")
-        return
+        logger.warning("Failed to retrieve excludes; column will be blank")
+        excludes = [{"results": []}]
+    elif len(excludes) == 0:
+        logger.warning("No exclude data returned; column will be blank")
+        excludes = [{"results": []}]
 
     timer_count = 0
     for cred in vaultcreds:

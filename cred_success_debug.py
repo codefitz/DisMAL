@@ -273,6 +273,8 @@ def success(twcreds, twsearch, args, dir):
     logger.info(msg)
 
     vaultcreds = get_json(twcreds.get_vault_credentials)
+    print("vaultcreds Type: ", type(vaultcreds))
+    print("vaultcreds JSON: ", vaultcreds.json())
     logger.debug('List Credentials:' + json.dumps(vaultcreds))
 
     credsux_results = search_results(twsearch, queries.credential_success)

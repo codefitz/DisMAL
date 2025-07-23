@@ -99,24 +99,32 @@ def fancy_out(data, heads):
         logger.error("Problem printing fancy output:%s\n%s"%(e.__class__,str(e)))
 
 def report(data, heads, args):
+    """Handle generic report output."""
+    cli_out = getattr(args, "output_cli", False)
+
     if len(data) > 0:
-        logger.debug("Report Info:\n%s"%data)
+        logger.debug("Report Info:\n%s" % data)
+
         if args.output_null:
             msg = "\n:%s Results\n" % len(data)
             logger.info(msg)
-            print(msg)
+            if cli_out:
+                print(msg)
         elif args.output_csv:
+            # --csv implies CLI output regardless of --stdout
             csv_out(data, heads)
             logger.info("Output to CSV")
         elif args.output_file:
             csv_file(data, heads, args.output_file)
             logger.info("Output to CSV file")
         else:
-            fancy_out(data, heads)
-            logger.info("Fancy output")
+            if cli_out:
+                fancy_out(data, heads)
+                logger.info("Fancy output")
     else:
         msg = "No results found!\n"
-        print(msg)
+        if cli_out:
+            print(msg)
         logger.warning(msg)
 
 def cmd2csv(header,result,seperator,filename,appliance):

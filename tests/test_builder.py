@@ -30,7 +30,7 @@ class DummySearch:
 def test_overlapping_handles_bad_api(monkeypatch):
     called = {}
 
-    def fake_report(data, headers, args):
+    def fake_report(*a, **k):
         called["ran"] = True
 
     monkeypatch.setattr(builder, "output", types.SimpleNamespace(report=fake_report))

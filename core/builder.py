@@ -133,7 +133,7 @@ def get_credential(twsearch, twcreds, args):
                             "Result/Reason",
                             "Successful",
                             "Access Time"
-                        ], args)
+                        ], args, name="devices_with_cred")
 
     return found
 
@@ -297,7 +297,7 @@ def ordering(creds, search, args, apply):
         logger.info(msg)
         data.append([index, label])
 
-    output.report(data, headers, args)
+    output.report(data, headers, args, name="suggested_cred_opt")
 
 def get_device(search, credentials, args):
     dev = args.excavate[1]
@@ -415,7 +415,7 @@ def get_device(search, credentials, args):
                             "Status",
                             "Message",
                             "Successful"
-                            ], args)
+                            ], args, name="device")
 
 def scheduling(vault, search, args):
     ## Schedules compared to runs
@@ -563,7 +563,7 @@ def scheduling(vault, search, args):
     if msg:
         print(msg)
 
-    output.report(data, [ "Name", "Type", "Range ID", "Ranges", "Scan Level", "When", "Credentials" ], args)
+    output.report(data, [ "Name", "Type", "Range ID", "Ranges", "Scan Level", "When", "Credentials" ], args, name="schedules")
 
 def unique_identities(search):
 
@@ -797,7 +797,7 @@ def overlapping(tw_search, args):
         logger.info(msg)
         print(msg)
 
-    output.report(data, [ "IP Address", "Scan Schedules" ], args)
+    output.report(data, [ "IP Address", "Scan Schedules" ], args, name="overlapping_ips")
 
 def get_scans(results, list_of_ranges):
     scan_ranges = []

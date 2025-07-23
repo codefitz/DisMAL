@@ -184,6 +184,7 @@ if args.target:
         reporting_dir = pwd + "/output_" + args.target.replace(".","_")
     if not os.path.exists(reporting_dir):
         os.makedirs(reporting_dir)
+    args.reporting_dir = reporting_dir
 
 logging.basicConfig(level=logging.INFO, filename=logfile, filemode='w', force=True)
 logger = logging.getLogger("_dismal_")
@@ -574,7 +575,7 @@ if args.access_method=="api":
         data = []
         for identity in identities:
             data.append([identity['originating_endpoint'],identity['list_of_ips'],identity['list_of_names']])
-        output.report(data, [ "Origating Endpoint", "List of IPs", "List of Names" ], args)
+        output.report(data, [ "Origating Endpoint", "List of IPs", "List of Names" ], args, name="device_ids")
 
     if args.excavate and args.excavate[0] == "ipaddr":
         reporting.ipaddr(search, creds, args)

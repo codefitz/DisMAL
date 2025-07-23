@@ -3,6 +3,7 @@
 import sys
 import logging
 import csv
+import os
 
 # PIP Modules
 from tabulate import tabulate
@@ -98,9 +99,11 @@ def fancy_out(data, heads):
     except Exception as e:
         logger.error("Problem printing fancy output:%s\n%s"%(e.__class__,str(e)))
 
-def report(data, heads, args):
+def report(data, heads, args, name=None):
     """Handle generic report output."""
     cli_out = getattr(args, "output_cli", False)
+    excavate = getattr(args, "excavate", None)
+    out_dir = getattr(args, "reporting_dir", None)
 
     if len(data) > 0:
         logger.debug("Report Info:\n%s" % data)
@@ -121,6 +124,9 @@ def report(data, heads, args):
             if cli_out:
                 fancy_out(data, heads)
                 logger.info("Fancy output")
+            elif excavate is not None and name and out_dir:
+                csv_file(data, heads, os.path.join(out_dir, f"{name}.csv"))
+                logger.info("Output to CSV file")
     else:
         msg = "No results found!\n"
         if cli_out:

@@ -33,7 +33,7 @@ def _run_with_patches(monkeypatch, func):
     monkeypatch.setattr(reporting.api, "search_results", lambda *a, **k: [])
     monkeypatch.setattr(reporting.api, "get_json", lambda *a, **k: [])
     called = {}
-    monkeypatch.setattr(reporting, "output", types.SimpleNamespace(report=lambda d, h, a: called.setdefault("ran", True)))
+    monkeypatch.setattr(reporting, "output", types.SimpleNamespace(report=lambda *a, **k: called.setdefault("ran", True)))
     args = types.SimpleNamespace(output_csv=False, output_file=None)
     func(DummySearch(), DummyCreds(), args)
     assert "ran" in called

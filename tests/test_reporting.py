@@ -45,3 +45,23 @@ def test_discovery_access_handles_bad_api(monkeypatch):
 
 def test_discovery_analysis_handles_bad_api(monkeypatch):
     _run_with_patches(monkeypatch, reporting.discovery_analysis)
+
+
+def test_successful_runs_without_scan_data(monkeypatch):
+    call = {"n": 0}
+
+    def fake_get_json(*a, **k):
+        call["n"] += 1
+        if call["n"] == 1:
+            return [{"uuid": "u1", "label": "c", "index": 1, "enabled": True}]
+        return []
+
+    monkeypatch.setattr(reporting.api, "get_json", fake_get_json)
+    monkeypatch.setattr(reporting.api, "search_results", lambda *a, **k: [])
+    monkeypatch.setattr(reporting.builder, "get_credentials", lambda entry: entry)
+    monkeypatch.setattr(reporting.builder, "get_scans", lambda *a, **k: [])
+    called = {}
+    monkeypatch.setattr(reporting, "output", types.SimpleNamespace(report=lambda *a, **k: called.setdefault("ran", True)))
+    args = types.SimpleNamespace(output_csv=False, output_file=None)
+    reporting.successful(DummyCreds(), DummySearch(), args)
+    assert "ran" in called

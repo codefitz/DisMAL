@@ -165,7 +165,7 @@ def successful(creds, search, args):
 
     if msg:
         print(msg)
-    output.report(data, headers, args)
+    output.report(data, headers, args, name="credential_success")
 
 def successful_cli(client, args, sysuser, passwd, reporting_dir):
     credentials = access.remote_cmd('tw_vault_control --show --json -u %s -p %s'%(sysuser,passwd),client)
@@ -546,7 +546,7 @@ def devices(twsearch, twcreds, args):
 
     if msg:
         print(msg)
-    output.report(data, headers, args)
+    output.report(data, headers, args, name="devices")
 
 def ipaddr(search, credentials, args):
     ipaddr = args.excavate[1]
@@ -1032,7 +1032,7 @@ def discovery_access(twsearch, twcreds, args):
         print(msg)
         logger.error(msg)
 
-    output.report(data, headers, args)
+    output.report(data, headers, args, name="discovery_access")
 
 def discovery_analysis(twsearch, twcreds, args):
     print("\nDiscovery Access Analysis")
@@ -1407,7 +1407,7 @@ def discovery_analysis(twsearch, twcreds, args):
         print(msg)
         logger.error(msg)
 
-    output.report(data, headers, args)
+    output.report(data, headers, args, name="discovery_analysis")
 
 def tpl_export(search, query, dir, method, client, sysuser, syspass):
     tpldir = dir + "/tpl"

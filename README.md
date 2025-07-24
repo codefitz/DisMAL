@@ -13,11 +13,18 @@ Use at your own risk.
 3. Install the required Python packages:
 
    ```bash
-   pip install pandas paramiko tabulate cidrize tideway
+   pip install -r requirements.txt
    ```
 
    The `tideway` module is distributed with BMC Discovery and may need to be
    installed from your appliance rather than PyPI.
+
+4. *(Optional)* Install additional development requirements for running the
+   test suite:
+
+   ```bash
+   pip install -r requirements-dev.txt
+   ```
 
 ## Usage
 

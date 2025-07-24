@@ -5,6 +5,7 @@ import logging
 import csv
 import json
 import os
+from urllib.parse import urlparse
 
 # PIP Modules
 from pprint import pprint
@@ -280,8 +281,10 @@ def map_outpost_credentials(appliance):
         url = outpost.get("url")
         if not url:
             continue
+        parsed = urlparse(url)
+        target = (parsed.netloc or parsed.path).rstrip("/")
         try:
-            op_app = tideway.appliance(url, token, api_version=api_version)
+            op_app = tideway.outpost(target, token, api_version=api_version)
             creds_ep = op_app.credentials()
             cred_list = get_json(creds_ep.get_vault_credentials)
             for cred in cred_list or []:

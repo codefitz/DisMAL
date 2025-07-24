@@ -583,7 +583,7 @@ if args.access_method=="api":
     if args.excavate and args.excavate[0] == "devices_with_cred":
         builder.get_credential(search, creds, args)
 
-    if excavate_default or (args.excavate and args.excavate[0] == "suggested_cred_opt"):
+    if excavate_default or (args.excavate and args.excavate[0] == "suggest_cred_opt"):
         builder.ordering(creds, search, args, False)
 
     if args.a_query:

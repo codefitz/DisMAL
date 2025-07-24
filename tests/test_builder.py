@@ -42,3 +42,34 @@ def test_overlapping_handles_bad_api(monkeypatch):
     # If the function returned early, fake_report won't be called
     assert "ran" not in called
 
+
+def test_ordering_inserts_instance_and_outpost(monkeypatch):
+    captured = {}
+
+    def fake_report(data, headers, args, name=None):
+        captured["data"] = data
+        captured["headers"] = headers
+        captured["name"] = name
+
+    monkeypatch.setattr(builder, "output", types.SimpleNamespace(report=fake_report))
+    monkeypatch.setattr(builder.api, "search_results", lambda *a, **k: [])
+    monkeypatch.setattr(builder.api, "map_outpost_credentials", lambda app: {"u1": "http://op"})
+    monkeypatch.setattr(builder.tideway, "appliance", lambda target, token: types.SimpleNamespace(), raising=False)
+    monkeypatch.setattr(
+        builder.api,
+        "get_json",
+        lambda *a, **k: [{"uuid": "u1", "label": "c", "index": 1, "types": [], "scopes": ["s"]}],
+    )
+
+    creds = types.SimpleNamespace(update_cred=lambda *a, **k: None, get_vault_credentials=None)
+    args = types.SimpleNamespace(output_csv=False, output_file=None, target="appl", token=None, f_token=None, excavate=["suggest_cred_opt"])
+
+    builder.ordering(creds, DummySearch(), args, False)
+
+    assert captured["name"] == "suggest_cred_opt"
+    assert captured["headers"][0] == "Discovery Instance"
+    assert "Scope" in captured["headers"]
+    assert "Outpost URL" in captured["headers"]
+    assert captured["data"]
+    assert captured["data"][0][0] == "appl"
+

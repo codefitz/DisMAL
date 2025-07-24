@@ -3,6 +3,8 @@
 import logging
 import os
 
+import tideway
+
 from . import api, tools, output, queries
 
 logger = logging.getLogger("_builder_")
@@ -151,6 +153,20 @@ def ordering(creds, search, args, apply):
         logger.error(msg)
         return
 
+    outpost_map = {}
+    if getattr(args, "target", None) and hasattr(tideway, "appliance"):
+        try:
+            token = getattr(args, "token", None)
+            if not token and getattr(args, "f_token", None):
+                if os.path.isfile(args.f_token):
+                    with open(args.f_token, "r") as f:
+                        token = f.read().strip()
+            app = tideway.appliance(args.target, token)
+            outpost_map = api.map_outpost_credentials(app)
+            logger.debug("Outpost credential map: %s", outpost_map)
+        except Exception as e:  # pragma: no cover - network errors
+            logger.error("Failed to retrieve outpost credentials: %s", e)
+
     cred_weighting = []
     
     for cred in credlist:
@@ -269,22 +285,42 @@ def ordering(creds, search, args, apply):
 
     if apply:
         for weighted_cred in weighted:
-            logger.debug("Updating: %s"%(weighted_cred))
-            headers =  [ "New Index", "Credential" ]
-            creds.update_cred(weighted_cred.get('uuid'),{"index":weighted_cred.get('index')})
+            logger.debug("Updating: %s" % (weighted_cred))
+            headers = ["New Index", "Credential", "Scope", "Outpost URL"]
+            creds.update_cred(
+                weighted_cred.get("uuid"), {"index": weighted_cred.get("index")}
+            )
     else:
-        headers = [ "Credential", "Current Index", "Weighting", "New Index" ]
+        headers = [
+            "Credential",
+            "Current Index",
+            "Weighting",
+            "New Index",
+            "Scope",
+            "Outpost URL",
+        ]
         for cred in credlist:
             for weighted_cred in weighted:
-                logger.debug("Evaluating: %s ... %s"%(cred.get('uuid'),weighted_cred.get('uuid')))
-                if cred.get('uuid') == weighted_cred.get('uuid'):
-                    index = cred.get('index')
-                    label = cred.get('label')
-                    weight = weighted_cred.get('weighting')
-                    new_index = weighted_cred.get('index')
-                    msg = '%s: Index: %s, Weight: %s, New Index: %s' % (label, index, weight, new_index)
+                logger.debug(
+                    "Evaluating: %s ... %s" % (cred.get("uuid"), weighted_cred.get("uuid"))
+                )
+                if cred.get("uuid") == weighted_cred.get("uuid"):
+                    index = cred.get("index")
+                    label = cred.get("label")
+                    weight = weighted_cred.get("weighting")
+                    new_index = weighted_cred.get("index")
+                    scope = cred.get("scopes") or []
+                    if isinstance(scope, list):
+                        scope = ", ".join(scope)
+                    url = outpost_map.get(cred.get("uuid"))
+                    msg = "%s: Index: %s, Weight: %s, New Index: %s" % (
+                        label,
+                        index,
+                        weight,
+                        new_index,
+                    )
                     logger.info(msg)
-                    data.append([label, index, weight, new_index])
+                    data.append([label, index, weight, new_index, scope, url])
 
     # Refresh
     credlist = api.get_json(creds.get_vault_credentials)
@@ -296,9 +332,18 @@ def ordering(creds, search, args, apply):
         index = cred.get('index')
         msg = '%s) %s' % (index, label)
         logger.info(msg)
-        data.append([index, label])
+        scope = cred.get("scopes") or []
+        if isinstance(scope, list):
+            scope = ", ".join(scope)
+        url = outpost_map.get(cred.get("uuid"))
+        data.append([index, label, scope, url])
 
-    output.report(data, headers, args, name="suggested_cred_opt")
+    if data:
+        headers.insert(0, "Discovery Instance")
+        for row in data:
+            row.insert(0, getattr(args, "target", None))
+
+    output.report(data, headers, args, name="suggest_cred_opt")
 
 def get_device(search, credentials, args):
     dev = args.excavate[1]

@@ -27,7 +27,12 @@ def successful(creds, search, args):
     outpost_map = {}
     if getattr(args, "target", None) and hasattr(tideway, "appliance"):
         try:
-            app = tideway.appliance(args.target, getattr(args, "token", None))
+            token = getattr(args, "token", None)
+            if not token and getattr(args, "f_token", None):
+                if os.path.isfile(args.f_token):
+                    with open(args.f_token, "r") as f:
+                        token = f.read().strip()
+            app = tideway.appliance(args.target, token)
             outpost_map = api.map_outpost_credentials(app)
             logger.debug("Outpost credential map: %s", outpost_map)
         except Exception as e:  # pragma: no cover - network errors

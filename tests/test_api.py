@@ -57,7 +57,6 @@ def test_show_runs_handles_bad_response(capsys):
     captured = capsys.readouterr()
     assert "No runs in progress." in captured.out
 
-
 def test_get_outposts_uses_deleted_false():
     """Verify get_outposts calls the correct API path."""
     class DummyAppliance:

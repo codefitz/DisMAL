@@ -275,12 +275,13 @@ def map_outpost_credentials(appliance):
     if not isinstance(outposts, list):
         return mapping
     token = getattr(appliance, "token", None)
+    api_version = getattr(appliance, "api_version", None)
     for outpost in outposts:
         url = outpost.get("url")
         if not url:
             continue
         try:
-            op_app = tideway.appliance(url, token)
+            op_app = tideway.appliance(url, token, api_version=api_version)
             creds_ep = op_app.credentials()
             cred_list = get_json(creds_ep.get_vault_credentials)
             for cred in cred_list or []:

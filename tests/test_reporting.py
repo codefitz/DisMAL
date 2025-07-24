@@ -32,9 +32,10 @@ def _run_with_patches(monkeypatch, func):
     monkeypatch.setattr(reporting.builder, "unique_identities", lambda s: [])
     monkeypatch.setattr(reporting.api, "search_results", lambda *a, **k: [])
     monkeypatch.setattr(reporting.api, "get_json", lambda *a, **k: [])
+    monkeypatch.setattr(reporting.api, "map_outpost_credentials", lambda *a, **k: {})
     called = {}
     monkeypatch.setattr(reporting, "output", types.SimpleNamespace(report=lambda *a, **k: called.setdefault("ran", True)))
-    args = types.SimpleNamespace(output_csv=False, output_file=None)
+    args = types.SimpleNamespace(output_csv=False, output_file=None, token=None, target="http://x")
     func(DummySearch(), DummyCreds(), args)
     assert "ran" in called
 
@@ -62,6 +63,6 @@ def test_successful_runs_without_scan_data(monkeypatch):
     monkeypatch.setattr(reporting.builder, "get_scans", lambda *a, **k: [])
     called = {}
     monkeypatch.setattr(reporting, "output", types.SimpleNamespace(report=lambda *a, **k: called.setdefault("ran", True)))
-    args = types.SimpleNamespace(output_csv=False, output_file=None)
+    args = types.SimpleNamespace(output_csv=False, output_file=None, token=None, target="http://x")
     reporting.successful(DummyCreds(), DummySearch(), args)
     assert "ran" in called

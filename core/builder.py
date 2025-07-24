@@ -14,6 +14,7 @@ def get_credentials(entry):
     label = entry.get('label')
     enabled = entry.get('enabled')
     types = entry.get('types')
+    usage = entry.get('usage')
     username = None
     if 'username' in entry:
         username = entry.get('username')
@@ -29,7 +30,7 @@ def get_credentials(entry):
         iprange = entry.get('ip_range')
     if 'ip_exclusion' in entry:
         exclusions = entry.get('ip_exclusion')
-    details = {"index":index,"uuid":uuid,"label":label,"username":username,"enabled":enabled,"iprange":iprange,"exclusions":exclusions,"types":types}
+    details = {"index":index,"uuid":uuid,"label":label,"username":username,"enabled":enabled,"iprange":iprange,"exclusions":exclusions,"types":types,"usage":usage}
     return details
 
 def get_credential(twsearch, twcreds, args):

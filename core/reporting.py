@@ -13,6 +13,7 @@ import pandas as pd
 
 # Local
 from . import api, queries, tools, builder, output, access, cli
+import tideway
 
 logger = logging.getLogger("_reporting_")
 
@@ -22,6 +23,15 @@ def successful(creds, search, args):
 
     vaultcreds = api.get_json(creds.get_vault_credentials)
     logger.debug('List Credentials:'+json.dumps(vaultcreds))
+
+    outpost_map = {}
+    if getattr(args, "target", None) and hasattr(tideway, "appliance"):
+        try:
+            app = tideway.appliance(args.target, getattr(args, "token", None))
+            outpost_map = api.map_outpost_credentials(app)
+            logger.debug("Outpost credential map: %s", outpost_map)
+        except Exception as e:  # pragma: no cover - network errors
+            logger.error("Failed to retrieve outpost credentials: %s", e)
 
     credsux_results = {}
     devinfosux = {}
@@ -154,18 +164,104 @@ def successful(creds, search, args):
             percent = "{0:.0%}".format(success/(total))
 
         msg = None
+        outpost_url = outpost_map.get(uuid)
+        usage = detail.get('usage')
         if args.output_file or args.output_csv:
             if active:
-                data.append([ detail.get('label'), index, uuid, detail.get('username'), session or failure[0], success, failure[1], percent, status, ip_range, ip_exclude, scheduled_scans if scheduled_scans else None, excluded_scans if excluded_scans else None ])
+                data.append([
+                    detail.get('label'),
+                    index,
+                    uuid,
+                    detail.get('username'),
+                    session or failure[0],
+                    success,
+                    failure[1],
+                    percent,
+                    status,
+                    usage,
+                    ip_range,
+                    ip_exclude,
+                    scheduled_scans if scheduled_scans else None,
+                    excluded_scans if excluded_scans else None,
+                    outpost_url,
+                ])
             else:
-                data.append([ detail.get('label'), index, uuid, detail.get('username'), detail.get('types'), None, None, "0%", "Credential appears to not be in use (%s)" % status, ip_range, ip_exclude, scheduled_scans if scheduled_scans else None, excluded_scans if excluded_scans else None ])
-            headers = [ "Credential", "Index", "UUID", "Login ID", "Protocol", "Successes", "Failures", "Success %", "State", "Ranges", "Excludes", "Scheduled Scans", "Exclusion Lists" ]
+                data.append([
+                    detail.get('label'),
+                    index,
+                    uuid,
+                    detail.get('username'),
+                    detail.get('types'),
+                    None,
+                    None,
+                    "0%",
+                    "Credential appears to not be in use (%s)" % status,
+                    usage,
+                    ip_range,
+                    ip_exclude,
+                    scheduled_scans if scheduled_scans else None,
+                    excluded_scans if excluded_scans else None,
+                    outpost_url,
+                ])
+            headers = [
+                "Credential",
+                "Index",
+                "UUID",
+                "Login ID",
+                "Protocol",
+                "Successes",
+                "Failures",
+                "Success %",
+                "State",
+                "Usage",
+                "Ranges",
+                "Excludes",
+                "Scheduled Scans",
+                "Exclusion Lists",
+                "Outpost URL",
+            ]
         else:
             if active:
-                data.append([ detail.get('label'), index, uuid, detail.get('username'), session or failure[0], success, failure[1], percent, status ])
+                data.append([
+                    detail.get('label'),
+                    index,
+                    uuid,
+                    detail.get('username'),
+                    session or failure[0],
+                    success,
+                    failure[1],
+                    percent,
+                    status,
+                    usage,
+                    outpost_url,
+                ])
             else:
-                data.append([ detail.get('label'), index, uuid, detail.get('username'), detail.get('types'), None, None, "0%", "Credential appears to not be in use (%s)" % status ])
-            headers = [ "Credential", "Index", "UUID", "Login ID", "Protocol", "Successes", "Failures", "Success %", "State" ]
+                data.append([
+                    detail.get('label'),
+                    index,
+                    uuid,
+                    detail.get('username'),
+                    detail.get('types'),
+                    None,
+                    None,
+                    "0%",
+                    "Credential appears to not be in use (%s)" % status,
+                    usage,
+                    outpost_url,
+                ])
+            headers = [
+                "Credential",
+                "Index",
+                "UUID",
+                "Login ID",
+                "Protocol",
+                "Successes",
+                "Failures",
+                "Success %",
+                "State",
+                "Usage",
+                "Outpost URL",
+            ]
     print(os.linesep,end="\r")
 
     if msg:

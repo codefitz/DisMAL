@@ -112,6 +112,7 @@ def api_target(args):
                 print(msg)
                 logger.error(msg)
 
+    args.token = token
     return disco
 
 def init_endpoints(api_target, args):

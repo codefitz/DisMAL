@@ -258,4 +258,5 @@ def api_target(args):
                 print(msg)
                 logger.error(msg)
 
+    args.token = token
     return disco

@@ -257,8 +257,8 @@ def query(search, args):
 
 def get_outposts(appliance):
     """Return list of Discovery Outposts from the appliance."""
-    logger.debug("Calling appliance.get('/discovery/outposts')")
-    resp = appliance.get("/discovery/outposts")
+    logger.debug("Calling appliance.get('/discovery/outposts?deleted=false')")
+    resp = appliance.get("/discovery/outposts?deleted=false")
     logger.debug(
         "outposts response ok=%s status=%s text=%s",
         getattr(resp, "ok", "N/A"),

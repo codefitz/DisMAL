@@ -66,3 +66,37 @@ def test_successful_runs_without_scan_data(monkeypatch):
     args = types.SimpleNamespace(output_csv=False, output_file=None, token=None, target="http://x")
     reporting.successful(DummyCreds(), DummySearch(), args)
     assert "ran" in called
+
+
+def test_successful_uses_token_file(monkeypatch, tmp_path):
+    file_path = tmp_path / "token.txt"
+    file_path.write_text("abc")
+
+    captured = {}
+
+    class DummyApp:
+        def __init__(self, token):
+            self.token = token
+
+    def fake_appliance(target, token):
+        captured["token"] = token
+        return DummyApp(token)
+
+    monkeypatch.setattr(reporting.tideway, "appliance", fake_appliance, raising=False)
+    monkeypatch.setattr(reporting.api, "map_outpost_credentials", lambda app: {})
+    monkeypatch.setattr(reporting.api, "search_results", lambda *a, **k: [])
+    monkeypatch.setattr(reporting.api, "get_json", lambda *a, **k: [])
+    monkeypatch.setattr(reporting.builder, "unique_identities", lambda s: [])
+    monkeypatch.setattr(reporting, "output", types.SimpleNamespace(report=lambda *a, **k: None))
+
+    args = types.SimpleNamespace(
+        output_csv=False,
+        output_file=None,
+        token=None,
+        f_token=str(file_path),
+        target="http://x",
+    )
+
+    reporting.successful(DummyCreds(), DummySearch(), args)
+
+    assert captured["token"] == "abc"

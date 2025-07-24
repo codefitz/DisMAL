@@ -269,6 +269,11 @@ def successful(creds, search, args):
             ]
     print(os.linesep,end="\r")
 
+    if data:
+        headers.insert(0, "Discovery Instance")
+        for row in data:
+            row.insert(0, getattr(args, "target", None))
+
     if msg:
         print(msg)
     output.report(data, headers, args, name="credential_success")

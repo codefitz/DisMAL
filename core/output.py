@@ -3,6 +3,7 @@
 import sys
 import logging
 import csv
+import os
 
 # PIP Modules
 from tabulate import tabulate
@@ -98,25 +99,38 @@ def fancy_out(data, heads):
     except Exception as e:
         logger.error("Problem printing fancy output:%s\n%s"%(e.__class__,str(e)))
 
-def report(data, heads, args):
+def report(data, heads, args, name=None):
+    """Handle generic report output."""
+    cli_out = getattr(args, "output_cli", False)
+    excavate = getattr(args, "excavate", None)
+    out_dir = getattr(args, "reporting_dir", None)
+
     if len(data) > 0:
-        logger.debug("Report Info:\n%s"%data)
+        logger.debug("Report Info:\n%s" % data)
+
         if args.output_null:
             msg = "\n:%s Results\n" % len(data)
             logger.info(msg)
-            print(msg)
+            if cli_out:
+                print(msg)
         elif args.output_csv:
+            # --csv implies CLI output regardless of --stdout
             csv_out(data, heads)
             logger.info("Output to CSV")
         elif args.output_file:
             csv_file(data, heads, args.output_file)
             logger.info("Output to CSV file")
         else:
-            fancy_out(data, heads)
-            logger.info("Fancy output")
+            if cli_out:
+                fancy_out(data, heads)
+                logger.info("Fancy output")
+            elif excavate is not None and name and out_dir:
+                csv_file(data, heads, os.path.join(out_dir, f"{name}.csv"))
+                logger.info("Output to CSV file")
     else:
         msg = "No results found!\n"
-        print(msg)
+        if cli_out:
+            print(msg)
         logger.warning(msg)
 
 def cmd2csv(header,result,seperator,filename,appliance):
@@ -151,9 +165,8 @@ def query2csv(search, query, filename, appliance):
 
 def define_txt(args,result,path,filename):
     # Manage all Output options
-    if args.access_method == "all":
-        txt_dump(result,path)
-    elif args.output_file:
+    cli_out = getattr(args, "output_cli", False)
+    if args.output_file:
         if filename:
             output_file = filename+"_"+args.output_file
         else:
@@ -167,36 +180,40 @@ def define_txt(args,result,path,filename):
     elif args.output_null:
         print("Report completed (null).")
     else:
-        print(result)
+        if cli_out:
+            print(result)
+        else:
+            txt_dump(result,path)
 
 def define_csv(args,head_ep,data,path,file,target,type):
     # Manage all Output options
+    cli_out = getattr(args, "output_cli", False)
     if type == "cmd":
-        if args.access_method == "all":
-            cmd2csv(head_ep, data, ":", path, target)
-        elif args.output_file:
+        if args.output_file:
             cmd2csv(head_ep, data, ":", file, target)
         elif args.output_csv:
             cmd2csv_out(head_ep, data, ":")
         elif args.output_null:
             print("Report completed (null).")
         else:
-            print(data)
+            if cli_out:
+                print(data)
+            else:
+                cmd2csv(head_ep, data, ":", path, target)
     elif type == "csv":
-        if args.access_method == "all":
-            save2csv(data, path, target)
-        elif args.output_file:
+        if args.output_file:
             save2csv(data, file, target)
         elif args.output_csv:
             print(data)
         elif args.output_null:
             print("Report completed (null).")
         else:
-            print(data)
+            if cli_out:
+                print(data)
+            else:
+                save2csv(data, path, target)
     elif type == "query":
-        if args.access_method == "all":
-            query2csv(head_ep, data, path, target)
-        elif args.output_file:
+        if args.output_file:
             query2csv(head_ep, data, file, target)
         elif args.output_csv:
             msg ="DisMAL: Output cannot be export to CLI."
@@ -205,13 +222,14 @@ def define_csv(args,head_ep,data,path,file,target,type):
         elif args.output_null:
             print("Report function completed (null).")
         else:
-            msg ="DisMAL: Output cannot be export to CLI."
-            logger.warning(msg)
-            print(msg)
+            if cli_out:
+                msg ="DisMAL: Output cannot be export to CLI."
+                logger.warning(msg)
+                print(msg)
+            else:
+                query2csv(head_ep, data, path, target)
     elif type == "csv_file":
-        if args.access_method == "all":
-            csv_file(data, head_ep, path)
-        elif args.output_file:
+        if args.output_file:
             csv_file(data, head_ep, file)
         elif args.output_csv:
             msg ="DisMAL: Output cannot be export to CLI."
@@ -220,6 +238,9 @@ def define_csv(args,head_ep,data,path,file,target,type):
         elif args.output_null:
             print("Report function completed (null).")
         else:
-            msg ="DisMAL: Output cannot be export to CLI."
-            logger.warning(msg)
-            print(msg)
+            if cli_out:
+                msg ="DisMAL: Output cannot be export to CLI."
+                logger.warning(msg)
+                print(msg)
+            else:
+                csv_file(data, head_ep, path)

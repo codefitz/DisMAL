@@ -7,7 +7,8 @@ sys.modules.setdefault("tabulate", types.SimpleNamespace(tabulate=lambda *a, **k
 sys.modules.setdefault("tideway", types.SimpleNamespace())
 sys.modules.setdefault("paramiko", types.SimpleNamespace())
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from core.api import get_json, search_results, show_runs
+from core.api import get_json, search_results, show_runs, get_outposts, map_outpost_credentials
+import core.api as api_mod
 
 class DummyResponse:
     def __init__(self, status_code=200, data="{}", reason="OK", url="http://x"):
@@ -56,3 +57,50 @@ def test_show_runs_handles_bad_response(capsys):
 
     captured = capsys.readouterr()
     assert "No runs in progress." in captured.out
+
+def test_get_outposts_uses_deleted_false():
+    """Verify get_outposts calls the correct API path."""
+    class DummyAppliance:
+        def __init__(self):
+            self.requested = None
+
+        def get(self, path):
+            self.requested = path
+            return DummyResponse(200, "[]")
+
+    app = DummyAppliance()
+    get_outposts(app)
+
+    assert app.requested == "/discovery/outposts?deleted=false"
+
+
+def test_map_outpost_credentials_strips_scheme(monkeypatch):
+    """Outpost targets should not include protocol."""
+
+    def fake_get_outposts(app):
+        return [{"url": "https://op.example.com"}]
+
+    class DummyCreds:
+        def get_vault_credentials(self):
+            return DummyResponse(200, '[{"uuid": "u1"}]')
+        def get_vault_credential(self, uuid):
+            return DummyResponse(200, "{}")
+
+    class DummyOutpost:
+        def credentials(self):
+            return DummyCreds()
+
+    captured = {}
+
+    def fake_outpost(target, token, api_version=None, ssl_verify=None, limit=None, offset=None):
+        captured["target"] = target
+        return DummyOutpost()
+
+    monkeypatch.setattr(api_mod, "get_outposts", fake_get_outposts)
+    monkeypatch.setattr(api_mod.tideway, "outpost", fake_outpost, raising=False)
+
+    mapping = map_outpost_credentials(types.SimpleNamespace(token="t"))
+
+    assert captured["target"] == "op.example.com"
+    assert mapping == {"u1": "https://op.example.com"}
+

@@ -156,3 +156,7 @@ cython_debug/
 *.csv
 .DS_Store
 output*/
+
+# Excel files
+*.xls
+*.xlsx

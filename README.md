@@ -13,11 +13,18 @@ Use at your own risk.
 3. Install the required Python packages:
 
    ```bash
-   pip install pandas paramiko tabulate cidrize tideway
+   pip install -r requirements.txt
    ```
 
    The `tideway` module is distributed with BMC Discovery and may need to be
    installed from your appliance rather than PyPI.
+
+4. *(Optional)* Install additional development requirements for running the
+   test suite:
+
+   ```bash
+   pip install -r requirements-dev.txt
+   ```
 
 ## Usage
 
@@ -42,3 +49,7 @@ python3 dismal.py --access_method cli \
 
 The options `-P`, `-T` and `-W` can be used to read the UI password, API token
 and tideway password from files instead of providing them inline.
+
+By default, reports are written to an `output_<appliance>` directory in the
+current working directory. Use the `--stdout` option to suppress file output and
+print results directly to the terminal.

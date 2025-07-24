@@ -5,10 +5,12 @@ import logging
 import csv
 import json
 import os
+from urllib.parse import urlparse
 
 # PIP Modules
 from pprint import pprint
 import pandas
+import tideway
 
 # Local
 from . import tools, output, builder, queries, defaults, reporting
@@ -254,7 +256,48 @@ def query(search, args):
         print(msg)
         logger.warning(msg)
 
-def success(twcreds,twsearch,args,dir):
+def get_outposts(appliance):
+    """Return list of Discovery Outposts from the appliance."""
+    logger.debug("Calling appliance.get('/discovery/outposts?deleted=false')")
+    resp = appliance.get("/discovery/outposts?deleted=false")
+    logger.debug(
+        "outposts response ok=%s status=%s text=%s",
+        getattr(resp, "ok", "N/A"),
+        getattr(resp, "status_code", "N/A"),
+        getattr(resp, "text", "N/A"),
+    )
+    return get_json(resp)
+
+
+def map_outpost_credentials(appliance):
+    """Return mapping of credential UUIDs to outpost URLs."""
+    mapping = {}
+    outposts = get_outposts(appliance)
+    if not isinstance(outposts, list):
+        return mapping
+    token = getattr(appliance, "token", None)
+    api_version = getattr(appliance, "api_version", None)
+    for outpost in outposts:
+        url = outpost.get("url")
+        if not url:
+            continue
+        parsed = urlparse(url)
+        target = (parsed.netloc or parsed.path).rstrip("/")
+        try:
+            op_app = tideway.outpost(target, token, api_version=api_version)
+            creds_ep = op_app.credentials()
+            cred_list = get_json(creds_ep.get_vault_credentials)
+            for cred in cred_list or []:
+                uuid = cred.get("uuid")
+                if not uuid:
+                    continue
+                get_json(creds_ep.get_vault_credential(uuid))
+                mapping[uuid] = url
+        except Exception as e:  # pragma: no cover - network errors
+            logger.error("Error processing outpost %s: %s", url, e)
+    return mapping
+
+def success(twcreds, twsearch, args, dir):
     reporting.successful(twcreds, twsearch, args)
     #if args.output_file:
     #    df = pandas.read_csv(args.output_file)

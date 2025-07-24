@@ -13,6 +13,7 @@ import pandas as pd
 
 # Local
 from . import api, queries, tools, builder, output, access, cli
+import tideway
 
 logger = logging.getLogger("_reporting_")
 
@@ -22,6 +23,20 @@ def successful(creds, search, args):
 
     vaultcreds = api.get_json(creds.get_vault_credentials)
     logger.debug('List Credentials:'+json.dumps(vaultcreds))
+
+    outpost_map = {}
+    if getattr(args, "target", None) and hasattr(tideway, "appliance"):
+        try:
+            token = getattr(args, "token", None)
+            if not token and getattr(args, "f_token", None):
+                if os.path.isfile(args.f_token):
+                    with open(args.f_token, "r") as f:
+                        token = f.read().strip()
+            app = tideway.appliance(args.target, token)
+            outpost_map = api.map_outpost_credentials(app)
+            logger.debug("Outpost credential map: %s", outpost_map)
+        except Exception as e:  # pragma: no cover - network errors
+            logger.error("Failed to retrieve outpost credentials: %s", e)
 
     credsux_results = {}
     devinfosux = {}
@@ -43,19 +58,24 @@ def successful(creds, search, args):
     failCreds = tools.session_get(credfail_results)
 
     # Include Scan Ranges and Excludes
-    scan_resp = search.search(queries.scanrange,format="object",limit=500)
+    scan_resp = search.search(queries.scanrange, format="object", limit=500)
     scan_ranges = api.get_json(scan_resp)
-    excludes_resp = search.search(queries.excludes,format="object",limit=500)
+    excludes_resp = search.search(queries.excludes, format="object", limit=500)
     excludes = api.get_json(excludes_resp)
+
     if not scan_ranges or not isinstance(scan_ranges, list):
-        logger.error("Failed to retrieve scan ranges")
-        return
+        logger.warning("Failed to retrieve scan ranges; column will be blank")
+        scan_ranges = [{"results": []}]
+    elif len(scan_ranges) == 0:
+        logger.warning("No scan ranges returned; column will be blank")
+        scan_ranges = [{"results": []}]
+
     if not excludes or not isinstance(excludes, list):
-        logger.error("Failed to retrieve excludes")
-        return
-    if len(scan_ranges) == 0 or len(excludes) == 0:
-        logger.error("No scan or exclude data returned")
-        return
+        logger.warning("Failed to retrieve excludes; column will be blank")
+        excludes = [{"results": []}]
+    elif len(excludes) == 0:
+        logger.warning("No exclude data returned; column will be blank")
+        excludes = [{"results": []}]
 
     timer_count = 0
     for cred in vaultcreds:
@@ -149,23 +169,114 @@ def successful(creds, search, args):
             percent = "{0:.0%}".format(success/(total))
 
         msg = None
+        outpost_url = outpost_map.get(uuid)
+        usage = detail.get('usage')
         if args.output_file or args.output_csv:
             if active:
-                data.append([ detail.get('label'), index, uuid, detail.get('username'), session or failure[0], success, failure[1], percent, status, ip_range, ip_exclude, scheduled_scans if scheduled_scans else None, excluded_scans if excluded_scans else None ])
+                data.append([
+                    detail.get('label'),
+                    index,
+                    uuid,
+                    detail.get('username'),
+                    session or failure[0],
+                    success,
+                    failure[1],
+                    percent,
+                    status,
+                    usage,
+                    ip_range,
+                    ip_exclude,
+                    scheduled_scans if scheduled_scans else None,
+                    excluded_scans if excluded_scans else None,
+                    outpost_url,
+                ])
             else:
-                data.append([ detail.get('label'), index, uuid, detail.get('username'), detail.get('types'), None, None, "0%", "Credential appears to not be in use (%s)" % status, ip_range, ip_exclude, scheduled_scans if scheduled_scans else None, excluded_scans if excluded_scans else None ])
-            headers = [ "Credential", "Index", "UUID", "Login ID", "Protocol", "Successes", "Failures", "Success %", "State", "Ranges", "Excludes", "Scheduled Scans", "Exclusion Lists" ]
+                data.append([
+                    detail.get('label'),
+                    index,
+                    uuid,
+                    detail.get('username'),
+                    detail.get('types'),
+                    None,
+                    None,
+                    "0%",
+                    "Credential appears to not be in use (%s)" % status,
+                    usage,
+                    ip_range,
+                    ip_exclude,
+                    scheduled_scans if scheduled_scans else None,
+                    excluded_scans if excluded_scans else None,
+                    outpost_url,
+                ])
+            headers = [
+                "Credential",
+                "Index",
+                "UUID",
+                "Login ID",
+                "Protocol",
+                "Successes",
+                "Failures",
+                "Success %",
+                "State",
+                "Usage",
+                "Ranges",
+                "Excludes",
+                "Scheduled Scans",
+                "Exclusion Lists",
+                "Outpost URL",
+            ]
         else:
             if active:
-                data.append([ detail.get('label'), index, uuid, detail.get('username'), session or failure[0], success, failure[1], percent, status ])
+                data.append([
+                    detail.get('label'),
+                    index,
+                    uuid,
+                    detail.get('username'),
+                    session or failure[0],
+                    success,
+                    failure[1],
+                    percent,
+                    status,
+                    usage,
+                    outpost_url,
+                ])
             else:
-                data.append([ detail.get('label'), index, uuid, detail.get('username'), detail.get('types'), None, None, "0%", "Credential appears to not be in use (%s)" % status ])
-            headers = [ "Credential", "Index", "UUID", "Login ID", "Protocol", "Successes", "Failures", "Success %", "State" ]
+                data.append([
+                    detail.get('label'),
+                    index,
+                    uuid,
+                    detail.get('username'),
+                    detail.get('types'),
+                    None,
+                    None,
+                    "0%",
+                    "Credential appears to not be in use (%s)" % status,
+                    usage,
+                    outpost_url,
+                ])
+            headers = [
+                "Credential",
+                "Index",
+                "UUID",
+                "Login ID",
+                "Protocol",
+                "Successes",
+                "Failures",
+                "Success %",
+                "State",
+                "Usage",
+                "Outpost URL",
+            ]
     print(os.linesep,end="\r")
+
+    if data:
+        headers.insert(0, "Discovery Instance")
+        for row in data:
+            row.insert(0, getattr(args, "target", None))
 
     if msg:
         print(msg)
-    output.report(data, headers, args)
+    output.report(data, headers, args, name="credential_success")
 
 def successful_cli(client, args, sysuser, passwd, reporting_dir):
     credentials = access.remote_cmd('tw_vault_control --show --json -u %s -p %s'%(sysuser,passwd),client)
@@ -546,7 +657,7 @@ def devices(twsearch, twcreds, args):
 
     if msg:
         print(msg)
-    output.report(data, headers, args)
+    output.report(data, headers, args, name="devices")
 
 def ipaddr(search, credentials, args):
     ipaddr = args.excavate[1]
@@ -1032,7 +1143,7 @@ def discovery_access(twsearch, twcreds, args):
         print(msg)
         logger.error(msg)
 
-    output.report(data, headers, args)
+    output.report(data, headers, args, name="discovery_access")
 
 def discovery_analysis(twsearch, twcreds, args):
     print("\nDiscovery Access Analysis")
@@ -1407,7 +1518,7 @@ def discovery_analysis(twsearch, twcreds, args):
         print(msg)
         logger.error(msg)
 
-    output.report(data, headers, args)
+    output.report(data, headers, args, name="discovery_analysis")
 
 def tpl_export(search, query, dir, method, client, sysuser, syspass):
     tpldir = dir + "/tpl"

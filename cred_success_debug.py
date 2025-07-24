@@ -531,16 +531,23 @@ def main():
     api_target_obj = api_target(args)
     disco, search, creds, _, _ = init_endpoints(api_target_obj, args)
 
+    # Execute the credential success report
+    #success(creds, search, args, '.')
+
     # Short API call test
     import tideway
+    if args.f_token and os.path.isfile(args.f_token):
+        with open(args.f_token, "r") as f:
+            args.token = f.read().strip()
+    print("Token: ", args.token)
     tw = tideway.appliance(args.target,args.token)
-    print("Attempting to get credentials from appliance: ", api_target_obj)
+    print("Attempting to get credentials from appliance: ", args.target)
     tw_creds = tw.credentials()
     print("tw_creds JSON: ", tw_creds.get_vault_credentials.json())
+    outposts = tw.get("/discovery/outposts")
+    print("Discovery Outposts: ", outposts.json())
+    print("URL: ", outposts.url)
     ###    # Short API call
-
-    # Execute the credential success report
-    success(creds, search, args, '.')
 
 if __name__ == '__main__':
     main()

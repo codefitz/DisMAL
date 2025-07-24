@@ -522,6 +522,7 @@ missing_vms = """
                     vm_type as 'VM_Type',
                     (product_version or cloud_class) as 'VM_Version',
                     #RunningSoftware:HostedSoftware:Host:.name as 'VM_Host',
+                    #RunningSoftware:HostedSoftware:Host:.type as 'VM_Host_Type',
                     vm_name as 'Guest_VM_Name',
                     vm_guest_os as 'Guest_VM_OS',
                     (vm_status or cloud and "Cloud Hosted") as 'Status'

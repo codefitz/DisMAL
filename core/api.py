@@ -6,6 +6,7 @@ import csv
 import json
 import os
 from urllib.parse import urlparse
+import datetime
 
 # PIP Modules
 from pprint import pprint
@@ -395,7 +396,60 @@ def orphan_vms(search, args, dir):
     output.define_csv(args,search,queries.orphan_vms,dir+defaults.orphan_vms_filename,args.output_file,args.target,"query")
 
 def missing_vms(search, args, dir):
-    output.define_csv(args,search,queries.missing_vms,dir+defaults.missing_vms_filename,args.output_file,args.target,"query")
+    """Run missing_vms query and enrich results with recent device info."""
+
+    vm_results = search_results(search, queries.missing_vms)
+
+    # Build a lookup of last scan information from the devices report
+    devices = search_results(search, queries.deviceInfo)
+    device_map = {}
+    for dev in devices:
+        ip = tools.getr(dev, "DA_Endpoint")
+        start = tools.getr(dev, "DA_Start")
+        if not ip or not start:
+            continue
+
+        # remove timezone information and parse
+        try:
+            start_ts = start.split(" ")[:2]
+            start_ts = " ".join(start_ts)
+            ts = datetime.datetime.strptime(start_ts, "%Y-%m-%d %H:%M:%S")
+        except Exception:
+            ts = datetime.datetime.min
+
+        existing = device_map.get(ip)
+        if not existing or ts > existing["ts"]:
+            device_map[ip] = {
+                "ts": ts,
+                "last_identity": tools.getr(dev, "Device_Hostname"),
+                "last_start_time": start,
+                "last_result": tools.getr(dev, "DA_Result"),
+            }
+
+    for vm in vm_results:
+        ip = (
+            vm.get("IP")
+            or vm.get("ip")
+            or vm.get("ip_addr")
+            or vm.get("IPAddress")
+            or vm.get("endpoint")
+        )
+        info = device_map.get(str(ip)) if ip is not None else None
+        if info:
+            vm["last_identity"] = info.get("last_identity")
+            vm["last_scanned"] = info.get("last_start_time")
+            vm["last_result"] = info.get("last_result")
+
+    header, data = tools.json2csv(vm_results)
+    output.define_csv(
+        args,
+        header,
+        data,
+        dir + defaults.missing_vms_filename,
+        args.output_file,
+        args.target,
+        "csv_file",
+    )
 
 def near_removal(search, args, dir):
     output.define_csv(args,search,queries.near_removal,dir+defaults.near_removal_filename,args.output_file,args.target,"query")

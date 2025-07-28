@@ -407,6 +407,9 @@ def missing_vms(search, args, dir):
             gf_index = header.index("Guest_Full_Name") if "Guest_Full_Name" in header else None
             header.append("Pingable")
 
+            devices = devices_lookup(search)
+            header.extend(["last_identity", "last_scanned", "last_result"])
+
             timer_count = 0
             for row in data:
                 timer_count = tools.completage(
@@ -423,6 +426,15 @@ def missing_vms(search, args, dir):
                         except Exception:
                             ip = "N/A"
                 row.append(ip)
+                info = devices.get(ip)
+                if info:
+                    row.extend([
+                        info.get("last_identity", "N/A"),
+                        info.get("last_start_time", "N/A"),
+                        info.get("last_result", "N/A"),
+                    ])
+                else:
+                    row.extend(["N/A", "N/A", "N/A"])
             print(os.linesep, end="\r")
 
             output.define_csv(
@@ -478,6 +490,20 @@ def agents(search, args, dir):
 
 def software_users(search, args, dir):
     output.define_csv(args,search,queries.user_accounts,dir+defaults.si_user_accounts_filename,args.output_file,args.target,"query")
+
+def devices_lookup(search):
+    """Return a mapping of IPs to their last discovery information."""
+    results = search_results(search, queries.deviceInfo)
+    mapping = {}
+    for result in results:
+        ip = tools.getr(result, "DA_Endpoint", None)
+        if ip:
+            mapping[ip] = {
+                "last_identity": tools.getr(result, "Device_Hostname", "N/A"),
+                "last_start_time": tools.getr(result, "DA_Start", "N/A"),
+                "last_result": tools.getr(result, "DA_Result", "N/A"),
+            }
+    return mapping
 
 def tku(knowledge, args, dir):
     logger.info("Checking Knowledge...")

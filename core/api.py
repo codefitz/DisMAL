@@ -13,7 +13,8 @@ import pandas
 import tideway
 
 # Local
-from . import tools, output, builder, queries, defaults, reporting
+from . import tools, output, builder, queries, defaults, reporting, access
+import socket
 
 logger = logging.getLogger("_api_")
 
@@ -395,7 +396,57 @@ def orphan_vms(search, args, dir):
     output.define_csv(args,search,queries.orphan_vms,dir+defaults.orphan_vms_filename,args.output_file,args.target,"query")
 
 def missing_vms(search, args, dir):
-    output.define_csv(args,search,queries.missing_vms,dir+defaults.missing_vms_filename,args.output_file,args.target,"query")
+    if getattr(args, "resolve_hostnames", False):
+        response = search_results(search, queries.missing_vms)
+        if isinstance(response, list) and len(response) > 0:
+            header, data = tools.json2csv(response)
+            header.insert(0, "Discovery Instance")
+            for row in data:
+                row.insert(0, args.target)
+
+            gf_index = header.index("Guest_Full_Name") if "Guest_Full_Name" in header else None
+            header.append("Pingable")
+
+            for row in data:
+                ip = "N/A"
+                if gf_index is not None:
+                    host = row[gf_index]
+                    if host and host != "N/A" and access.ping(host) == 0:
+                        try:
+                            ip = socket.gethostbyname(host)
+                        except Exception:
+                            ip = "N/A"
+                row.append(ip)
+
+            output.define_csv(
+                args,
+                header,
+                data,
+                dir + defaults.missing_vms_filename,
+                args.output_file,
+                args.target,
+                "csv_file",
+            )
+        else:
+            output.define_csv(
+                args,
+                search,
+                queries.missing_vms,
+                dir + defaults.missing_vms_filename,
+                args.output_file,
+                args.target,
+                "query",
+            )
+    else:
+        output.define_csv(
+            args,
+            search,
+            queries.missing_vms,
+            dir + defaults.missing_vms_filename,
+            args.output_file,
+            args.target,
+            "query",
+        )
 
 def near_removal(search, args, dir):
     output.define_csv(args,search,queries.near_removal,dir+defaults.near_removal_filename,args.output_file,args.target,"query")

@@ -151,6 +151,8 @@ Providing no <report> or using "default" will run all options that do not requir
 "default"                   - Run all options that do not require a value
 \n
 ''',metavar='<report> [value]',nargs='*')
+excavation.add_argument('--resolve-hostnames', dest='resolve_hostnames', action='store_true', required=False,
+                        help='Ping guest full names and record the resolved IP address in results.')
 
 global args
 args = parser.parse_args()

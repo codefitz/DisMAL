@@ -407,7 +407,13 @@ def missing_vms(search, args, dir):
             gf_index = header.index("Guest_Full_Name") if "Guest_Full_Name" in header else None
             header.append("Pingable")
 
+            timer_count = 0
             for row in data:
+                timer_count = tools.completage(
+                    "Resolving hostnames...",
+                    len(data),
+                    timer_count,
+                )
                 ip = "N/A"
                 if gf_index is not None:
                     host = row[gf_index]
@@ -417,6 +423,7 @@ def missing_vms(search, args, dir):
                         except Exception:
                             ip = "N/A"
                 row.append(ip)
+            print(os.linesep, end="\r")
 
             output.define_csv(
                 args,

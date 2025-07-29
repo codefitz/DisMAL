@@ -661,6 +661,10 @@ def update_cred(appliance, uuid):
 
 def search_results(api_endpoint, query):
     try:
+        if isinstance(query, dict) and "query" in query:
+            sanitized = query["query"].replace("'", '\\"')
+            sanitized = sanitized.replace("\n", " ").replace("\r", " ")
+            query = {"query": sanitized}
         if logger.isEnabledFor(logging.DEBUG):
             try:
                 logger.debug("Search query: %s" % query)
@@ -686,12 +690,18 @@ def search_results(api_endpoint, query):
                     logger.debug("Raw search response: %s" % results.text)
                 except Exception:
                     pass
-            if not getattr(results, "ok", True):
-                logger.error(
-                    "Search API returned %s - %s",
-                    getattr(results, "status_code", "unknown"),
-                    getattr(results, "reason", ""),
-                )
+            status_code = getattr(results, "status_code", 200)
+            if status_code >= 400:
+                try:
+                    data = json.loads(results.text)
+                except Exception:
+                    data = {"error": getattr(results, "text", "")}
+                if logger.isEnabledFor(logging.DEBUG):
+                    try:
+                        logger.debug("Parsed error payload: %s" % json.dumps(data))
+                    except Exception:
+                        pass
+                return data
             try:
                 data = results.json()
             except Exception as e:

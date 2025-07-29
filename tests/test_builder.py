@@ -73,3 +73,76 @@ def test_ordering_inserts_instance_and_outpost(monkeypatch):
     assert captured["data"]
     assert captured["data"][0][0] == "appl"
 
+
+def _setup_schedule_patches(monkeypatch, cred_list, excludes, scan_ranges):
+    seq = iter([cred_list, excludes, scan_ranges])
+
+    monkeypatch.setattr(builder.api, "get_json", lambda *a, **k: next(seq))
+    monkeypatch.setattr(builder.tools, "range_to_ips", lambda r: [r])
+    monkeypatch.setattr(builder.tools, "sortlist", lambda l, dv=None: list(l))
+    monkeypatch.setattr(builder.tools, "completage", lambda *a, **k: 0)
+
+    search = types.SimpleNamespace(search=lambda *a, **k: None)
+    vault = types.SimpleNamespace(get_vault_credentials=None)
+    args = types.SimpleNamespace(output_csv=False, output_file=None)
+
+    captured = {}
+
+    def fake_report(data, heads, args, name=None):
+        captured["data"] = data
+        captured["heads"] = heads
+
+    monkeypatch.setattr(builder, "output", types.SimpleNamespace(report=fake_report))
+
+    return vault, search, args, captured
+
+
+def test_scheduling_empty_excludes(monkeypatch, capsys):
+    cred = [{"uuid": "u1", "label": "c1", "index": 1, "ip_range": "10.0.0.0/24"}]
+    vault, search, args, captured = _setup_schedule_patches(
+        monkeypatch,
+        cred,
+        [],
+        [{"results": [{"Scan_Range": ["10.0.0.0/24"], "ID": 1, "Label": "r", "Level": "L", "Date_Rules": ""}]}],
+    )
+
+    builder.scheduling(vault, search, args)
+    out = capsys.readouterr().out
+
+    assert "No exclude ranges found" in out
+    assert captured["data"]
+    assert any(row[1] == "Scan Range" for row in captured["data"])
+
+
+def test_scheduling_empty_scan_ranges(monkeypatch, capsys):
+    cred = [{"uuid": "u1", "label": "c1", "index": 1, "ip_range": "10.0.0.0/24"}]
+    excludes = [{"results": [{"Scan_Range": ["10.0.0.0/24"], "ID": 1, "Label": "r", "Date_Rules": ""}]}]
+
+    vault, search, args, captured = _setup_schedule_patches(
+        monkeypatch,
+        cred,
+        excludes,
+        [],
+    )
+
+    builder.scheduling(vault, search, args)
+    out = capsys.readouterr().out
+
+    assert "No scan ranges found" in out
+    assert captured["data"]
+    assert any(row[1] == "Exclude Range" for row in captured["data"])
+
+
+def test_scheduling_empty_both(monkeypatch):
+    cred = [{"uuid": "u1", "label": "c1", "index": 1}]
+    vault, search, args, captured = _setup_schedule_patches(
+        monkeypatch,
+        cred,
+        [],
+        [],
+    )
+
+    builder.scheduling(vault, search, args)
+
+    assert captured["data"] == []
+

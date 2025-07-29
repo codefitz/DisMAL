@@ -470,9 +470,13 @@ def scheduling(vault, search, args):
     logger.info("Running Schedules Report...")
     msg = None
 
+    heads = ["Name", "Type", "Range ID", "Ranges", "Scan Level", "When", "Credentials"]
+    data = []
+
     vaultcreds = api.get_json(vault.get_vault_credentials)
     if not vaultcreds or not isinstance(vaultcreds, list):
         logger.error("Vault credentials could not be retrieved")
+        output.report([], heads, args, name="schedules")
         return
 
     credential_ips = []
@@ -494,20 +498,22 @@ def scheduling(vault, search, args):
     excludes_resp = search.search(queries.excludes,format="object")
     logger.debug("Excludes search HTTP status: %s", getattr(excludes_resp, "status_code", "n/a"))
     excludes = api.get_json(excludes_resp)
-    if not excludes or not isinstance(excludes, list):
+    data = []
+    if excludes is None or not isinstance(excludes, list):
         logger.error("Failed to retrieve excludes")
+        output.report(data, heads, args, name="schedules")
         return
     if len(excludes) == 0:
-        logger.error("No excludes returned")
-        return
-
-    # Build the results
-
-    results = excludes[0]
-    if not isinstance(results, dict) or 'results' not in results:
-        logger.error("Invalid excludes result structure")
-        return
-    data = []
+        msg = "No exclude ranges found"
+        print(msg)
+        logger.info(msg)
+        results = {"results": []}
+    else:
+        results = excludes[0]
+        if not isinstance(results, dict) or 'results' not in results:
+            logger.error("Invalid excludes result structure")
+            output.report(data, heads, args, name="schedules")
+            return
     exclude_ips = []
 
     timer_count = 0
@@ -550,19 +556,21 @@ def scheduling(vault, search, args):
     scan_resp = search.search(queries.scanrange,format="object")
     logger.debug("Scan range search HTTP status: %s", getattr(scan_resp, "status_code", "n/a"))
     scan_ranges = api.get_json(scan_resp)
-    if not scan_ranges or not isinstance(scan_ranges, list):
+    if scan_ranges is None or not isinstance(scan_ranges, list):
         logger.error("Failed to retrieve scan ranges")
+        output.report(data, heads, args, name="schedules")
         return
     if len(scan_ranges) == 0:
-        logger.error("No scan ranges returned")
-        return
-
-    # Build the results
-
-    results = scan_ranges[0]
-    if not isinstance(results, dict) or 'results' not in results:
-        logger.error("Invalid scan range result structure")
-        return
+        msg = "No scan ranges found"
+        print(msg)
+        logger.info(msg)
+        results = {"results": []}
+    else:
+        results = scan_ranges[0]
+        if not isinstance(results, dict) or 'results' not in results:
+            logger.error("Invalid scan range result structure")
+            output.report(data, heads, args, name="schedules")
+            return
 
     range_ips = []
     timer_count = 0
@@ -609,7 +617,7 @@ def scheduling(vault, search, args):
     if msg:
         print(msg)
 
-    output.report(data, [ "Name", "Type", "Range ID", "Ranges", "Scan Level", "When", "Credentials" ], args, name="schedules")
+    output.report(data, heads, args, name="schedules")
 
 def unique_identities(search):
 

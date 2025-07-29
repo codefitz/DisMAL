@@ -90,6 +90,8 @@ def get_json(api_endpoint):
             return {}
 
     if not hasattr(api_endpoint, "status_code"):
+        if isinstance(api_endpoint, (list, dict)):
+            return api_endpoint
         logger.error("Invalid API endpoint provided to get_json")
         return {}
 

@@ -708,6 +708,7 @@ def search_results(api_endpoint, query):
                         )
                     except Exception:
                         pass
+                logger.error("Search failed: %s - %s", status_code, getattr(results, "reason", ""))
                 return data
             try:
                 data = results.json()
@@ -722,14 +723,14 @@ def search_results(api_endpoint, query):
                         logger.debug("Parsed results length: %s" % len(data))
                     except Exception:
                         pass
-                return data
+                return tools.list_table_to_json(data)
         else:
             if logger.isEnabledFor(logging.DEBUG):
                 try:
                     logger.debug("Parsed results length: %s" % len(results))
                 except Exception:
                     pass
-            return results
+            return tools.list_table_to_json(results)
     except Exception as e:
         msg = "Not able to make api call.\nQuery: %s\nException: %s\n%s" %(query,e.__class__,str(e))
         print(msg)

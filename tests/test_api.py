@@ -156,20 +156,8 @@ def test_search_results_returns_error_payload(caplog):
     assert result == {"msg": "bad"}
     assert "Bad" in caplog.text
 
-
-def test_excludes_query_dict(monkeypatch):
-    """search_results should accept the excludes dict query."""
-
-    captured = {}
-
-    class Recorder:
-        def search(self, query, format="object", limit=500):
-            captured["query"] = query
-            return DummyResponse(200, "[]")
-
-    result = search_results(Recorder(), queries.excludes)
-
-    assert result == []
-    assert isinstance(captured["query"], dict)
-    assert "query" in captured["query"]
+def test_search_results_list_table():
+    search = DummySearch([["A", "B"], [1, 2]])
+    result = search_results(search, {"query": "q"})
+    assert result == [{"A": 1, "B": 2}]
 

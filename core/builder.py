@@ -755,7 +755,7 @@ def overlapping(tw_search, args):
     range_ips = []
     full_range = []
     scheduled_ip_list = []
-    matched_runs = []
+    matched_runs = []  # store matched runs from all scan ranges
 
     timer_count = 0
     for result in results.get('results'):
@@ -795,9 +795,12 @@ def overlapping(tw_search, args):
                 if matched:
                     runs.append(matched)
 
-        # Unique
-        matched_runs = tools.sortdic(runs)
-        logger.debug("Matched Runs: %s"%(matched_runs))
+        # Unique per scan range
+        matched_runs.extend(tools.sortdic(runs))
+        logger.debug("Matched Runs so far: %s"%(matched_runs))
+
+    # Remove duplicates across all ranges
+    matched_runs = tools.sortdic(matched_runs)
 
     logger.debug("Executing excludes query: %s", queries.excludes)
     excludes_resp = tw_search.search(queries.excludes,format="object")

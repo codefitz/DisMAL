@@ -692,13 +692,20 @@ def search_results(api_endpoint, query):
                     pass
             status_code = getattr(results, "status_code", 200)
             if status_code >= 400:
+                logger.error(
+                    "Search API returned %s - %s",
+                    status_code,
+                    getattr(results, "reason", ""),
+                )
                 try:
                     data = json.loads(results.text)
                 except Exception:
                     data = {"error": getattr(results, "text", "")}
                 if logger.isEnabledFor(logging.DEBUG):
                     try:
-                        logger.debug("Parsed error payload: %s" % json.dumps(data))
+                        logger.debug(
+                            "Parsed error payload: %s" % json.dumps(data)
+                        )
                     except Exception:
                         pass
                 return data

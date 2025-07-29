@@ -9,6 +9,7 @@ sys.modules.setdefault("paramiko", types.SimpleNamespace())
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from core.api import get_json, search_results, show_runs, get_outposts, map_outpost_credentials
 import core.api as api_mod
+from core import queries
 
 class DummyResponse:
     def __init__(self, status_code=200, data="{}", reason="OK", url="http://x"):
@@ -154,4 +155,21 @@ def test_search_results_returns_error_payload(caplog):
 
     assert result == {"msg": "bad"}
     assert "Bad" in caplog.text
+
+
+def test_excludes_query_dict(monkeypatch):
+    """search_results should accept the excludes dict query."""
+
+    captured = {}
+
+    class Recorder:
+        def search(self, query, format="object", limit=500):
+            captured["query"] = query
+            return DummyResponse(200, "[]")
+
+    result = search_results(Recorder(), queries.excludes)
+
+    assert result == []
+    assert isinstance(captured["query"], dict)
+    assert "query" in captured["query"]
 

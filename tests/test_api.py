@@ -57,6 +57,22 @@ def test_search_results_fallback():
     assert search_results(search, {"query": "q"}) == [{"ok": True}]
 
 
+def test_search_results_sanitizes_dict_query():
+    captured = {}
+
+    class CaptureSearch:
+        def search(self, query, format="object", limit=500):
+            captured["q"] = query
+            return DummyResponse(200, "[]")
+
+    search = CaptureSearch()
+    query = {"query": "search Foo\nshow bar as 'Bar'"}
+
+    search_results(search, query)
+
+    assert captured["q"] == {"query": 'search Foo show bar as \\"Bar\\"'}
+
+
 def test_show_runs_handles_bad_response(capsys):
     resp = DummyResponse(401, 'not-json', reason="Unauthorized")
     disco = DummyDisco(resp)

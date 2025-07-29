@@ -659,13 +659,19 @@ def update_cred(appliance, uuid):
             active = True
     return active
 
-def search_results(api_endpoint,query):
+def search_results(api_endpoint, query):
     try:
         if logger.isEnabledFor(logging.DEBUG):
             try:
                 logger.debug("Search query: %s" % query)
             except Exception:
                 pass
+
+        if isinstance(query, dict) and isinstance(query.get("query"), str):
+            cleaned = query["query"].replace("\n", " ").replace("'", r'\"')
+            query = dict(query)
+            query["query"] = cleaned
+
         if hasattr(api_endpoint, "search_bulk"):
             results = api_endpoint.search_bulk(query, format="object", limit=500)
         else:
@@ -680,6 +686,12 @@ def search_results(api_endpoint,query):
                     logger.debug("Raw search response: %s" % results.text)
                 except Exception:
                     pass
+            if not getattr(results, "ok", True):
+                logger.error(
+                    "Search API returned %s - %s",
+                    getattr(results, "status_code", "unknown"),
+                    getattr(results, "reason", ""),
+                )
             try:
                 data = results.json()
             except Exception as e:

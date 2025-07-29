@@ -146,3 +146,34 @@ def test_scheduling_empty_both(monkeypatch):
 
     assert captured["data"] == []
 
+
+def test_scheduling_creates_empty_csv(monkeypatch):
+    cred = [{"uuid": "u1", "label": "c1", "index": 1}]
+    seq = iter([cred, [], []])
+
+    monkeypatch.setattr(builder.api, "get_json", lambda *a, **k: next(seq))
+    monkeypatch.setattr(builder.tools, "range_to_ips", lambda r: [r])
+    monkeypatch.setattr(builder.tools, "sortlist", lambda l, dv=None: list(l))
+    monkeypatch.setattr(builder.tools, "completage", lambda *a, **k: 0)
+
+    search = types.SimpleNamespace(search=lambda *a, **k: None)
+    vault = types.SimpleNamespace(get_vault_credentials=None)
+
+    args = types.SimpleNamespace(
+        output_csv=False,
+        output_file=None,
+        excavate=["schedules"],
+        reporting_dir="out",
+    )
+
+    called = {}
+
+    def fake_csv_file(data, heads, filename):
+        called["file"] = filename
+
+    monkeypatch.setattr(builder.output, "csv_file", fake_csv_file)
+
+    builder.scheduling(vault, search, args)
+
+    assert called["file"].endswith("schedules.csv")
+

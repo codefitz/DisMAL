@@ -97,6 +97,31 @@ def _setup_schedule_patches(monkeypatch, cred_list, excludes, scan_ranges):
     return vault, search, args, captured
 
 
+def _setup_overlap_patches(monkeypatch, scan_ranges, excludes):
+    seq = iter([scan_ranges, excludes])
+
+    monkeypatch.setattr(builder.api, "get_json", lambda *a, **k: next(seq))
+    monkeypatch.setattr(builder.api, "search_results", lambda *a, **k: [])
+    monkeypatch.setattr(builder.tools, "range_to_ips", lambda r: [r])
+    monkeypatch.setattr(builder.tools, "sortdic", lambda l: list(l))
+    monkeypatch.setattr(builder.tools, "sortlist", lambda l, dv=None: list(l))
+    monkeypatch.setattr(builder.tools, "completage", lambda *a, **k: 0)
+    monkeypatch.setattr(builder.tools, "getr", lambda d, k, default=None: d.get(k, default))
+
+    search = types.SimpleNamespace(search=lambda *a, **k: None)
+    args = types.SimpleNamespace(output_csv=False, output_file=None)
+
+    captured = {}
+
+    def fake_report(data, heads, args, name=None):
+        captured["data"] = data
+        captured["heads"] = heads
+
+    monkeypatch.setattr(builder, "output", types.SimpleNamespace(report=fake_report))
+
+    return search, args, captured
+
+
 def test_scheduling_empty_excludes(monkeypatch, capsys):
     cred = [{"uuid": "u1", "label": "c1", "index": 1, "ip_range": "10.0.0.0/24"}]
     vault, search, args, captured = _setup_schedule_patches(
@@ -221,4 +246,24 @@ def test_overlapping_scan_ranges_no_results_key(monkeypatch):
     builder.overlapping(search, args)
 
     assert "data" in called
+
+
+def test_overlapping_empty_excludes(monkeypatch, capsys):
+    scan_ranges = [{"results": [{"Scan_Range": ["10.0.0.0/24"], "ID": 1, "Label": "r", "Level": "L", "Date_Rules": ""}]}]
+    search, args, captured = _setup_overlap_patches(monkeypatch, scan_ranges, [])
+
+    builder.overlapping(search, args)
+    out = capsys.readouterr().out
+
+    assert "No exclude ranges found" in out
+    assert captured["data"] == []
+
+
+def test_overlapping_empty_scan_ranges(monkeypatch, capsys):
+    search, args, captured = _setup_overlap_patches(monkeypatch, [], [{"results": []}])
+
+    builder.overlapping(search, args)
+    out = capsys.readouterr().out
+
+    assert "No scan ranges found" in out
 

@@ -729,8 +729,7 @@ def overlapping(tw_search, args):
     print("\nScheduled Scans Overlapping")
     print("---------------------------")
     logger.info("Running: Overlapping Report...")
-
-    heads = [ "IP Address", "Scan Schedules" ]
+    heads = ["IP Address", "Scan Schedules"]
 
     logger.debug("Executing scan range query: %s", queries.scanrange.get("query", queries.scanrange))
     scan_resp = tw_search.search(queries.scanrange,format="object")
@@ -744,7 +743,14 @@ def overlapping(tw_search, args):
         msg = "No scan ranges found"
         print(msg)
         logger.info(msg)
-        results = {"results": []}
+        output.report([], heads, args, name="overlapping_ips")
+        return
+
+    # Build the results
+
+    first = scan_ranges[0]
+    if isinstance(first, dict) and 'results' in first:
+        results = first
     else:
         first = scan_ranges[0]
         if isinstance(first, dict) and 'results' in first:
@@ -814,13 +820,15 @@ def overlapping(tw_search, args):
         msg = "No exclude ranges found"
         print(msg)
         logger.info(msg)
-        e = {"results": []}
-    else:
-        e = excludes[0]
-        if not isinstance(e, dict) or 'results' not in e:
-            logger.error("Invalid excludes result structure")
-            output.report([], heads, args, name="overlapping_ips")
-            return
+        output.report([], heads, args, name="overlapping_ips")
+        return
+
+    e = excludes[0]
+    if not isinstance(e, dict) or 'results' not in e:
+        logger.error("Invalid excludes result structure")
+        output.report([], heads, args, name="overlapping_ips")
+        return
+
     for result in e.get('results'):
         r = result['Scan_Range'][0]
         list_of_ips = tools.range_to_ips(r)

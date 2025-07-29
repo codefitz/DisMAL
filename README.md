@@ -62,3 +62,5 @@ Two related reports focus on Discovery Access history:
   including credential information and timestamps.
 - **discovery_analysis** – adds a comparison between consecutive runs using the
   same data to highlight state changes.
+- **overlapping_ips** – analyze overlapping discovery ranges and report
+  unscheduled endpoints. Uses the same data sources as the schedules report.

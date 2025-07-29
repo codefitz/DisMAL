@@ -42,6 +42,15 @@ def test_get_json_bad_json():
     resp = DummyResponse(200, 'not-json')
     assert get_json(resp) == {}
 
+def test_get_json_returns_list_directly():
+    data = [{"x": 1}]
+    # When a list is passed in, get_json should return it unchanged
+    assert get_json(data) == data
+
+def test_get_json_returns_dict_directly():
+    data = {"a": 1}
+    assert get_json(data) == data
+
 def test_search_results_fallback():
     resp = DummyResponse(200, '[{"ok": true}]')
     search = DummySearch(resp)

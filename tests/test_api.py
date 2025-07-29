@@ -57,7 +57,6 @@ def test_search_results_fallback():
     search = DummySearch(resp)
     assert search_results(search, {"query": "q"}) == [{"ok": True}]
 
-
 def test_search_results_error_json():
     resp = DummyResponse(404, '{"error": "missing"}')
     search = DummySearch(resp)

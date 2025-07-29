@@ -9,6 +9,7 @@ sys.modules.setdefault("paramiko", types.SimpleNamespace())
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from core.api import get_json, search_results, show_runs, get_outposts, map_outpost_credentials
 import core.api as api_mod
+from core import queries
 
 class DummyResponse:
     def __init__(self, status_code=200, data="{}", reason="OK", url="http://x"):
@@ -154,7 +155,6 @@ def test_search_results_returns_error_payload(caplog):
 
     assert result == {"msg": "bad"}
     assert "Bad" in caplog.text
-
 
 def test_search_results_list_table():
     search = DummySearch([["A", "B"], [1, 2]])

@@ -93,14 +93,12 @@ da_ip_lookup = {
                                 #::InferredElement:.#DeviceWithInterface:DeviceInterface:InterfaceOfDevice:NetworkInterface.ip_addr as 'NIC_IPs'
                             """
                 }
-excludes = {"""
-                        search in '_System' ExcludeRange
-                        show
-                        exrange_id as 'ID',
-                        name as 'Label',
-                        range_strings as 'Scan_Range',
-                        recurrenceDescription(schedule) as 'Date_Rules'
-                    """}
+excludes = {"query": """search in '_System' ExcludeRange
+                            show
+                            exrange_id as 'ID',
+                            name as 'Label',
+                            range_strings as 'Scan_Range',
+                            recurrenceDescription(schedule) as 'Date_Rules'"""}
 scanrange = {
                 "query":
                 """

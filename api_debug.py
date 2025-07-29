@@ -541,13 +541,34 @@ def main():
             args.token = f.read().strip()
     print("Token: ", args.token)
     tw = tideway.appliance(args.target,args.token)
-    print("Attempting to get credentials from appliance: ", args.target)
-    tw_creds = tw.credentials()
-    print("tw_creds JSON: ", tw_creds.get_vault_credentials.json())
-    outposts = tw.get("/discovery/outposts")
-    print("Discovery Outposts: ", outposts.json())
-    print("URL: ", outposts.url)
+    #print("Attempting to get credentials from appliance: ", args.target)
+    #tw_creds = tw.credentials()
+    #print("tw_creds JSON: ", tw_creds.get_vault_credentials.json())
+    #outposts = tw.get("/discovery/outposts")
+    #print("Discovery Outposts: ", outposts.json())
+    #print("URL: ", outposts.url)
     ###    # Short API call
+    tw_search = tw.data()
+    query = {
+                "query":
+                """
+                search ScanRange where scan_type = 'Scheduled'
+                show
+                range_id as 'ID',
+                label as 'Label',
+                (range_strings or provider) as 'Scan_Range',
+                scan_level as 'Level',
+                recurrenceDescription(schedule) as 'Date_Rules'
+                """
+               }
+    results = tw_search.search(query)
+    #print("Search Results: ", results)
+
+    # Convert to list of dictionaries
+    headers, *rows = results
+    json_data = [dict(zip(headers, row)) for row in rows]
+
+    print(json.dumps(json_data, indent=2))
 
 if __name__ == '__main__':
     main()

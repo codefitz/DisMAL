@@ -730,15 +730,20 @@ def overlapping(tw_search, args):
     print("---------------------------")
     logger.info("Running: Overlapping Report...")
 
+    heads = ["IP Address", "Scan Schedules"]
+
     logger.debug("Executing scan range query: %s", queries.scanrange.get("query", queries.scanrange))
     scan_resp = tw_search.search(queries.scanrange,format="object")
     logger.debug("Scan range search HTTP status: %s", getattr(scan_resp, "status_code", "n/a"))
     scan_ranges = api.get_json(scan_resp)
-    if not scan_ranges or not isinstance(scan_ranges, list):
+    if scan_ranges is None or not isinstance(scan_ranges, list):
         logger.error("Failed to retrieve scan ranges")
         return
     if len(scan_ranges) == 0:
-        logger.error("No scan ranges returned")
+        msg = "No scan ranges found"
+        print(msg)
+        logger.info(msg)
+        output.report([], heads, args, name="overlapping_ips")
         return
 
     # Build the results
@@ -800,16 +805,21 @@ def overlapping(tw_search, args):
     excludes_resp = tw_search.search(queries.excludes,format="object")
     logger.debug("Excludes search HTTP status: %s", getattr(excludes_resp, "status_code", "n/a"))
     excludes = api.get_json(excludes_resp)
-    if not excludes or not isinstance(excludes, list):
+    if excludes is None or not isinstance(excludes, list):
         logger.error("Failed to retrieve excludes")
+        output.report([], heads, args, name="overlapping_ips")
         return
     if len(excludes) == 0:
-        logger.error("No excludes returned")
+        msg = "No exclude ranges found"
+        print(msg)
+        logger.info(msg)
+        output.report([], heads, args, name="overlapping_ips")
         return
 
     e = excludes[0]
     if not isinstance(e, dict) or 'results' not in e:
         logger.error("Invalid excludes result structure")
+        output.report([], heads, args, name="overlapping_ips")
         return
     for result in e.get('results'):
         r = result['Scan_Range'][0]

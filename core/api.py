@@ -670,6 +670,12 @@ def search_results(api_endpoint, query):
                 logger.debug("Search query: %s" % query)
             except Exception:
                 pass
+
+        if isinstance(query, dict) and isinstance(query.get("query"), str):
+            cleaned = query["query"].replace("\n", " ").replace("'", r'\"')
+            query = dict(query)
+            query["query"] = cleaned
+
         if hasattr(api_endpoint, "search_bulk"):
             results = api_endpoint.search_bulk(query, format="object", limit=500)
         else:
@@ -684,7 +690,6 @@ def search_results(api_endpoint, query):
                     logger.debug("Raw search response: %s" % results.text)
                 except Exception:
                     pass
-
             status_code = getattr(results, "status_code", 200)
             if status_code >= 400:
                 try:
@@ -697,7 +702,6 @@ def search_results(api_endpoint, query):
                     except Exception:
                         pass
                 return data
-
             try:
                 data = results.json()
             except Exception as e:

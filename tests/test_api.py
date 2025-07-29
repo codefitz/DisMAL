@@ -125,3 +125,33 @@ def test_map_outpost_credentials_strips_scheme(monkeypatch):
     assert captured["target"] == "op.example.com"
     assert mapping == {"u1": "https://op.example.com"}
 
+
+def test_search_results_cleans_query(monkeypatch):
+    """Ensure single quotes become escaped double quotes and newlines removed."""
+
+    captured = {}
+
+    class Recorder:
+        def search(self, query, format="object", limit=500):
+            captured["query"] = query
+            return DummyResponse(200, "[]")
+
+    qry = "search Device\nwhere name = 'foo'\n"
+    search_results(Recorder(), {"query": qry})
+
+    sent = captured["query"]["query"]
+    assert "'" not in sent
+    assert "\n" not in sent
+    assert '\\"foo\\"' in sent
+
+
+def test_search_results_returns_error_payload(caplog):
+    resp = DummyResponse(400, '{"msg": "bad"}', reason="Bad")
+    search = DummySearch(resp)
+
+    with caplog.at_level("ERROR"):
+        result = search_results(search, {"query": "q"})
+
+    assert result == {"msg": "bad"}
+    assert "Bad" in caplog.text
+

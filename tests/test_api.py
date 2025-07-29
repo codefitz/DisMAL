@@ -17,6 +17,7 @@ class DummyResponse:
         self.reason = reason
         self.url = url
         self.ok = status_code == 200
+        self.text = data
     def json(self):
         import json
         return json.loads(self._data)
@@ -55,6 +56,18 @@ def test_search_results_fallback():
     resp = DummyResponse(200, '[{"ok": true}]')
     search = DummySearch(resp)
     assert search_results(search, {"query": "q"}) == [{"ok": True}]
+
+
+def test_search_results_error_json():
+    resp = DummyResponse(404, '{"error": "missing"}')
+    search = DummySearch(resp)
+    assert search_results(search, {"query": "q"}) == {"error": "missing"}
+
+
+def test_search_results_error_non_json():
+    resp = DummyResponse(500, 'Internal Server Error')
+    search = DummySearch(resp)
+    assert search_results(search, {"query": "q"}) == {"error": "Internal Server Error"}
 
 
 def test_show_runs_handles_bad_response(capsys):

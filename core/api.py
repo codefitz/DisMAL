@@ -659,8 +659,12 @@ def update_cred(appliance, uuid):
             active = True
     return active
 
-def search_results(api_endpoint,query):
+def search_results(api_endpoint, query):
     try:
+        if isinstance(query, dict) and "query" in query:
+            sanitized = query["query"].replace("'", '\\"')
+            sanitized = sanitized.replace("\n", " ").replace("\r", " ")
+            query = {"query": sanitized}
         if logger.isEnabledFor(logging.DEBUG):
             try:
                 logger.debug("Search query: %s" % query)

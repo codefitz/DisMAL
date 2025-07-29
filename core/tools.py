@@ -206,3 +206,14 @@ def json2csv(jsdata):
             values.append(getr(jsitem,key,"N/A")) # Substitute if missing
         data.append(values)
     return header, data
+
+def list_table_to_json(rows):
+    """Convert a list-of-lists table to a list of dictionaries.
+
+    The first row is treated as headers.  If ``rows`` is not a list of
+    lists, the value is returned unchanged.
+    """
+    if isinstance(rows, list) and rows and isinstance(rows[0], list):
+        headers = rows[0]
+        return [dict(zip(headers, r)) for r in rows[1:]]
+    return rows

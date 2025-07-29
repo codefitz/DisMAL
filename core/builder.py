@@ -566,11 +566,11 @@ def scheduling(vault, search, args):
         logger.info(msg)
         results = {"results": []}
     else:
-        results = scan_ranges[0]
-        if not isinstance(results, dict) or 'results' not in results:
-            logger.error("Invalid scan range result structure")
-            output.report(data, heads, args, name="schedules")
-            return
+        first = scan_ranges[0]
+        if isinstance(first, dict) and 'results' in first:
+            results = first
+        else:
+            results = {"results": scan_ranges}
 
     range_ips = []
     timer_count = 0
@@ -743,10 +743,11 @@ def overlapping(tw_search, args):
 
     # Build the results
 
-    results = scan_ranges[0]
-    if not isinstance(results, dict) or 'results' not in results:
-        logger.error("Invalid scan range result structure")
-        return
+    first = scan_ranges[0]
+    if isinstance(first, dict) and 'results' in first:
+        results = first
+    else:
+        results = {"results": scan_ranges}
 
     range_ips = []
     full_range = []

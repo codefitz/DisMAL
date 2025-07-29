@@ -177,3 +177,48 @@ def test_scheduling_creates_empty_csv(monkeypatch):
 
     assert called["file"].endswith("schedules.csv")
 
+
+def test_scheduling_scan_ranges_no_results_key(monkeypatch):
+    cred = [{"uuid": "u1", "label": "c1", "index": 1, "ip_range": "10.0.0.0/24"}]
+    scan_ranges = [{"Scan_Range": ["10.0.0.0/24"], "ID": 1, "Label": "r", "Level": "L", "Date_Rules": ""}]
+
+    vault, search, args, captured = _setup_schedule_patches(
+        monkeypatch,
+        cred,
+        [],
+        scan_ranges,
+    )
+
+    builder.scheduling(vault, search, args)
+
+    assert captured["data"]
+    assert any(row[1] == "Scan Range" for row in captured["data"])
+
+
+def test_overlapping_scan_ranges_no_results_key(monkeypatch):
+    scan_ranges = [{"Scan_Range": ["10.0.0.0/24"], "ID": 1, "Label": "r", "Level": "L", "Date_Rules": ""}]
+    excludes = [{"results": []}]
+
+    seq = iter([scan_ranges, excludes])
+    monkeypatch.setattr(builder.api, "get_json", lambda *a, **k: next(seq))
+    monkeypatch.setattr(builder.api, "search_results", lambda *a, **k: [])
+    monkeypatch.setattr(builder.tools, "range_to_ips", lambda r: [r])
+    monkeypatch.setattr(builder.tools, "sortdic", lambda l: list(l))
+    monkeypatch.setattr(builder.tools, "sortlist", lambda l, dv=None: list(l))
+    monkeypatch.setattr(builder.tools, "completage", lambda *a, **k: 0)
+    monkeypatch.setattr(builder.tools, "getr", lambda d, k, default=None: d.get(k, default))
+
+    called = {}
+
+    def fake_report(data, heads, args, name=None):
+        called["data"] = data
+
+    monkeypatch.setattr(builder, "output", types.SimpleNamespace(report=fake_report))
+
+    search = types.SimpleNamespace(search=lambda *a, **k: None)
+    args = types.SimpleNamespace(output_csv=False, output_file=None)
+
+    builder.overlapping(search, args)
+
+    assert "data" in called
+

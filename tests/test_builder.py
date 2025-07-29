@@ -39,8 +39,8 @@ def test_overlapping_handles_bad_api(monkeypatch):
     # Should not raise even though API call fails
     builder.overlapping(DummySearch(), args)
 
-    # If the function returned early, fake_report won't be called
-    assert "ran" not in called
+    # When the API call fails the function should still report an empty result
+    assert "ran" in called
 
 
 def test_ordering_inserts_instance_and_outpost(monkeypatch):

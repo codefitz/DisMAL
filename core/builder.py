@@ -729,7 +729,6 @@ def overlapping(tw_search, args):
     print("\nScheduled Scans Overlapping")
     print("---------------------------")
     logger.info("Running: Overlapping Report...")
-
     heads = ["IP Address", "Scan Schedules"]
 
     logger.debug("Executing scan range query: %s", queries.scanrange.get("query", queries.scanrange))
@@ -738,6 +737,7 @@ def overlapping(tw_search, args):
     scan_ranges = api.get_json(scan_resp)
     if scan_ranges is None or not isinstance(scan_ranges, list):
         logger.error("Failed to retrieve scan ranges")
+        output.report([], heads, args, name="overlapping_ips")
         return
     if len(scan_ranges) == 0:
         msg = "No scan ranges found"
@@ -752,12 +752,16 @@ def overlapping(tw_search, args):
     if isinstance(first, dict) and 'results' in first:
         results = first
     else:
-        results = {"results": scan_ranges}
+        first = scan_ranges[0]
+        if isinstance(first, dict) and 'results' in first:
+            results = first
+        else:
+            results = {"results": scan_ranges}
 
     range_ips = []
     full_range = []
     scheduled_ip_list = []
-    matched_runs = []
+    matched_runs = []  # store matched runs from all scan ranges
 
     timer_count = 0
     for result in results.get('results'):
@@ -797,9 +801,12 @@ def overlapping(tw_search, args):
                 if matched:
                     runs.append(matched)
 
-        # Unique
-        matched_runs = tools.sortdic(runs)
-        logger.debug("Matched Runs: %s"%(matched_runs))
+        # Unique per scan range
+        matched_runs.extend(tools.sortdic(runs))
+        logger.debug("Matched Runs so far: %s"%(matched_runs))
+
+    # Remove duplicates across all ranges
+    matched_runs = tools.sortdic(matched_runs)
 
     logger.debug("Executing excludes query: %s", queries.excludes)
     excludes_resp = tw_search.search(queries.excludes,format="object")
@@ -821,6 +828,7 @@ def overlapping(tw_search, args):
         logger.error("Invalid excludes result structure")
         output.report([], heads, args, name="overlapping_ips")
         return
+
     for result in e.get('results'):
         r = result['Scan_Range'][0]
         list_of_ips = tools.range_to_ips(r)
@@ -862,7 +870,7 @@ def overlapping(tw_search, args):
         logger.info(msg)
         print(msg)
 
-    output.report(data, [ "IP Address", "Scan Schedules" ], args, name="overlapping_ips")
+    output.report(data, heads, args, name="overlapping_ips")
 
 def get_scans(results, list_of_ranges):
     scan_ranges = []

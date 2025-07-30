@@ -109,6 +109,11 @@ administration.add_argument('--cred_optimise',      dest='a_opt', action='store_
 administration.add_argument('--cred_remove',        dest='a_removal', type=str, required=False, help='Delete a credential from the system (with prompt).\n\n',metavar='<UUID>')
 administration.add_argument('--cred_remove_list',   dest='f_remlist', type=str, required=False, help='Specify a list of credentials to delete (no prompt).\n\n',metavar='<filename>')
 administration.add_argument('--kill_run',           dest='a_kill_run', type=str, required=False, help='Nicely kill a discovery run that is jammed.\n\n',metavar='<argument>')
+administration.add_argument('--schedule_timezone',  dest='schedule_timezone', type=str, required=False,
+                           help='Timezone to apply to discovery run schedules (e.g. CST or America/Chicago).\n\n',
+                           metavar='<timezone>')
+administration.add_argument('--reset_schedule_timezone', dest='reset_schedule_timezone', action='store_true', required=False,
+                           help='With --schedule_timezone, shift scheduled times back to UTC.\n\n')
 
 # Excavation (Boosted Reports)
 excavation = parser.add_argument_group("Excavation (Boosted Reports)")
@@ -565,6 +570,9 @@ if args.access_method=="api":
         
     if args.a_kill_run:
         api.cancel_run(disco, args)
+
+    if args.schedule_timezone:
+        api.update_schedule_timezone(disco, args)
 
     if args.excavate and args.excavate[0] == "device":
         builder.get_device(search, creds, args)

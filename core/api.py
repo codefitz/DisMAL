@@ -562,6 +562,80 @@ def cancel_run(disco, args):
         logger.warning("Run not cancelled\n%s" % msg)
         return False
 
+def update_schedule_timezone(disco, args):
+    """Adjust discovery run start times for the given timezone."""
+    tz = args.schedule_timezone
+    reset = getattr(args, "reset_schedule_timezone", False)
+
+    if not tz:
+        logger.error("No timezone provided for schedule update")
+        return
+
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    # Allow a few common short names
+    common = {
+        "UTC": 0,
+        "CST": -6,
+        "CDT": -5,
+        "EST": -5,
+        "EDT": -4,
+        "PST": -8,
+        "PDT": -7,
+        "MST": -7,
+        "MDT": -6,
+    }
+
+    try:
+        if tz.upper() in common:
+            offset = common[tz.upper()]
+        else:
+            offset = int(
+                (datetime.now(ZoneInfo(tz)).utcoffset() or datetime.timedelta())
+                .total_seconds()
+                // 3600
+            )
+    except Exception as e:
+        msg = f"Invalid timezone {tz}: {e}"
+        print(msg)
+        logger.error(msg)
+        return
+
+    if reset:
+        offset = -offset
+
+    logger.debug("Calling disco.get_discovery_runs")
+    api_response = disco.get_discovery_runs
+    logger.debug(
+        "disco.get_discovery_runs response ok=%s status=%s text=%s",
+        getattr(api_response, "ok", "N/A"),
+        getattr(api_response, "status_code", "N/A"),
+        getattr(api_response, "text", "N/A"),
+    )
+
+    runs = get_json(api_response)
+    if not runs:
+        logger.error("No discovery runs returned")
+        return
+
+    for run in runs:
+        run_id = run.get("range_id") or run.get("id") or run.get("run_id")
+        schedule = run.get("schedule", {})
+        start_times = schedule.get("start_times", [])
+        if not run_id or not isinstance(start_times, list):
+            continue
+        new_times = [int((t + offset) % 24) for t in start_times]
+        patch = {"schedule": {"start_times": new_times}}
+        logger.debug("Calling disco.patch_discovery_run(%s, %s)", run_id, patch)
+        resp = disco.patch_discovery_run(run_id, patch)
+        logger.debug(
+            "disco.patch_discovery_run response ok=%s status=%s text=%s",
+            getattr(resp, "ok", "N/A"),
+            getattr(resp, "status_code", "N/A"),
+            getattr(resp, "text", "N/A"),
+        )
+
 def vault(vault, args, dir):
     logger.info("Checking Vault...")
     logger.debug("Calling vault.get_vault")

@@ -1,6 +1,7 @@
 import os
 import sys
 import types
+import json
 
 sys.modules.setdefault("pandas", types.SimpleNamespace())
 sys.modules.setdefault("tabulate", types.SimpleNamespace(tabulate=lambda *a, **k: ""))
@@ -35,6 +36,15 @@ class DummyDisco:
     @property
     def get_discovery_runs(self):
         return self._response
+
+class RecorderDisco(DummyDisco):
+    def __init__(self, response):
+        super().__init__(response)
+        self.patches = []
+
+    def patch_discovery_run(self, rid, payload):
+        self.patches.append((rid, payload))
+        return DummyResponse(200, "{}")
 
 def test_get_json_success():
     resp = DummyResponse(200, '{"a":1}')
@@ -160,4 +170,26 @@ def test_search_results_list_table():
     search = DummySearch([["A", "B"], [1, 2]])
     result = search_results(search, {"query": "q"})
     assert result == [{"A": 1, "B": 2}]
+
+
+def test_update_schedule_timezone_applies_offset():
+    runs = [{"range_id": "r1", "schedule": {"start_times": [10, 23]}}]
+    resp = DummyResponse(200, json.dumps(runs))
+    disco = RecorderDisco(resp)
+    args = types.SimpleNamespace(schedule_timezone="Etc/GMT+5", reset_schedule_timezone=False)
+
+    api_mod.update_schedule_timezone(disco, args)
+
+    assert disco.patches == [("r1", {"schedule": {"start_times": [5, 18]}})]
+
+
+def test_update_schedule_timezone_reset():
+    runs = [{"range_id": "r1", "schedule": {"start_times": [10]}}]
+    resp = DummyResponse(200, json.dumps(runs))
+    disco = RecorderDisco(resp)
+    args = types.SimpleNamespace(schedule_timezone="Etc/GMT+5", reset_schedule_timezone=True)
+
+    api_mod.update_schedule_timezone(disco, args)
+
+    assert disco.patches[0][1]["schedule"]["start_times"] == [15]
 

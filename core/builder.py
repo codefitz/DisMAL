@@ -3,6 +3,8 @@
 import logging
 import os
 
+import tideway
+
 from . import api, tools, output, queries
 
 logger = logging.getLogger("_builder_")
@@ -151,6 +153,20 @@ def ordering(creds, search, args, apply):
         logger.error(msg)
         return
 
+    outpost_map = {}
+    if getattr(args, "target", None) and hasattr(tideway, "appliance"):
+        try:
+            token = getattr(args, "token", None)
+            if not token and getattr(args, "f_token", None):
+                if os.path.isfile(args.f_token):
+                    with open(args.f_token, "r") as f:
+                        token = f.read().strip()
+            app = tideway.appliance(args.target, token)
+            outpost_map = api.map_outpost_credentials(app)
+            logger.debug("Outpost credential map: %s", outpost_map)
+        except Exception as e:  # pragma: no cover - network errors
+            logger.error("Failed to retrieve outpost credentials: %s", e)
+
     cred_weighting = []
     
     for cred in credlist:
@@ -269,22 +285,42 @@ def ordering(creds, search, args, apply):
 
     if apply:
         for weighted_cred in weighted:
-            logger.debug("Updating: %s"%(weighted_cred))
-            headers =  [ "New Index", "Credential" ]
-            creds.update_cred(weighted_cred.get('uuid'),{"index":weighted_cred.get('index')})
+            logger.debug("Updating: %s" % (weighted_cred))
+            headers = ["New Index", "Credential", "Scope", "Outpost URL"]
+            creds.update_cred(
+                weighted_cred.get("uuid"), {"index": weighted_cred.get("index")}
+            )
     else:
-        headers = [ "Credential", "Current Index", "Weighting", "New Index" ]
+        headers = [
+            "Credential",
+            "Current Index",
+            "Weighting",
+            "New Index",
+            "Scope",
+            "Outpost URL",
+        ]
         for cred in credlist:
             for weighted_cred in weighted:
-                logger.debug("Evaluating: %s ... %s"%(cred.get('uuid'),weighted_cred.get('uuid')))
-                if cred.get('uuid') == weighted_cred.get('uuid'):
-                    index = cred.get('index')
-                    label = cred.get('label')
-                    weight = weighted_cred.get('weighting')
-                    new_index = weighted_cred.get('index')
-                    msg = '%s: Index: %s, Weight: %s, New Index: %s' % (label, index, weight, new_index)
+                logger.debug(
+                    "Evaluating: %s ... %s" % (cred.get("uuid"), weighted_cred.get("uuid"))
+                )
+                if cred.get("uuid") == weighted_cred.get("uuid"):
+                    index = cred.get("index")
+                    label = cred.get("label")
+                    weight = weighted_cred.get("weighting")
+                    new_index = weighted_cred.get("index")
+                    scope = cred.get("scopes") or []
+                    if isinstance(scope, list):
+                        scope = ", ".join(scope)
+                    url = outpost_map.get(cred.get("uuid"))
+                    msg = "%s: Index: %s, Weight: %s, New Index: %s" % (
+                        label,
+                        index,
+                        weight,
+                        new_index,
+                    )
                     logger.info(msg)
-                    data.append([label, index, weight, new_index])
+                    data.append([label, index, weight, new_index, scope, url])
 
     # Refresh
     credlist = api.get_json(creds.get_vault_credentials)
@@ -296,9 +332,18 @@ def ordering(creds, search, args, apply):
         index = cred.get('index')
         msg = '%s) %s' % (index, label)
         logger.info(msg)
-        data.append([index, label])
+        scope = cred.get("scopes") or []
+        if isinstance(scope, list):
+            scope = ", ".join(scope)
+        url = outpost_map.get(cred.get("uuid"))
+        data.append([index, label, scope, url])
 
-    output.report(data, headers, args, name="suggested_cred_opt")
+    if data:
+        headers.insert(0, "Discovery Instance")
+        for row in data:
+            row.insert(0, getattr(args, "target", None))
+
+    output.report(data, headers, args, name="suggest_cred_opt")
 
 def get_device(search, credentials, args):
     dev = args.excavate[1]
@@ -425,9 +470,13 @@ def scheduling(vault, search, args):
     logger.info("Running Schedules Report...")
     msg = None
 
+    heads = ["Name", "Type", "Range ID", "Ranges", "Scan Level", "When", "Credentials"]
+    data = []
+
     vaultcreds = api.get_json(vault.get_vault_credentials)
     if not vaultcreds or not isinstance(vaultcreds, list):
         logger.error("Vault credentials could not be retrieved")
+        output.report([], heads, args, name="schedules")
         return
 
     credential_ips = []
@@ -449,20 +498,22 @@ def scheduling(vault, search, args):
     excludes_resp = search.search(queries.excludes,format="object")
     logger.debug("Excludes search HTTP status: %s", getattr(excludes_resp, "status_code", "n/a"))
     excludes = api.get_json(excludes_resp)
-    if not excludes or not isinstance(excludes, list):
+    data = []
+    if excludes is None or not isinstance(excludes, list):
         logger.error("Failed to retrieve excludes")
+        output.report(data, heads, args, name="schedules")
         return
     if len(excludes) == 0:
-        logger.error("No excludes returned")
-        return
-
-    # Build the results
-
-    results = excludes[0]
-    if not isinstance(results, dict) or 'results' not in results:
-        logger.error("Invalid excludes result structure")
-        return
-    data = []
+        msg = "No exclude ranges found"
+        print(msg)
+        logger.info(msg)
+        results = {"results": []}
+    else:
+        results = excludes[0]
+        if not isinstance(results, dict) or 'results' not in results:
+            logger.error("Invalid excludes result structure")
+            output.report(data, heads, args, name="schedules")
+            return
     exclude_ips = []
 
     timer_count = 0
@@ -505,19 +556,21 @@ def scheduling(vault, search, args):
     scan_resp = search.search(queries.scanrange,format="object")
     logger.debug("Scan range search HTTP status: %s", getattr(scan_resp, "status_code", "n/a"))
     scan_ranges = api.get_json(scan_resp)
-    if not scan_ranges or not isinstance(scan_ranges, list):
+    if scan_ranges is None or not isinstance(scan_ranges, list):
         logger.error("Failed to retrieve scan ranges")
+        output.report(data, heads, args, name="schedules")
         return
     if len(scan_ranges) == 0:
-        logger.error("No scan ranges returned")
-        return
-
-    # Build the results
-
-    results = scan_ranges[0]
-    if not isinstance(results, dict) or 'results' not in results:
-        logger.error("Invalid scan range result structure")
-        return
+        msg = "No scan ranges found"
+        print(msg)
+        logger.info(msg)
+        results = {"results": []}
+    else:
+        first = scan_ranges[0]
+        if isinstance(first, dict) and 'results' in first:
+            results = first
+        else:
+            results = {"results": scan_ranges}
 
     range_ips = []
     timer_count = 0
@@ -564,7 +617,7 @@ def scheduling(vault, search, args):
     if msg:
         print(msg)
 
-    output.report(data, [ "Name", "Type", "Range ID", "Ranges", "Scan Level", "When", "Credentials" ], args, name="schedules")
+    output.report(data, heads, args, name="schedules")
 
 def unique_identities(search):
 
@@ -676,29 +729,35 @@ def overlapping(tw_search, args):
     print("\nScheduled Scans Overlapping")
     print("---------------------------")
     logger.info("Running: Overlapping Report...")
+    heads = ["IP Address", "Scan Schedules"]
 
     logger.debug("Executing scan range query: %s", queries.scanrange.get("query", queries.scanrange))
-    scan_resp = tw_search.search(queries.scanrange,format="object")
+    scan_resp = tw_search.search(queries.scanrange, format="object")
     logger.debug("Scan range search HTTP status: %s", getattr(scan_resp, "status_code", "n/a"))
     scan_ranges = api.get_json(scan_resp)
-    if not scan_ranges or not isinstance(scan_ranges, list):
+    logger.debug("Raw scan range results: %s", scan_ranges)
+    if scan_ranges is None or not isinstance(scan_ranges, list):
         logger.error("Failed to retrieve scan ranges")
+        output.report([], heads, args, name="overlapping_ips")
         return
     if len(scan_ranges) == 0:
-        logger.error("No scan ranges returned")
-        return
+        msg = "No scan ranges found"
+        print(msg)
+        logger.info(msg)
+        results = {"results": []}
+    else:
+        first = scan_ranges[0]
+        if isinstance(first, dict) and 'results' in first:
+            results = first
+        else:
+            results = {"results": scan_ranges}
 
-    # Build the results
-
-    results = scan_ranges[0]
-    if not isinstance(results, dict) or 'results' not in results:
-        logger.error("Invalid scan range result structure")
-        return
+    logger.debug("Parsed %d scan range results", len(results.get("results", [])))
 
     range_ips = []
     full_range = []
     scheduled_ip_list = []
-    matched_runs = []
+    matched_runs = []  # store matched runs from all scan ranges
 
     timer_count = 0
     for result in results.get('results'):
@@ -738,25 +797,36 @@ def overlapping(tw_search, args):
                 if matched:
                     runs.append(matched)
 
-        # Unique
-        matched_runs = tools.sortdic(runs)
-        logger.debug("Matched Runs: %s"%(matched_runs))
+        # Unique per scan range
+        matched_runs.extend(tools.sortdic(runs))
+        logger.debug("Matched Runs so far: %s"%(matched_runs))
+
+    # Remove duplicates across all ranges
+    matched_runs = tools.sortdic(matched_runs)
 
     logger.debug("Executing excludes query: %s", queries.excludes)
-    excludes_resp = tw_search.search(queries.excludes,format="object")
+    excludes_resp = tw_search.search(queries.excludes, format="object")
     logger.debug("Excludes search HTTP status: %s", getattr(excludes_resp, "status_code", "n/a"))
     excludes = api.get_json(excludes_resp)
-    if not excludes or not isinstance(excludes, list):
+    logger.debug("Raw exclude results: %s", excludes)
+    if excludes is None or not isinstance(excludes, list):
         logger.error("Failed to retrieve excludes")
+        output.report([], heads, args, name="overlapping_ips")
         return
     if len(excludes) == 0:
-        logger.error("No excludes returned")
-        return
+        msg = "No exclude ranges found"
+        print(msg)
+        logger.info(msg)
+        e = {"results": []}
+    else:
+        e = excludes[0]
+        if not isinstance(e, dict) or 'results' not in e:
+            logger.error("Invalid excludes result structure")
+            output.report([], heads, args, name="overlapping_ips")
+            return
 
-    e = excludes[0]
-    if not isinstance(e, dict) or 'results' not in e:
-        logger.error("Invalid excludes result structure")
-        return
+    logger.debug("Parsed %d exclude results", len(e.get("results", [])))
+
     for result in e.get('results'):
         r = result['Scan_Range'][0]
         list_of_ips = tools.range_to_ips(r)
@@ -798,7 +868,7 @@ def overlapping(tw_search, args):
         logger.info(msg)
         print(msg)
 
-    output.report(data, [ "IP Address", "Scan Schedules" ], args, name="overlapping_ips")
+    output.report(data, heads, args, name="overlapping_ips")
 
 def get_scans(results, list_of_ranges):
     scan_ranges = []

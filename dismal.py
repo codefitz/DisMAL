@@ -151,6 +151,8 @@ Providing no <report> or using "default" will run all options that do not requir
 "default"                   - Run all options that do not require a value
 \n
 ''',metavar='<report> [value]',nargs='*')
+excavation.add_argument('--resolve-hostnames', dest='resolve_hostnames', action='store_true', required=False,
+                        help='Ping guest full names and record the resolved IP address in results.')
 
 global args
 args = parser.parse_args()
@@ -583,7 +585,7 @@ if args.access_method=="api":
     if args.excavate and args.excavate[0] == "devices_with_cred":
         builder.get_credential(search, creds, args)
 
-    if excavate_default or (args.excavate and args.excavate[0] == "suggested_cred_opt"):
+    if excavate_default or (args.excavate and args.excavate[0] == "suggest_cred_opt"):
         builder.ordering(creds, search, args, False)
 
     if args.a_query:

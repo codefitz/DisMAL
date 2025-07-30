@@ -9,6 +9,7 @@ sys.modules.setdefault("paramiko", types.SimpleNamespace())
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from core.api import get_json, search_results, show_runs, get_outposts, map_outpost_credentials
 import core.api as api_mod
+from core import queries
 
 class DummyResponse:
     def __init__(self, status_code=200, data="{}", reason="OK", url="http://x"):
@@ -17,6 +18,7 @@ class DummyResponse:
         self.reason = reason
         self.url = url
         self.ok = status_code == 200
+        self.text = data
     def json(self):
         import json
         return json.loads(self._data)
@@ -42,10 +44,30 @@ def test_get_json_bad_json():
     resp = DummyResponse(200, 'not-json')
     assert get_json(resp) == {}
 
+def test_get_json_returns_list_directly():
+    data = [{"x": 1}]
+    # When a list is passed in, get_json should return it unchanged
+    assert get_json(data) == data
+
+def test_get_json_returns_dict_directly():
+    data = {"a": 1}
+    assert get_json(data) == data
+
 def test_search_results_fallback():
     resp = DummyResponse(200, '[{"ok": true}]')
     search = DummySearch(resp)
     assert search_results(search, {"query": "q"}) == [{"ok": True}]
+
+def test_search_results_error_json():
+    resp = DummyResponse(404, '{"error": "missing"}')
+    search = DummySearch(resp)
+    assert search_results(search, {"query": "q"}) == {"error": "missing"}
+
+
+def test_search_results_error_non_json():
+    resp = DummyResponse(500, 'Internal Server Error')
+    search = DummySearch(resp)
+    assert search_results(search, {"query": "q"}) == {"error": "Internal Server Error"}
 
 
 def test_show_runs_handles_bad_response(capsys):
@@ -103,4 +125,39 @@ def test_map_outpost_credentials_strips_scheme(monkeypatch):
 
     assert captured["target"] == "op.example.com"
     assert mapping == {"u1": "https://op.example.com"}
+
+
+def test_search_results_cleans_query(monkeypatch):
+    """Ensure single quotes become escaped double quotes and newlines removed."""
+
+    captured = {}
+
+    class Recorder:
+        def search(self, query, format="object", limit=500):
+            captured["query"] = query
+            return DummyResponse(200, "[]")
+
+    qry = "search Device\nwhere name = 'foo'\n"
+    search_results(Recorder(), {"query": qry})
+
+    sent = captured["query"]["query"]
+    assert "'" not in sent
+    assert "\n" not in sent
+    assert '\\"foo\\"' in sent
+
+
+def test_search_results_returns_error_payload(caplog):
+    resp = DummyResponse(400, '{"msg": "bad"}', reason="Bad")
+    search = DummySearch(resp)
+
+    with caplog.at_level("ERROR"):
+        result = search_results(search, {"query": "q"})
+
+    assert result == {"msg": "bad"}
+    assert "Bad" in caplog.text
+
+def test_search_results_list_table():
+    search = DummySearch([["A", "B"], [1, 2]])
+    result = search_results(search, {"query": "q"})
+    assert result == [{"A": 1, "B": 2}]
 

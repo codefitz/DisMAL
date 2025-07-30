@@ -53,3 +53,14 @@ and tideway password from files instead of providing them inline.
 By default, reports are written to an `output_<appliance>` directory in the
 current working directory. Use the `--stdout` option to suppress file output and
 print results directly to the terminal.
+
+## Reports
+
+Two related reports focus on Discovery Access history:
+
+- **discovery_access** – exports the latest access details for each endpoint,
+  including credential information and timestamps.
+- **discovery_analysis** – adds a comparison between consecutive runs using the
+  same data to highlight state changes.
+- **overlapping_ips** – analyze overlapping discovery ranges and report
+  unscheduled endpoints. Uses the same data sources as the schedules report.

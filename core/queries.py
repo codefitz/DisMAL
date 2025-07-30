@@ -93,14 +93,12 @@ da_ip_lookup = {
                                 #::InferredElement:.#DeviceWithInterface:DeviceInterface:InterfaceOfDevice:NetworkInterface.ip_addr as 'NIC_IPs'
                             """
                 }
-excludes = {"""
-                        search in '_System' ExcludeRange
-                        show
-                        exrange_id as 'ID',
-                        name as 'Label',
-                        range_strings as 'Scan_Range',
-                        recurrenceDescription(schedule) as 'Date_Rules'
-                    """}
+excludes = {"query": """search in '_System' ExcludeRange
+                            show
+                            exrange_id as 'ID',
+                            name as 'Label',
+                            range_strings as 'Scan_Range',
+                            recurrenceDescription(schedule) as 'Date_Rules'"""}
 scanrange = {
                 "query":
                 """
@@ -522,8 +520,10 @@ missing_vms = """
                     vm_type as 'VM_Type',
                     (product_version or cloud_class) as 'VM_Version',
                     #RunningSoftware:HostedSoftware:Host:.name as 'VM_Host',
+                    #RunningSoftware:HostedSoftware:Host:.type as 'VM_Host_Type',
                     vm_name as 'Guest_VM_Name',
                     vm_guest_os as 'Guest_VM_OS',
+                    guest_full_name as 'Guest_Full_Name',
                     (vm_status or cloud and "Cloud Hosted") as 'Status'
                 """
 

@@ -13,7 +13,8 @@ import pandas
 import tideway
 
 # Local
-from . import tools, output, builder, queries, defaults, reporting
+from . import tools, output, builder, queries, defaults, reporting, access
+import socket
 
 logger = logging.getLogger("_api_")
 
@@ -89,6 +90,8 @@ def get_json(api_endpoint):
             return {}
 
     if not hasattr(api_endpoint, "status_code"):
+        if isinstance(api_endpoint, (list, dict)):
+            return api_endpoint
         logger.error("Invalid API endpoint provided to get_json")
         return {}
 
@@ -395,7 +398,76 @@ def orphan_vms(search, args, dir):
     output.define_csv(args,search,queries.orphan_vms,dir+defaults.orphan_vms_filename,args.output_file,args.target,"query")
 
 def missing_vms(search, args, dir):
-    output.define_csv(args,search,queries.missing_vms,dir+defaults.missing_vms_filename,args.output_file,args.target,"query")
+    if getattr(args, "resolve_hostnames", False):
+        response = search_results(search, queries.missing_vms)
+        if isinstance(response, list) and len(response) > 0:
+            header, data = tools.json2csv(response)
+            header.insert(0, "Discovery Instance")
+            for row in data:
+                row.insert(0, args.target)
+
+            gf_index = header.index("Guest_Full_Name") if "Guest_Full_Name" in header else None
+            header.append("Pingable")
+
+            devices = devices_lookup(search)
+            header.extend(["last_identity", "last_scanned", "last_result"])
+
+            timer_count = 0
+            for row in data:
+                timer_count = tools.completage(
+                    "Resolving hostnames...",
+                    len(data),
+                    timer_count,
+                )
+                ip = "N/A"
+                if gf_index is not None:
+                    host = row[gf_index]
+                    if host and host != "N/A" and access.ping(host) == 0:
+                        try:
+                            ip = socket.gethostbyname(host)
+                        except Exception:
+                            ip = "N/A"
+                row.append(ip)
+                info = devices.get(ip)
+                if info:
+                    row.extend([
+                        info.get("last_identity", "N/A"),
+                        info.get("last_start_time", "N/A"),
+                        info.get("last_result", "N/A"),
+                    ])
+                else:
+                    row.extend(["N/A", "N/A", "N/A"])
+            print(os.linesep, end="\r")
+
+            output.define_csv(
+                args,
+                header,
+                data,
+                dir + defaults.missing_vms_filename,
+                args.output_file,
+                args.target,
+                "csv_file",
+            )
+        else:
+            output.define_csv(
+                args,
+                search,
+                queries.missing_vms,
+                dir + defaults.missing_vms_filename,
+                args.output_file,
+                args.target,
+                "query",
+            )
+    else:
+        output.define_csv(
+            args,
+            search,
+            queries.missing_vms,
+            dir + defaults.missing_vms_filename,
+            args.output_file,
+            args.target,
+            "query",
+        )
 
 def near_removal(search, args, dir):
     output.define_csv(args,search,queries.near_removal,dir+defaults.near_removal_filename,args.output_file,args.target,"query")
@@ -420,6 +492,20 @@ def agents(search, args, dir):
 
 def software_users(search, args, dir):
     output.define_csv(args,search,queries.user_accounts,dir+defaults.si_user_accounts_filename,args.output_file,args.target,"query")
+
+def devices_lookup(search):
+    """Return a mapping of IPs to their last discovery information."""
+    results = search_results(search, queries.deviceInfo)
+    mapping = {}
+    for result in results:
+        ip = tools.getr(result, "DA_Endpoint", None)
+        if ip:
+            mapping[ip] = {
+                "last_identity": tools.getr(result, "Device_Hostname", "N/A"),
+                "last_start_time": tools.getr(result, "DA_Start", "N/A"),
+                "last_result": tools.getr(result, "DA_Result", "N/A"),
+            }
+    return mapping
 
 def tku(knowledge, args, dir):
     logger.info("Checking Knowledge...")
@@ -573,13 +659,23 @@ def update_cred(appliance, uuid):
             active = True
     return active
 
-def search_results(api_endpoint,query):
+def search_results(api_endpoint, query):
     try:
+        if isinstance(query, dict) and "query" in query:
+            sanitized = query["query"].replace("'", '\\"')
+            sanitized = sanitized.replace("\n", " ").replace("\r", " ")
+            query = {"query": sanitized}
         if logger.isEnabledFor(logging.DEBUG):
             try:
                 logger.debug("Search query: %s" % query)
             except Exception:
                 pass
+
+        if isinstance(query, dict) and isinstance(query.get("query"), str):
+            cleaned = query["query"].replace("\n", " ").replace("'", r'\"')
+            query = dict(query)
+            query["query"] = cleaned
+
         if hasattr(api_endpoint, "search_bulk"):
             results = api_endpoint.search_bulk(query, format="object", limit=500)
         else:
@@ -594,6 +690,26 @@ def search_results(api_endpoint,query):
                     logger.debug("Raw search response: %s" % results.text)
                 except Exception:
                     pass
+            status_code = getattr(results, "status_code", 200)
+            if status_code >= 400:
+                logger.error(
+                    "Search API returned %s - %s",
+                    status_code,
+                    getattr(results, "reason", ""),
+                )
+                try:
+                    data = json.loads(results.text)
+                except Exception:
+                    data = {"error": getattr(results, "text", "")}
+                if logger.isEnabledFor(logging.DEBUG):
+                    try:
+                        logger.debug(
+                            "Parsed error payload: %s" % json.dumps(data)
+                        )
+                    except Exception:
+                        pass
+                logger.error("Search failed: %s - %s", status_code, getattr(results, "reason", ""))
+                return data
             try:
                 data = results.json()
             except Exception as e:
@@ -607,14 +723,14 @@ def search_results(api_endpoint,query):
                         logger.debug("Parsed results length: %s" % len(data))
                     except Exception:
                         pass
-                return data
+                return tools.list_table_to_json(data)
         else:
             if logger.isEnabledFor(logging.DEBUG):
                 try:
                     logger.debug("Parsed results length: %s" % len(results))
                 except Exception:
                     pass
-            return results
+            return tools.list_table_to_json(results)
     except Exception as e:
         msg = "Not able to make api call.\nQuery: %s\nException: %s\n%s" %(query,e.__class__,str(e))
         print(msg)

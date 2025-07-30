@@ -133,6 +133,13 @@ def report(data, heads, args, name=None):
             print(msg)
         logger.warning(msg)
 
+        if args.output_file:
+            csv_file(data, heads, args.output_file)
+            logger.info("Output to CSV file")
+        elif excavate is not None and name and out_dir:
+            csv_file(data, heads, os.path.join(out_dir, f"{name}.csv"))
+            logger.info("Output to CSV file")
+
 def cmd2csv(header,result,seperator,filename,appliance):
     data = []
     header.insert(0,"Discovery Instance")

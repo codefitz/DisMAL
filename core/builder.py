@@ -623,17 +623,24 @@ def unique_identities(search):
 
     logger.info("Running: Unique Identities report...")
 
-    devices = api.search_results(search,queries.deviceInfo)
-    da_results = api.search_results(search,queries.da_ip_lookup)
+    devices = api.search_results(search, queries.deviceInfo)
+    da_results = api.search_results(search, queries.da_ip_lookup)
+
+    if not isinstance(devices, list) or not isinstance(da_results, list):
+        logger.error("Failed to retrieve unique identity data")
+        return []
 
     ### list of unique endpoints
     unique_endpoints = []
     timer_count = 0
     for da in da_results:
         timer_count = tools.completage("Getting Unique IPs", len(da_results), timer_count)
+        if not isinstance(da, dict):
+            logger.warning("Unexpected discovery access entry: %r", da)
+            continue
         endpoint = da.get('ip')
-        if endpoint not in unique_endpoints:
-            logger.debug("Unique Endpoint: %s"%endpoint)
+        if endpoint and endpoint not in unique_endpoints:
+            logger.debug("Unique Endpoint: %s" % endpoint)
             unique_endpoints.append(endpoint)
 
     # Generate combined record of hostnames and endpoints
@@ -646,6 +653,9 @@ def unique_identities(search):
         timer_count = tools.completage("Processing", len(unique_endpoints), timer_count)
         logger.debug("Processing Unique Endpoint: %s"%endpoint)
         for device in devices:
+            if not isinstance(device, dict):
+                logger.warning("Unexpected device record: %r", device)
+                continue
             if endpoint == device.get('DA_Endpoint'):
                 logger.debug("Found DA for %s"%endpoint)
                 list_of_ips = []

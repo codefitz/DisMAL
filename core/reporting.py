@@ -855,6 +855,18 @@ def _gather_discovery_data(twsearch, twcreds):
 
     unique_endpoints = tools.sortlist(unique_endpoints)
 
+    bins = [0, 59, 1440, 10080, 43830, 131487, 262974, 525949, 525950]
+    labels = [
+        "Less than 60 minutes ago",
+        "Less than 24 hours ago",
+        "Less than 7 days ago",
+        "Less than 1 month ago",
+        "Less than 3 months ago",
+        "Less than 6 months ago",
+        "Less than 12 months ago",
+        "Over a year ago",
+    ]
+
     timer_count = 0
     for endpoint in unique_endpoints:
         timer_count = tools.completage(
@@ -887,17 +899,6 @@ def _gather_discovery_data(twsearch, twcreds):
                 delta = time_now - ep_timestamp
                 overall_mins = delta.days * 24 * 60 + (delta.seconds) / 60
                 whenData = pd.DataFrame({"in_minutes": [overall_mins]})
-                bins = [0, 59, 1440, 10080, 43830, 131487, 262974, 525949, 525950]
-                labels = [
-                    "Less than 60 minutes ago",
-                    "Less than 24 hours ago",
-                    "Less than 7 days ago",
-                    "Less than 1 month ago",
-                    "Less than 3 months ago",
-                    "Less than 6 months ago",
-                    "Less than 12 months ago",
-                    "Over a year ago",
-                ]
                 whenData["when"] = pd.cut(
                     whenData["in_minutes"], bins=bins, labels=labels, right=False
                 )

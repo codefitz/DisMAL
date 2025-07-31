@@ -138,7 +138,7 @@ def test_map_outpost_credentials_strips_scheme(monkeypatch):
 
 
 def test_search_results_cleans_query(monkeypatch):
-    """Ensure single quotes become escaped double quotes and newlines removed."""
+    """Ensure newlines removed and single quotes preserved."""
 
     captured = {}
 
@@ -151,9 +151,9 @@ def test_search_results_cleans_query(monkeypatch):
     search_results(Recorder(), {"query": qry})
 
     sent = captured["query"]["query"]
-    assert "'" not in sent
     assert "\n" not in sent
-    assert '\\"foo\\"' in sent
+    assert "'foo'" in sent
+    assert '\\"foo\\"' not in sent
 
 
 def test_search_results_returns_error_payload(caplog):

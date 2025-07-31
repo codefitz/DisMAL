@@ -882,6 +882,8 @@ def overlapping(tw_search, args):
 
 def get_scans(results, list_of_ranges):
     scan_ranges = []
+    if not results:
+        return scan_ranges
     for result in results:
         msg = "Result: %s" % result
         logger.debug(msg)

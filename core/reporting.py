@@ -841,9 +841,15 @@ def _gather_discovery_data(twsearch, twcreds):
     unique_endpoints = []
 
     for result in discos:
+        if not isinstance(result, dict):
+            logger.warning("Unexpected discovery access entry: %r", result)
+            continue
         endpoint = result.get("Endpoint")
         unique_endpoints.append(endpoint)
     for result in dropped:
+        if not isinstance(result, dict):
+            logger.warning("Unexpected dropped entry: %r", result)
+            continue
         endpoint = result.get("Endpoint")
         unique_endpoints.append(endpoint)
 
@@ -860,6 +866,9 @@ def _gather_discovery_data(twsearch, twcreds):
         list_of_end_states = []
 
         for result in discos:
+            if not isinstance(result, dict):
+                logger.warning("Unexpected discovery access entry: %r", result)
+                continue
             if tools.getr(result, "Endpoint") == endpoint:
                 ep_record = {"endpoint": endpoint}
                 hostname = tools.getr(result, "Hostname", None)
@@ -974,6 +983,9 @@ def _gather_discovery_data(twsearch, twcreds):
                 disco_data.append(ep_record)
 
         for result in dropped:
+            if not isinstance(result, dict):
+                logger.warning("Unexpected dropped entry: %r", result)
+                continue
             if result.get("Endpoint") == endpoint:
                 ep_record = {"endpoint": endpoint}
                 run_end = tools.getr(result, "End")

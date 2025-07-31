@@ -65,17 +65,29 @@ def successful(creds, search, args):
 
     if not scan_ranges or not isinstance(scan_ranges, list):
         logger.warning("Failed to retrieve scan ranges; column will be blank")
-        scan_ranges = [{"results": []}]
+        scan_ranges_results = []
     elif len(scan_ranges) == 0:
         logger.warning("No scan ranges returned; column will be blank")
-        scan_ranges = [{"results": []}]
+        scan_ranges_results = []
+    else:
+        first = scan_ranges[0]
+        if isinstance(first, dict) and "results" in first:
+            scan_ranges_results = first.get("results", [])
+        else:
+            scan_ranges_results = scan_ranges
 
     if not excludes or not isinstance(excludes, list):
         logger.warning("Failed to retrieve excludes; column will be blank")
-        excludes = [{"results": []}]
+        excludes_results = []
     elif len(excludes) == 0:
         logger.warning("No exclude data returned; column will be blank")
-        excludes = [{"results": []}]
+        excludes_results = []
+    else:
+        first = excludes[0]
+        if isinstance(first, dict) and "results" in first:
+            excludes_results = first.get("results", [])
+        else:
+            excludes_results = excludes
 
     timer_count = 0
     for cred in vaultcreds:
@@ -148,14 +160,11 @@ def successful(creds, search, args):
             msg = "DevInfos only: %s" % success
             logger.debug(msg)
 
-        scan_ranges_res = scan_ranges[0]
-        excludes_res = excludes[0]
-
-        scheduled_scans = builder.get_scans(scan_ranges_res.get('results'), list_of_ranges)
+        scheduled_scans = builder.get_scans(scan_ranges_results, list_of_ranges)
         msg = "Scheduled Scans List" % scheduled_scans
         logger.debug(msg)
 
-        excluded_scans = builder.get_scans(excludes_res.get('results'), list_of_ranges)
+        excluded_scans = builder.get_scans(excludes_results, list_of_ranges)
         msg = "Excluded Scans List" % excluded_scans
         logger.debug(msg)
 
@@ -832,13 +841,31 @@ def _gather_discovery_data(twsearch, twcreds):
     unique_endpoints = []
 
     for result in discos:
+        if not isinstance(result, dict):
+            logger.warning("Unexpected discovery access entry: %r", result)
+            continue
         endpoint = result.get("Endpoint")
         unique_endpoints.append(endpoint)
     for result in dropped:
+        if not isinstance(result, dict):
+            logger.warning("Unexpected dropped entry: %r", result)
+            continue
         endpoint = result.get("Endpoint")
         unique_endpoints.append(endpoint)
 
     unique_endpoints = tools.sortlist(unique_endpoints)
+
+    bins = [0, 59, 1440, 10080, 43830, 131487, 262974, 525949, 525950]
+    labels = [
+        "Less than 60 minutes ago",
+        "Less than 24 hours ago",
+        "Less than 7 days ago",
+        "Less than 1 month ago",
+        "Less than 3 months ago",
+        "Less than 6 months ago",
+        "Less than 12 months ago",
+        "Over a year ago",
+    ]
 
     timer_count = 0
     for endpoint in unique_endpoints:
@@ -851,6 +878,9 @@ def _gather_discovery_data(twsearch, twcreds):
         list_of_end_states = []
 
         for result in discos:
+            if not isinstance(result, dict):
+                logger.warning("Unexpected discovery access entry: %r", result)
+                continue
             if tools.getr(result, "Endpoint") == endpoint:
                 ep_record = {"endpoint": endpoint}
                 hostname = tools.getr(result, "Hostname", None)
@@ -869,17 +899,6 @@ def _gather_discovery_data(twsearch, twcreds):
                 delta = time_now - ep_timestamp
                 overall_mins = delta.days * 24 * 60 + (delta.seconds) / 60
                 whenData = pd.DataFrame({"in_minutes": [overall_mins]})
-                bins = [0, 59, 1440, 10080, 43830, 131487, 262974, 525949, 525950]
-                labels = [
-                    "Less than 60 minutes ago",
-                    "Less than 24 hours ago",
-                    "Less than 7 days ago",
-                    "Less than 1 month ago",
-                    "Less than 3 months ago",
-                    "Less than 6 months ago",
-                    "Less than 12 months ago",
-                    "Over a year ago",
-                ]
                 whenData["when"] = pd.cut(
                     whenData["in_minutes"], bins=bins, labels=labels, right=False
                 )
@@ -965,6 +984,9 @@ def _gather_discovery_data(twsearch, twcreds):
                 disco_data.append(ep_record)
 
         for result in dropped:
+            if not isinstance(result, dict):
+                logger.warning("Unexpected dropped entry: %r", result)
+                continue
             if result.get("Endpoint") == endpoint:
                 ep_record = {"endpoint": endpoint}
                 run_end = tools.getr(result, "End")

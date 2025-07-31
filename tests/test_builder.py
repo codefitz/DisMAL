@@ -267,3 +267,15 @@ def test_overlapping_empty_scan_ranges(monkeypatch, capsys):
 
     assert "No scan ranges found" in out
 
+
+def test_unique_identities_handles_bad_api(monkeypatch):
+    monkeypatch.setattr(builder.tools, "completage", lambda *a, **k: 0)
+
+    def fake_search_results(api, query):
+        return {"error": "fail"}
+
+    monkeypatch.setattr(builder.api, "search_results", fake_search_results)
+
+    result = builder.unique_identities(None)
+    assert result == []
+

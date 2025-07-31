@@ -4,6 +4,7 @@ import logging
 import os
 
 import tideway
+from collections import defaultdict
 
 from . import api, tools, output, queries
 
@@ -764,55 +765,31 @@ def overlapping(tw_search, args):
 
     logger.debug("Parsed %d scan range results", len(results.get("results", [])))
 
-    range_ips = []
-    full_range = []
-    scheduled_ip_list = []
-    matched_runs = []  # store matched runs from all scan ranges
+    ip_to_ranges = defaultdict(set)
+    scheduled_ip_set = set()
 
     timer_count = 0
     for result in results.get('results'):
-        timer_count = tools.completage("Gathering Results...", len(results.get('results')), timer_count)
-        logger.debug("Scan Result:\n%s"%(result))
+        timer_count = tools.completage(
+            "Gathering Results...",
+            len(results.get('results')),
+            timer_count,
+        )
+        logger.debug("Scan Result:\n%s", result)
+        label = result.get('Label')
         for scan_range in result.get('Scan_Range'):
-            r = scan_range
-            i = result.get('ID')
-            l = result.get('Label')
-            list_of_ips = tools.range_to_ips(r)
-            range_ips.append([i,list_of_ips,l])
-            full_range.append([i,list_of_ips,l])
-            logger.debug("List of IPs:%s"%(list_of_ips))
+            ips = tools.range_to_ips(scan_range)
+            logger.debug("List of IPs:%s", ips)
+            for ip in ips:
+                ip_str = str(ip)
+                ip_to_ranges[ip_str].add(label)
+                scheduled_ip_set.add(ip_str)
 
-        runs = []
-
-        for run in range_ips:
-            logger.debug("Processing run:%s"%(run))
-            run_ips = run[1]
-            run_id = run[0]
-            label = run[2]
-            for ip in run_ips:
-                logger.debug("Processing IP:%s"%(ip))
-                scheduled_ip_list.append(str(ip))
-                scheds = [ label ]
-                matched = {}
-                for range in full_range:
-                    logger.debug("Processing Range:%s"%(range))
-                    range_ip = range[1]
-                    range_run = range[0]
-                    range_label = range[2]
-                    logger.debug("IP: %s, Range_IP: %s, Range_Run: %s, Run_ID: %s"%(ip,range_ip,range_run,run_id))
-                    if ip in range_ip and range_run != run_id:
-                        scheds.append(range_label)
-                        scheds.sort()
-                        matched = {"ip":ip,"runs":scheds}
-                if matched:
-                    runs.append(matched)
-
-        # Unique per scan range
-        matched_runs.extend(tools.sortdic(runs))
-        logger.debug("Matched Runs so far: %s"%(matched_runs))
-
-    # Remove duplicates across all ranges
-    matched_runs = tools.sortdic(matched_runs)
+    matched_runs = [
+        {"ip": ip, "runs": sorted(list(labels))}
+        for ip, labels in ip_to_ranges.items()
+        if len(labels) > 1
+    ]
 
     logger.debug("Executing excludes query: %s", queries.excludes)
     excludes_resp = tw_search.search(queries.excludes, format="object")
@@ -840,20 +817,22 @@ def overlapping(tw_search, args):
     for result in e.get('results'):
         r = result['Scan_Range'][0]
         list_of_ips = tools.range_to_ips(r)
-        logger.debug("List of Exclude Ips to be added to Scheduled_ip_list: %s"%(list_of_ips))
+        logger.debug(
+            "List of Exclude Ips to be added to Scheduled_ip_list: %s", list_of_ips
+        )
         for ip in list_of_ips:
-            scheduled_ip_list.append(str(ip))
+            scheduled_ip_set.add(str(ip))
 
-    scheduled_ip_list = tools.sortlist(scheduled_ip_list)
+    scheduled_ip_list = tools.sortlist(list(scheduled_ip_set))
 
     # Check for missing IPs
     missing_ips = []
-    ip_schedules = api.search_results(tw_search,queries.ip_schedules)
+    ip_schedules = api.search_results(tw_search, queries.ip_schedules)
     for ip_sched in ip_schedules:
-        endpoint = tools.getr(ip_sched,'endpoint')
-        if endpoint not in scheduled_ip_list:
+        endpoint = tools.getr(ip_sched, 'endpoint')
+        if endpoint not in scheduled_ip_set:
             missing_ips.append(endpoint)
-            logger.debug("Missing endpoint: %s"%(endpoint))
+            logger.debug("Missing endpoint: %s", endpoint)
     missing_ips = tools.sortlist(missing_ips)
 
     data=[]

@@ -65,17 +65,29 @@ def successful(creds, search, args):
 
     if not scan_ranges or not isinstance(scan_ranges, list):
         logger.warning("Failed to retrieve scan ranges; column will be blank")
-        scan_ranges = [{"results": []}]
+        scan_ranges_results = []
     elif len(scan_ranges) == 0:
         logger.warning("No scan ranges returned; column will be blank")
-        scan_ranges = [{"results": []}]
+        scan_ranges_results = []
+    else:
+        first = scan_ranges[0]
+        if isinstance(first, dict) and "results" in first:
+            scan_ranges_results = first.get("results", [])
+        else:
+            scan_ranges_results = scan_ranges
 
     if not excludes or not isinstance(excludes, list):
         logger.warning("Failed to retrieve excludes; column will be blank")
-        excludes = [{"results": []}]
+        excludes_results = []
     elif len(excludes) == 0:
         logger.warning("No exclude data returned; column will be blank")
-        excludes = [{"results": []}]
+        excludes_results = []
+    else:
+        first = excludes[0]
+        if isinstance(first, dict) and "results" in first:
+            excludes_results = first.get("results", [])
+        else:
+            excludes_results = excludes
 
     timer_count = 0
     for cred in vaultcreds:
@@ -148,14 +160,11 @@ def successful(creds, search, args):
             msg = "DevInfos only: %s" % success
             logger.debug(msg)
 
-        scan_ranges_res = scan_ranges[0]
-        excludes_res = excludes[0]
-
-        scheduled_scans = builder.get_scans(scan_ranges_res.get('results'), list_of_ranges)
+        scheduled_scans = builder.get_scans(scan_ranges_results, list_of_ranges)
         msg = "Scheduled Scans List" % scheduled_scans
         logger.debug(msg)
 
-        excluded_scans = builder.get_scans(excludes_res.get('results'), list_of_ranges)
+        excluded_scans = builder.get_scans(excludes_results, list_of_ranges)
         msg = "Excluded Scans List" % excluded_scans
         logger.debug(msg)
 

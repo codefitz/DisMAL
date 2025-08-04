@@ -366,14 +366,16 @@ def show_runs(disco, args):
             run_csv.append(value)
         run_csvs.append(run_csv)
     run_csvs.insert(0, headers)
-    if getattr(args, "export", False):
+    export = getattr(args, "export", False)
+    outfile = getattr(args, "file", getattr(args, "output_file", None))
+    if export:
         w = csv.writer(sys.stdout)
         w.writerows(run_csvs)
-    elif getattr(args, "file", None):
-        with open(args.file, "w", newline="") as file:
+    elif outfile:
+        with open(outfile, "w", newline="") as file:
             writer = csv.writer(file)
             writer.writerows(run_csvs)
-            msg = "Results written to %s" % args.file
+            msg = "Results written to %s" % outfile
             print(msg)
             logger.info(msg)
     else:

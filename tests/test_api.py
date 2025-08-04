@@ -90,6 +90,18 @@ def test_show_runs_handles_bad_response(capsys):
     captured = capsys.readouterr()
     assert "No runs in progress." in captured.out
 
+
+def test_show_runs_minimal_args(capsys):
+    """show_runs should handle args without optional attributes."""
+    resp = DummyResponse(401, 'not-json', reason="Unauthorized")
+    disco = DummyDisco(resp)
+    args = types.SimpleNamespace()
+
+    show_runs(disco, args)
+
+    captured = capsys.readouterr()
+    assert "No runs in progress." in captured.out
+
 def test_get_outposts_uses_deleted_false():
     """Verify get_outposts calls the correct API path."""
     class DummyAppliance:

@@ -15,35 +15,42 @@ from . import tools, api
 
 logger = logging.getLogger("_output_")
 
-
-def _timer(name_or_func=None):
+def _timer(func=None, *, name=None):
     """Decorator to time report generation and log the duration.
 
-    Can be used with or without arguments. When a string argument is supplied,
-    it is included in the completion message to provide a friendly report name.
+    Parameters
+    ----------
+    name : str, optional
+        Friendly name for the report being executed.
     """
 
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
+            display_name = name or func.__name__
+            start_msg = f"Running report {display_name}..."
+            print(start_msg)
+            logger.info(start_msg)
             start = time.time()
             result = func(*args, **kwargs)
             elapsed = time.time() - start
-            label = name_or_func if isinstance(name_or_func, str) else func.__name__
-            msg = f"{label} completed in {elapsed:.2f} seconds."
+            if elapsed < 60:
+                formatted = f"{elapsed:.2f} seconds"
+            elif elapsed < 3600:
+                formatted = f"{elapsed/60:.2f} minutes"
+            else:
+                formatted = f"{elapsed/3600:.2f} hours"
+            msg = f"Report completed in {formatted}"
             print(msg)
             logger.info(msg)
             return result
 
         return wrapper
 
-    # Support using the decorator with or without parentheses
-    if callable(name_or_func):
-        func = name_or_func
-        name_or_func = func.__name__
+    if func is None:
+        return decorator
+    else:
         return decorator(func)
-
-    return decorator
 
 def csv_out(data, heads):
     data.insert(0, heads)

@@ -119,7 +119,7 @@ def get_json(api_endpoint):
 
     if logger.isEnabledFor(logging.DEBUG):
         try:
-            logger.debug("API response text from %s:\n%s" % (url, api_endpoint.text))
+            logger.debug("API response text from %s:\n%s", url, api_endpoint.text)
         except Exception:
             pass
 
@@ -133,7 +133,7 @@ def get_json(api_endpoint):
     else:
         if logger.isEnabledFor(logging.DEBUG):
             try:
-                logger.debug("Decoded JSON from %s:\n%s" % (url, json.dumps(data, indent=2)))
+                logger.debug("Decoded JSON from %s:\n%s", url, json.dumps(data, indent=2))
             except Exception:
                 pass
         return data
@@ -778,9 +778,7 @@ def search_results(api_endpoint, query):
                     data = {"error": getattr(results, "text", "")}
                 if logger.isEnabledFor(logging.DEBUG):
                     try:
-                        logger.debug(
-                            "Parsed error payload: %s" % json.dumps(data)
-                        )
+                        logger.debug("Parsed error payload: %s", json.dumps(data))
                     except Exception:
                         pass
                 logger.error("Search failed: %s - %s", status_code, getattr(results, "reason", ""))

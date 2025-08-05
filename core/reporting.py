@@ -7,6 +7,7 @@ import os
 from collections import Counter
 import json
 import re
+from concurrent.futures import ThreadPoolExecutor
 
 # PIP Packages
 import pandas as pd
@@ -42,9 +43,30 @@ def successful(creds, search, args):
     devinfosux = {}
     credfail_results = {}
 
-    credsux_results = api.search_results(search,queries.credential_success)
-    devinfosux = api.search_results(search,queries.deviceinfo_success)
-    credfail_results = api.search_results(search,queries.credential_failure)
+    with ThreadPoolExecutor() as executor:
+        futures = {
+            "credsux_results": executor.submit(
+                api.search_results, search, queries.credential_success
+            ),
+            "devinfosux": executor.submit(
+                api.search_results, search, queries.deviceinfo_success
+            ),
+            "credfail_results": executor.submit(
+                api.search_results, search, queries.credential_failure
+            ),
+        }
+
+        results = {}
+        for key, future in futures.items():
+            try:
+                results[key] = future.result()
+            except Exception as e:
+                logger.error("Failed to retrieve %s: %s", key, e)
+                results[key] = []
+
+    credsux_results = results.get("credsux_results", [])
+    devinfosux = results.get("devinfosux", [])
+    credfail_results = results.get("credfail_results", [])
 
     data = []
     headers = []

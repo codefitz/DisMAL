@@ -105,7 +105,11 @@ def sortdic(lst):
 def completage(message, record_count, timer_count):
     timer_count += 1
     pc = (float(timer_count) / float(record_count))
-    print('%s: %d%%' % (message,100.0 * pc),end='\r')
+    if timer_count >= record_count:
+        end_char = '\n'
+    else:
+        end_char = '\r'
+    print('%s: %d%%' % (message,100.0 * pc), end=end_char)
     return timer_count
 
 def list_of_lists(ci,attr,list_to_append):

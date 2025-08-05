@@ -400,19 +400,99 @@ def show_runs(disco, args):
         pprint(runs)
 
 def sensitive(search, args, dir):
-    output.define_csv(args,search,queries.sensitive_data,dir+defaults.sensitive_data_filename,args.output_file,args.target,"query")
+    results = search_results(search, queries.sensitive_data)
+    count = len(results) if isinstance(results, list) else 0
+    tools.completage("Processing", count or 1, (count or 1) - 1)
+    print(os.linesep, end="\r")
+    header, rows = [], []
+    if isinstance(results, list) and results:
+        header, rows = tools.json2csv(results)
+        header.insert(0, "Discovery Instance")
+        for row in rows:
+            row.insert(0, args.target)
+    else:
+        header.insert(0, "Discovery Instance")
+    output.define_csv(
+        args,
+        header,
+        rows,
+        dir + defaults.sensitive_data_filename,
+        args.output_file,
+        args.target,
+        "csv_file",
+    )
 
 def tpl_export(search, args, dir):
     reporting.tpl_export(search, queries.tpl_export, dir, "api", None, None, None)
 
 def eca_errors(search, args, dir):
-    output.define_csv(args,search,queries.eca_error,dir+defaults.eca_errors_filename,args.output_file,args.target,"query")
+    results = search_results(search, queries.eca_error)
+    count = len(results) if isinstance(results, list) else 0
+    tools.completage("Processing", count or 1, (count or 1) - 1)
+    print(os.linesep, end="\r")
+    header, rows = [], []
+    if isinstance(results, list) and results:
+        header, rows = tools.json2csv(results)
+        header.insert(0, "Discovery Instance")
+        for row in rows:
+            row.insert(0, args.target)
+    else:
+        header.insert(0, "Discovery Instance")
+    output.define_csv(
+        args,
+        header,
+        rows,
+        dir + defaults.eca_errors_filename,
+        args.output_file,
+        args.target,
+        "csv_file",
+    )
 
 def open_ports(search, args, dir):
-    output.define_csv(args,search,queries.open_ports,dir+defaults.open_ports_filename,args.output_file,args.target,"query")
+    results = search_results(search, queries.open_ports)
+    count = len(results) if isinstance(results, list) else 0
+    tools.completage("Processing", count or 1, (count or 1) - 1)
+    print(os.linesep, end="\r")
+    header, rows = [], []
+    if isinstance(results, list) and results:
+        header, rows = tools.json2csv(results)
+        header.insert(0, "Discovery Instance")
+        for row in rows:
+            row.insert(0, args.target)
+    else:
+        header.insert(0, "Discovery Instance")
+    output.define_csv(
+        args,
+        header,
+        rows,
+        dir + defaults.open_ports_filename,
+        args.output_file,
+        args.target,
+        "csv_file",
+    )
 
 def host_util(search, args, dir):
-    output.define_csv(args,search,queries.host_utilisation,dir+defaults.host_util_filename,args.output_file,args.target,"query")
+    results = search_results(search, queries.host_utilisation)
+    count = len(results) if isinstance(results, list) else 0
+    tools.completage("Processing", count or 1, (count or 1) - 1)
+    print(os.linesep, end="\r")
+    header, rows = [], []
+    if isinstance(results, list) and results:
+        header, rows = tools.json2csv(results)
+        header.insert(0, "Discovery Instance")
+        for row in rows:
+            row.insert(0, args.target)
+    else:
+        header.insert(0, "Discovery Instance")
+    output.define_csv(
+        args,
+        header,
+        rows,
+        dir + defaults.host_util_filename,
+        args.output_file,
+        args.target,
+        "csv_file",
+    )
 
 def orphan_vms(search, args, dir):
     output.define_csv(args,search,queries.orphan_vms,dir+defaults.orphan_vms_filename,args.output_file,args.target,"query")

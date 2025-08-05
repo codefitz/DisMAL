@@ -70,7 +70,7 @@ def csv_file(data, heads, filename):
         try:
             writer = csv.writer(file, delimiter=",")
             writer.writerows(data)
-            msg = "Results written to %s" % filename
+            msg = "Report saved to %s" % filename
             print(msg)
             logger.info(msg)
         except Exception as e:

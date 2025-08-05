@@ -274,7 +274,7 @@ def query(search, args):
             with open(args.output_file, 'w', newline='') as file:
                 writer = csv.writer(file)
                 writer.writerows(results)
-                msg = "Results written to %s" % args.output_file
+                msg = "Report saved to %s" % args.output_file
                 print(msg)
                 logger.info(msg)
         else:
@@ -415,7 +415,7 @@ def show_runs(disco, args):
             writer = csv.writer(file)
             writer.writerow(headers)
             writer.writerows(run_csvs)
-            msg = "Results written to %s" % outfile
+            msg = "Report saved to %s" % outfile
             print(msg)
             logger.info(msg)
     else:

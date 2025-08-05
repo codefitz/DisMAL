@@ -559,10 +559,16 @@ def scheduling(vault, search, args):
             for credential in credential_ips:
                 cred_ips = credential[1]
                 for cred_ip in cred_ips:
-                    if cred_ip in run_ips:
-                        logger.debug("Credential IP %s found in Exclude run"%(cred_ip))
+                    if isinstance(cred_ip, (ipaddress.IPv4Network, ipaddress.IPv6Network)):
+                        if any(
+                            isinstance(run_ip, (ipaddress.IPv4Network, ipaddress.IPv6Network))
+                            and cred_ip.overlaps(run_ip)
+                            for run_ip in run_ips
+                        ):
+                            logger.debug("Credential IP %s found in Exclude run"%(cred_ip))
+                            in_exclude.append("%s (%s)" % (credential[2],credential[0]))
+                    elif cred_ip == "0.0.0.0/0,::/0" and "0.0.0.0/0,::/0" in run_ips:
                         in_exclude.append("%s (%s)" % (credential[2],credential[0]))
-        #in_exclude = list(dict.fromkeys(in_exclude)) # sort and unique
         in_exclude = tools.sortlist(in_exclude)
         logger.debug("Excludes:%s"%(in_exclude))
 
@@ -617,9 +623,14 @@ def scheduling(vault, search, args):
             for credential in credential_ips:
                 cred_ips = credential[1]
                 for cred_ip in cred_ips:
-                    if cred_ip in run_ips:
-                        in_run.append("%s (%s)" % (credential[2],credential[0]))
-                        logger.debug("Credential IP %s found in run"%(cred_ip))
+                    if isinstance(cred_ip, (ipaddress.IPv4Network, ipaddress.IPv6Network)):
+                        if any(
+                            isinstance(run_ip, (ipaddress.IPv4Network, ipaddress.IPv6Network))
+                            and cred_ip.overlaps(run_ip)
+                            for run_ip in run_ips
+                        ):
+                            in_run.append("%s (%s)" % (credential[2],credential[0]))
+                            logger.debug("Credential IP %s found in run"%(cred_ip))
                     elif cred_ip == "0.0.0.0/0,::/0":
                         in_run.append("%s (%s)" % (credential[2],credential[0]))
                         logger.debug("No range specified - scan all - %s"%(cred_ip))
@@ -800,12 +811,12 @@ def overlapping(tw_search, args):
         logger.debug("Scan Result:\n%s", result)
         label = result.get('Label')
         for scan_range in result.get('Scan_Range'):
-            ips = tools.range_to_ips(scan_range)
-            logger.debug("List of IPs:%s", ips)
-            for ip in ips:
-                ip_str = str(ip)
-                ip_to_ranges[ip_str].add(label)
-                scheduled_ip_set.add(ip_str)
+            nets = tools.range_to_ips(scan_range)
+            logger.debug("List of Networks:%s", nets)
+            for net in nets:
+                net_str = str(net)
+                ip_to_ranges[net_str].add(label)
+                scheduled_ip_set.add(net_str)
 
     matched_runs = [
         {"ip": ip, "runs": sorted(list(labels))}
@@ -894,29 +905,32 @@ def get_scans(results, list_of_ranges):
         return scan_ranges
     ip_set = set(list_of_ranges)
     for result in results:
-        msg = "Result: %s" % result
-        logger.debug(msg)
+        logger.debug("Result: %s", result)
         ranges = result.get('Scan_Range')
         if ranges and isinstance(ranges, list):
             for scan_range in ranges:
-                msg = "Scan Range: %s" % scan_range
-                logger.debug(msg)
-                networks = _range_to_networks(scan_range)
+                logger.debug("Scan Range: %s", scan_range)
+                r = scan_range
                 label = result.get('Label')
-                for ip in ip_set:
-                    if isinstance(ip, str) and ip == "0.0.0.0/0,::/0":
+                networks = tools.range_to_ips(r)
+                logger.debug("List of Networks: %s", networks)
+                for ip in list_of_ranges:
+                    logger.debug("Checking IP %s in networks", ip)
+                    if ip == "0.0.0.0/0,::/0":
                         scan_ranges.append(label)
-                        msg = "IP %s added to scheduled_scans" % ip
-                        logger.debug(msg)
-                        break
-                    try:
-                        if any(ip in network for network in networks):
-                            scan_ranges.append(label)
-                            msg = "IP %s added to scheduled_scans" % ip
-                            logger.debug(msg)
-                            break
-                    except TypeError:
-                        # Non IP values can't be checked for membership
+                        logger.debug("IP %s added to scheduled_scans", ip)
                         continue
+
+                    if isinstance(ip, (ipaddress.IPv4Network, ipaddress.IPv6Network)):
+                        for net in networks:
+                            if isinstance(net, (ipaddress.IPv4Network, ipaddress.IPv6Network)) and ip.overlaps(net):
+                                scan_ranges.append(label)
+                                logger.debug("IP %s added to scheduled_scans", ip)
+                                break
+                    else:
+                        if ip in networks:
+                            scan_ranges.append(label)
+                            logger.debug("IP %s added to scheduled_scans", ip)
+                            break
     scan_ranges = tools.sortlist(scan_ranges)
     return scan_ranges

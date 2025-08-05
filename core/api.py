@@ -146,6 +146,7 @@ def get_json(api_endpoint):
                 pass
         return data
 
+@output._timer
 def admin(disco,args,dir):
     logger.debug("Calling disco.admin() with no parameters")
     data = disco.admin()
@@ -161,9 +162,11 @@ def admin(disco,args,dir):
     logger.info('Discovery Version:\n%s'%os_version)
     output.define_txt(args,json.dumps(result['versions']),dir+defaults.api_filename,None)
 
+@output._timer
 def audit(search,args,dir):
     output.define_csv(args,search,queries.audit,dir+defaults.audit_filename,args.output_file,args.target,"query")
 
+@output._timer
 def baseline(disco, args, dir):
     logger.debug("Calling disco.baseline() with no parameters")
     data = disco.baseline()
@@ -201,12 +204,15 @@ def baseline(disco, args, dir):
         last_message = bl
         output.txt_dump(last_message,dir+"/baseline_status.txt")
 
+@output._timer
 def cmdb_config(search, args, dir):
     output.define_csv(args,search,queries.cmdb_sync_config,dir+defaults.cmdbsync_filename,args.output_file,args.target,"query")
 
+@output._timer
 def modules(search, args, dir):
     output.define_csv(args,search,queries.patterns,dir+defaults.tw_knowledge_filename,args.output_file,args.target,"query")
 
+@output._timer
 def licensing(disco, args, dir):
     try:
         # CSV
@@ -237,6 +243,7 @@ def licensing(disco, args, dir):
             if chunk:  # filter out keep-alive new chunks
                 handle.write(chunk)
 
+@output._timer
 def query(search, args):
     """Run an ad-hoc query against the search endpoint."""
     results = []
@@ -318,6 +325,7 @@ def map_outpost_credentials(appliance):
             logger.error("Error processing outpost %s: %s", url, e)
     return mapping
 
+@output._timer
 def success(twcreds, twsearch, args, dir):
     reporting.successful(twcreds, twsearch, args)
     #if args.output_file:
@@ -326,12 +334,15 @@ def success(twcreds, twsearch, args, dir):
     #    df.to_csv(dir+defaults.success_filename, index=False)
     #    os.remove(args.output_file)
 
+@output._timer
 def schedules(search, args, dir):
     output.define_csv(args,search,queries.scan_ranges,dir+defaults.scan_ranges_filename,args.output_file,args.target,"query")
 
+@output._timer
 def excludes(search, args, dir):
     output.define_csv(args,search,queries.exclude_ranges,dir+defaults.exclude_ranges_filename,args.output_file,args.target,"query")
 
+@output._timer
 def discovery_runs(disco, args, dir):
     logger.info("Checking Scan ranges...")
     logger.debug("Calling disco.get_discovery_runs")
@@ -360,6 +371,7 @@ def discovery_runs(disco, args, dir):
             "csv_file",
         )
 
+@output._timer
 def show_runs(disco, args):
     logger.debug("Calling disco.get_discovery_runs")
     api_response = disco.get_discovery_runs
@@ -427,6 +439,7 @@ def show_runs(disco, args):
                 status = r.get("status", "unknown")
                 print(f" - {rid}: {status}")
 
+@output._timer
 def sensitive(search, args, dir):
     results = search_results(search, queries.sensitive_data)
     count = len(results) if isinstance(results, list) else 0
@@ -450,9 +463,11 @@ def sensitive(search, args, dir):
         "csv_file",
     )
 
+@output._timer
 def tpl_export(search, args, dir):
     reporting.tpl_export(search, queries.tpl_export, dir, "api", None, None, None)
 
+@output._timer
 def eca_errors(search, args, dir):
     results = search_results(search, queries.eca_error)
     count = len(results) if isinstance(results, list) else 0
@@ -476,6 +491,7 @@ def eca_errors(search, args, dir):
         "csv_file",
     )
 
+@output._timer
 def open_ports(search, args, dir):
     results = search_results(search, queries.open_ports)
     count = len(results) if isinstance(results, list) else 0
@@ -499,6 +515,7 @@ def open_ports(search, args, dir):
         "csv_file",
     )
 
+@output._timer
 def host_util(search, args, dir):
     results = search_results(search, queries.host_utilisation)
     count = len(results) if isinstance(results, list) else 0
@@ -522,9 +539,11 @@ def host_util(search, args, dir):
         "csv_file",
     )
 
+@output._timer
 def orphan_vms(search, args, dir):
     output.define_csv(args,search,queries.orphan_vms,dir+defaults.orphan_vms_filename,args.output_file,args.target,"query")
 
+@output._timer
 def missing_vms(search, args, dir):
     if getattr(args, "resolve_hostnames", False):
         response = search_results(search, queries.missing_vms)
@@ -597,27 +616,35 @@ def missing_vms(search, args, dir):
             "query",
         )
 
+@output._timer
 def near_removal(search, args, dir):
     output.define_csv(args,search,queries.near_removal,dir+defaults.near_removal_filename,args.output_file,args.target,"query")
 
+@output._timer
 def removed(search, args, dir):
     output.define_csv(args,search,queries.removed,dir+defaults.removed_filename,args.output_file,args.target,"query")
 
+@output._timer
 def oslc(search, args, dir):
     output.define_csv(args,search,queries.os_lifecycle,dir+defaults.os_lifecycle_filename,args.output_file,args.target,"query")
 
+@output._timer
 def slc(search, args, dir):
     output.define_csv(args,search,queries.software_lifecycle,dir+defaults.si_lifecycle_filename,args.output_file,args.target,"query")
 
+@output._timer
 def dblc(search, args, dir):
     output.define_csv(args,search,queries.db_lifecycle,dir+defaults.db_lifecycle_filename,args.output_file,args.target,"query")
 
+@output._timer
 def snmp(search, args, dir):
     output.define_csv(args,search,queries.snmp_devices,dir+defaults.snmp_unrecognised_filename,args.output_file,args.target,"query")
 
+@output._timer
 def agents(search, args, dir):
     output.define_csv(args,search,queries.agents,dir+defaults.installed_agents_filename,args.output_file,args.target,"query")
 
+@output._timer
 def software_users(search, args, dir):
     output.define_csv(args,search,queries.user_accounts,dir+defaults.si_user_accounts_filename,args.output_file,args.target,"query")
 
@@ -635,6 +662,7 @@ def devices_lookup(search):
             }
     return mapping
 
+@output._timer
 def tku(knowledge, args, dir):
     logger.info("Checking Knowledge...")
     logger.debug("Calling knowledge.get_knowledge")
@@ -764,6 +792,7 @@ def update_schedule_timezone(disco, args):
             getattr(resp, "text", "N/A"),
         )
 
+@output._timer
 def vault(vault, args, dir):
     logger.info("Checking Vault...")
     logger.debug("Calling vault.get_vault")
@@ -941,5 +970,6 @@ def search_results(api_endpoint, query):
             )
         return []
 
+@output._timer
 def hostname(args,dir):
     output.define_txt(args,args.target,dir+defaults.hostname_filename,None)

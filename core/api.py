@@ -737,19 +737,14 @@ def update_cred(appliance, uuid):
 
 def search_results(api_endpoint, query):
     try:
-        if isinstance(query, dict) and "query" in query:
-            sanitized = query["query"].replace("\n", " ").replace("\r", " ")
-            query = {"query": sanitized}
+        if isinstance(query, dict) and isinstance(query.get("query"), str):
+            query = dict(query)
+            query["query"] = query["query"].replace("\n", " ").replace("\r", " ")
         if logger.isEnabledFor(logging.DEBUG):
             try:
                 logger.debug("Search query: %s" % query)
             except Exception:
                 pass
-
-        if isinstance(query, dict) and isinstance(query.get("query"), str):
-            cleaned = query["query"].replace("\n", " ").replace("\r", " ")
-            query = dict(query)
-            query["query"] = cleaned
 
         if hasattr(api_endpoint, "search_bulk"):
             results = api_endpoint.search_bulk(query, format="object", limit=500)

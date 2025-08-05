@@ -23,7 +23,8 @@ def successful(creds, search, args):
     logger.info(msg)
 
     vaultcreds = api.get_json(creds.get_vault_credentials)
-    logger.debug('List Credentials:'+json.dumps(vaultcreds))
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug('List Credentials: %s', json.dumps(vaultcreds))
 
     outpost_map = {}
     if getattr(args, "target", None) and hasattr(tideway, "appliance"):
@@ -71,9 +72,10 @@ def successful(creds, search, args):
     data = []
     headers = []
 
-    logger.info('Successful SessionResults:' + json.dumps(credsux_results))
-    logger.info('Successful DeviceInfos:' + json.dumps(devinfosux))
-    logger.info('Failures:' + json.dumps(credfail_results))
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug('Successful SessionResults: %s', json.dumps(credsux_results))
+        logger.debug('Successful DeviceInfos: %s', json.dumps(devinfosux))
+        logger.debug('Failures: %s', json.dumps(credfail_results))
 
     suxCreds = tools.session_get(credsux_results)
     suxDev = tools.session_get(devinfosux)

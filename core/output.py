@@ -20,9 +20,15 @@ def _timer(func=None, *, name=None):
 
     Parameters
     ----------
+    func : callable or str, optional
+        Function to decorate or a friendly name for the report.
     name : str, optional
         Friendly name for the report being executed.
     """
+
+    if func is not None and not callable(func):
+        name = func
+        func = None
 
     def decorator(func):
         @wraps(func)

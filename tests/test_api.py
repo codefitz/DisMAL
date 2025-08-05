@@ -168,6 +168,33 @@ def test_search_results_cleans_query(monkeypatch):
     assert '\\"foo\\"' not in sent
 
 
+def test_search_results_sanitizes_once(monkeypatch):
+    """Ensure query sanitization occurs exactly once."""
+
+    class CountingStr(str):
+        calls = 0
+
+        def replace(self, old, new, count=-1):
+            CountingStr.calls += 1
+            return CountingStr(super().replace(old, new, count))
+
+    captured = {}
+
+    class Recorder:
+        def search(self, query, format="object", limit=500):
+            captured["query"] = query
+            return DummyResponse(200, "[]")
+
+    CountingStr.calls = 0
+    qry = CountingStr("search Device\nwhere name = 'foo'\r")
+    search_results(Recorder(), {"query": qry})
+
+    sent = captured["query"]["query"]
+    assert "\n" not in sent
+    assert "\r" not in sent
+    assert CountingStr.calls == 2
+
+
 def test_search_results_returns_error_payload(caplog):
     resp = DummyResponse(400, '{"msg": "bad"}', reason="Bad")
     search = DummySearch(resp)

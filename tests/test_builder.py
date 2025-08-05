@@ -1,6 +1,7 @@
 import os
 import sys
 import types
+import ipaddress
 
 sys.modules.setdefault("pandas", types.SimpleNamespace())
 sys.modules.setdefault("tabulate", types.SimpleNamespace(tabulate=lambda *a, **k: ""))
@@ -78,7 +79,11 @@ def _setup_schedule_patches(monkeypatch, cred_list, excludes, scan_ranges):
     seq = iter([cred_list, excludes, scan_ranges])
 
     monkeypatch.setattr(builder.api, "get_json", lambda *a, **k: next(seq))
-    monkeypatch.setattr(builder.tools, "range_to_ips", lambda r: [r])
+    monkeypatch.setattr(
+        builder.tools,
+        "range_to_ips",
+        lambda r: [ipaddress.ip_network(r, strict=False)] if r else [],
+    )
     monkeypatch.setattr(builder.tools, "sortlist", lambda l, dv=None: list(l))
     monkeypatch.setattr(builder.tools, "completage", lambda *a, **k: 0)
 
@@ -102,7 +107,11 @@ def _setup_overlap_patches(monkeypatch, scan_ranges, excludes):
 
     monkeypatch.setattr(builder.api, "get_json", lambda *a, **k: next(seq))
     monkeypatch.setattr(builder.api, "search_results", lambda *a, **k: [])
-    monkeypatch.setattr(builder.tools, "range_to_ips", lambda r: [r])
+    monkeypatch.setattr(
+        builder.tools,
+        "range_to_ips",
+        lambda r: [ipaddress.ip_network(r, strict=False)] if r else [],
+    )
     monkeypatch.setattr(builder.tools, "sortdic", lambda l: list(l))
     monkeypatch.setattr(builder.tools, "sortlist", lambda l, dv=None: list(l))
     monkeypatch.setattr(builder.tools, "completage", lambda *a, **k: 0)
@@ -177,7 +186,11 @@ def test_scheduling_creates_empty_csv(monkeypatch):
     seq = iter([cred, [], []])
 
     monkeypatch.setattr(builder.api, "get_json", lambda *a, **k: next(seq))
-    monkeypatch.setattr(builder.tools, "range_to_ips", lambda r: [r])
+    monkeypatch.setattr(
+        builder.tools,
+        "range_to_ips",
+        lambda r: [ipaddress.ip_network(r, strict=False)] if r else [],
+    )
     monkeypatch.setattr(builder.tools, "sortlist", lambda l, dv=None: list(l))
     monkeypatch.setattr(builder.tools, "completage", lambda *a, **k: 0)
 
@@ -227,7 +240,11 @@ def test_overlapping_scan_ranges_no_results_key(monkeypatch):
     seq = iter([scan_ranges, excludes])
     monkeypatch.setattr(builder.api, "get_json", lambda *a, **k: next(seq))
     monkeypatch.setattr(builder.api, "search_results", lambda *a, **k: [])
-    monkeypatch.setattr(builder.tools, "range_to_ips", lambda r: [r])
+    monkeypatch.setattr(
+        builder.tools,
+        "range_to_ips",
+        lambda r: [ipaddress.ip_network(r, strict=False)] if r else [],
+    )
     monkeypatch.setattr(builder.tools, "sortdic", lambda l: list(l))
     monkeypatch.setattr(builder.tools, "sortlist", lambda l, dv=None: list(l))
     monkeypatch.setattr(builder.tools, "completage", lambda *a, **k: 0)

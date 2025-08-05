@@ -347,10 +347,18 @@ def discovery_runs(disco, args, dir):
         runs = json.loads(json.dumps(r))
         logger.debug('Runs:\n%s' % r)
         header, rows = tools.json2csv(runs)
-        header.insert(0,"Discovery Instance")
+        header.insert(0, "Discovery Instance")
         for row in rows:
             row.insert(0, args.target)
-        output.define_csv(args,None,rows,dir+defaults.current_scans_filename,args.output_file,args.target,"csv_file")
+        output.define_csv(
+            args,
+            header,
+            rows,
+            dir + defaults.current_scans_filename,
+            args.output_file,
+            args.target,
+            "csv_file",
+        )
 
 def show_runs(disco, args):
     logger.debug("Calling disco.get_discovery_runs")

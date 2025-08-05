@@ -296,3 +296,41 @@ def test_unique_identities_handles_bad_api(monkeypatch):
     result = builder.unique_identities(None)
     assert result == []
 
+
+def test_get_scans_uses_networks(monkeypatch):
+    import ipaddress
+
+    # Ensure legacy helper is not used
+    monkeypatch.setattr(
+        builder.tools,
+        "range_to_ips",
+        lambda *a, **k: (_ for _ in ()).throw(RuntimeError("range_to_ips used")),
+    )
+
+    results = [{"Scan_Range": ["192.168.0.0/30"], "Label": "r1"}]
+    ip_list = [ipaddress.ip_address("192.168.0.1")]
+
+    assert builder.get_scans(results, ip_list) == ["r1"]
+
+
+def test_get_scans_caches_ranges(monkeypatch):
+    import ipaddress
+
+    monkeypatch.setattr(
+        builder.tools,
+        "range_to_ips",
+        lambda *a, **k: (_ for _ in ()).throw(RuntimeError("range_to_ips used")),
+    )
+
+    builder._range_to_networks.cache_clear()
+
+    results = [{"Scan_Range": ["192.168.0.0/30"], "Label": "r1"}]
+    ip_list = [ipaddress.ip_address("192.168.0.1")]
+
+    builder.get_scans(results, ip_list)
+    info1 = builder._range_to_networks.cache_info()
+    builder.get_scans(results, ip_list)
+    info2 = builder._range_to_networks.cache_info()
+
+    assert info2.hits > info1.hits
+

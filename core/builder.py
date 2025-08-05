@@ -2,6 +2,7 @@
 
 import logging
 import os
+from functools import lru_cache
 import ipaddress
 
 import tideway
@@ -10,6 +11,26 @@ from collections import defaultdict
 from . import api, tools, output, queries
 
 logger = logging.getLogger("_builder_")
+
+
+@lru_cache(maxsize=None)
+def _range_to_networks(range_str):
+    """Return a list of :mod:`ipaddress` networks for *range_str*.
+
+    The results are cached so repeated ranges are only parsed once.
+    """
+    networks = []
+    if not range_str:
+        return networks
+    for part in range_str.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        try:
+            networks.append(ipaddress.ip_network(part, strict=False))
+        except ValueError:
+            logger.warning("Unable to parse scan range %s", part)
+    return networks
 
 def get_credentials(entry):
     details = {}
@@ -872,10 +893,17 @@ def overlapping(tw_search, args):
     output.report(data, heads, args, name="overlapping_ips")
 
 def get_scans(results, list_of_ranges):
+    """Return labels of scans that include any of ``list_of_ranges``.
+
+    ``list_of_ranges`` is converted to a :class:`set` to avoid redundant
+    comparisons. Each scan range is parsed into :mod:`ipaddress` network
+    objects (with results cached by :func:`_range_to_networks`), and
+    membership is evaluated using ``ip in network``.
+    """
     scan_ranges = []
     if not results:
         return scan_ranges
-
+    ip_set = set(list_of_ranges)
     for result in results:
         logger.debug("Result: %s", result)
         ranges = result.get('Scan_Range')
@@ -904,6 +932,5 @@ def get_scans(results, list_of_ranges):
                             scan_ranges.append(label)
                             logger.debug("IP %s added to scheduled_scans", ip)
                             break
-
     scan_ranges = tools.sortlist(scan_ranges)
     return scan_ranges

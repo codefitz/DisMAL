@@ -2,6 +2,8 @@
 
 import logging
 import os
+from functools import lru_cache
+import ipaddress
 
 import tideway
 from collections import defaultdict
@@ -9,6 +11,26 @@ from collections import defaultdict
 from . import api, tools, output, queries
 
 logger = logging.getLogger("_builder_")
+
+
+@lru_cache(maxsize=None)
+def _range_to_networks(range_str):
+    """Return a list of :mod:`ipaddress` networks for *range_str*.
+
+    The results are cached so repeated ranges are only parsed once.
+    """
+    networks = []
+    if not range_str:
+        return networks
+    for part in range_str.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        try:
+            networks.append(ipaddress.ip_network(part, strict=False))
+        except ValueError:
+            logger.warning("Unable to parse scan range %s", part)
+    return networks
 
 def get_credentials(entry):
     details = {}
@@ -860,9 +882,17 @@ def overlapping(tw_search, args):
     output.report(data, heads, args, name="overlapping_ips")
 
 def get_scans(results, list_of_ranges):
+    """Return labels of scans that include any of ``list_of_ranges``.
+
+    ``list_of_ranges`` is converted to a :class:`set` to avoid redundant
+    comparisons. Each scan range is parsed into :mod:`ipaddress` network
+    objects (with results cached by :func:`_range_to_networks`), and
+    membership is evaluated using ``ip in network``.
+    """
     scan_ranges = []
     if not results:
         return scan_ranges
+    ip_set = set(list_of_ranges)
     for result in results:
         msg = "Result: %s" % result
         logger.debug(msg)
@@ -871,21 +901,22 @@ def get_scans(results, list_of_ranges):
             for scan_range in ranges:
                 msg = "Scan Range: %s" % scan_range
                 logger.debug(msg)
-                r = scan_range
-                l = result.get('Label')
-                list_of_ips = tools.range_to_ips(r)
-                msg = "List of IPs: %s" % list_of_ips
-                logger.debug(msg)
-                for ip in list_of_ranges:
-                    msg = "Checking IP %s in list_of_ips" % ip
-                    logger.debug(msg)
-                    if ip in list_of_ips:
-                        scan_ranges.append(l)
+                networks = _range_to_networks(scan_range)
+                label = result.get('Label')
+                for ip in ip_set:
+                    if isinstance(ip, str) and ip == "0.0.0.0/0,::/0":
+                        scan_ranges.append(label)
                         msg = "IP %s added to scheduled_scans" % ip
                         logger.debug(msg)
-                    elif ip == "0.0.0.0/0,::/0":
-                        scan_ranges.append(l)
-                        msg = "IP %s added to scheduled_scans" % ip
-                        logger.debug(msg)
+                        break
+                    try:
+                        if any(ip in network for network in networks):
+                            scan_ranges.append(label)
+                            msg = "IP %s added to scheduled_scans" % ip
+                            logger.debug(msg)
+                            break
+                    except TypeError:
+                        # Non IP values can't be checked for membership
+                        continue
     scan_ranges = tools.sortlist(scan_ranges)
     return scan_ranges

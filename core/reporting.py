@@ -18,7 +18,7 @@ import tideway
 
 logger = logging.getLogger("_reporting_")
 
-@output._timer
+@output._timer("Success Report")
 def successful(creds, search, args):
     msg = "Running: Success Report )"
     logger.info(msg)
@@ -312,7 +312,7 @@ def successful(creds, search, args):
         print(msg)
     output.report(data, headers, args, name="credential_success")
 
-@output._timer
+@output._timer("Success Report (CLI)")
 def successful_cli(client, args, sysuser, passwd, reporting_dir):
     credentials = access.remote_cmd('tw_vault_control --show --json -u %s -p %s'%(sysuser,passwd),client)
     credjson = []
@@ -393,7 +393,7 @@ def successful_cli(client, args, sysuser, passwd, reporting_dir):
         row.insert(0, args.target)
     output.csv_file(data, headers, reporting_dir+"/credentials.csv")
 
-@output._timer
+@output._timer("Device Access Analysis")
 def devices(twsearch, twcreds, args):
 
     print("\nDevice Access Analyis")
@@ -695,7 +695,7 @@ def devices(twsearch, twcreds, args):
         print(msg)
     output.report(data, headers, args, name="devices")
 
-@output._timer
+@output._timer("IP Address Lookup")
 def ipaddr(search, credentials, args):
     ipaddr = args.excavate[1]
     msg = "\nIP Address Lookup: %s" % ipaddr
@@ -1077,7 +1077,7 @@ def _gather_discovery_data(twsearch, twcreds):
     return disco_data
 
 
-@output._timer
+@output._timer("Discovery Access Export")
 def discovery_access(twsearch, twcreds, args):
     print("\nDiscovery Access Export")
     print("-----------------------")
@@ -1193,7 +1193,7 @@ def discovery_access(twsearch, twcreds, args):
     output.report(data, headers, args, name="discovery_access")
 
 
-@output._timer
+@output._timer("Discovery Access Analysis")
 def discovery_analysis(twsearch, twcreds, args):
     print("\nDiscovery Access Analysis")
     print("-------------------------")
@@ -1324,7 +1324,7 @@ def discovery_analysis(twsearch, twcreds, args):
     output.report(data, headers, args, name="discovery_analysis")
 
 
-@output._timer
+@output._timer("TPL Export")
 def tpl_export(search, query, dir, method, client, sysuser, syspass):
     tpldir = dir + "/tpl"
     if not os.path.exists(tpldir):

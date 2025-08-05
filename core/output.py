@@ -15,7 +15,6 @@ from . import tools, api
 
 logger = logging.getLogger("_output_")
 
-
 def _timer(func=None, *, name=None):
     """Decorator to time report generation and log the duration.
 
@@ -139,7 +138,6 @@ def fancy_out(data, heads):
     except Exception as e:
         logger.error("Problem printing fancy output:%s\n%s"%(e.__class__,str(e)))
 
-@_timer
 def report(data, heads, args, name=None):
     """Handle generic report output."""
     cli_out = getattr(args, "output_cli", False)
@@ -211,7 +209,6 @@ def query2csv(search, query, filename, appliance):
     else:
         txt_dump("No results.",filename)
 
-@_timer
 def define_txt(args,result,path,filename):
     # Manage all Output options
     cli_out = getattr(args, "output_cli", False)
@@ -234,7 +231,6 @@ def define_txt(args,result,path,filename):
         else:
             txt_dump(result,path)
 
-@_timer
 def define_csv(args,head_ep,data,path,file,target,type):
     # Manage all Output options
     cli_out = getattr(args, "output_cli", False)

@@ -16,20 +16,34 @@ from . import tools, api
 logger = logging.getLogger("_output_")
 
 
-def _timer(func):
-    """Decorator to time report generation and log the duration."""
+def _timer(name_or_func=None):
+    """Decorator to time report generation and log the duration.
 
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        start = time.time()
-        result = func(*args, **kwargs)
-        elapsed = time.time() - start
-        msg = f"Report completed in {elapsed:.2f} seconds."
-        print(msg)
-        logger.info(msg)
-        return result
+    Can be used with or without arguments. When a string argument is supplied,
+    it is included in the completion message to provide a friendly report name.
+    """
 
-    return wrapper
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            start = time.time()
+            result = func(*args, **kwargs)
+            elapsed = time.time() - start
+            label = name_or_func if isinstance(name_or_func, str) else func.__name__
+            msg = f"{label} completed in {elapsed:.2f} seconds."
+            print(msg)
+            logger.info(msg)
+            return result
+
+        return wrapper
+
+    # Support using the decorator with or without parentheses
+    if callable(name_or_func):
+        func = name_or_func
+        name_or_func = func.__name__
+        return decorator(func)
+
+    return decorator
 
 def csv_out(data, heads):
     data.insert(0, heads)
@@ -117,7 +131,6 @@ def fancy_out(data, heads):
     except Exception as e:
         logger.error("Problem printing fancy output:%s\n%s"%(e.__class__,str(e)))
 
-@_timer
 def report(data, heads, args, name=None):
     """Handle generic report output."""
     cli_out = getattr(args, "output_cli", False)
@@ -189,7 +202,6 @@ def query2csv(search, query, filename, appliance):
     else:
         txt_dump("No results.",filename)
 
-@_timer
 def define_txt(args,result,path,filename):
     # Manage all Output options
     cli_out = getattr(args, "output_cli", False)
@@ -212,7 +224,6 @@ def define_txt(args,result,path,filename):
         else:
             txt_dump(result,path)
 
-@_timer
 def define_csv(args,head_ep,data,path,file,target,type):
     # Manage all Output options
     cli_out = getattr(args, "output_cli", False)

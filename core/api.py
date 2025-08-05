@@ -391,21 +391,41 @@ def show_runs(disco, args):
             value = run.get(header)
             run_csv.append(value)
         run_csvs.append(run_csv)
-    run_csvs.insert(0, headers)
+
     export = getattr(args, "export", False)
     outfile = getattr(args, "file", getattr(args, "output_file", None))
     if export:
         w = csv.writer(sys.stdout)
+        w.writerow(headers)
         w.writerows(run_csvs)
     elif outfile:
         with open(outfile, "w", newline="") as file:
             writer = csv.writer(file)
+            writer.writerow(headers)
             writer.writerows(run_csvs)
             msg = "Results written to %s" % outfile
             print(msg)
             logger.info(msg)
     else:
-        pprint(runs)
+        if getattr(args, "excavate", None):
+            out_dir = getattr(args, "reporting_dir", "")
+            output.define_csv(
+                args,
+                headers,
+                run_csvs,
+                os.path.join(out_dir, defaults.current_scans_filename),
+                getattr(args, "output_file", None),
+                getattr(args, "target", None),
+                "csv_file",
+            )
+        elif getattr(args, "debugging", False):
+            pprint(runs)
+        else:
+            print(f"Active discovery runs: {len(runs)}")
+            for r in runs:
+                rid = r.get("run_id") or r.get("id") or r.get("label") or "N/A"
+                status = r.get("status", "unknown")
+                print(f" - {rid}: {status}")
 
 def sensitive(search, args, dir):
     results = search_results(search, queries.sensitive_data)

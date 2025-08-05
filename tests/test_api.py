@@ -102,6 +102,51 @@ def test_show_runs_minimal_args(capsys):
     captured = capsys.readouterr()
     assert "No runs in progress." in captured.out
 
+
+def test_show_runs_prints_summary(capsys):
+    resp = DummyResponse(200, '[{"run_id": "1", "status": "running"}]')
+    disco = DummyDisco(resp)
+    args = types.SimpleNamespace()
+
+    show_runs(disco, args)
+
+    captured = capsys.readouterr()
+    assert "Active discovery runs: 1" in captured.out
+    assert "1" in captured.out
+    assert "running" in captured.out
+    assert "{" not in captured.out
+
+
+def test_show_runs_debug_prints_json(capsys):
+    resp = DummyResponse(200, '[{"run_id": "1", "status": "running"}]')
+    disco = DummyDisco(resp)
+    args = types.SimpleNamespace(debugging=True)
+
+    show_runs(disco, args)
+
+    captured = capsys.readouterr()
+    assert "'run_id': '1'" in captured.out
+    assert "'status': 'running'" in captured.out
+
+
+def test_show_runs_excavate_routes_to_define_csv(monkeypatch):
+    resp = DummyResponse(200, '[{"run_id": "1", "status": "running"}]')
+    disco = DummyDisco(resp)
+    recorded = {}
+
+    def fake_define_csv(args, header, data, path, file, target, typ):
+        recorded["header"] = header
+        recorded["data"] = data
+
+    monkeypatch.setattr(api_mod.output, "define_csv", fake_define_csv)
+
+    args = types.SimpleNamespace(excavate=["active_runs"], reporting_dir="/tmp", target="appl")
+
+    show_runs(disco, args)
+
+    assert recorded["header"] == ["run_id", "status"]
+    assert recorded["data"] == [["1", "running"]]
+
 def test_get_outposts_uses_deleted_false():
     """Verify get_outposts calls the correct API path."""
     class DummyAppliance:

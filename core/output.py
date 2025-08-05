@@ -16,20 +16,42 @@ from . import tools, api
 logger = logging.getLogger("_output_")
 
 
-def _timer(func):
-    """Decorator to time report generation and log the duration."""
+def _timer(func=None, *, name=None):
+    """Decorator to time report generation and log the duration.
 
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        start = time.time()
-        result = func(*args, **kwargs)
-        elapsed = time.time() - start
-        msg = f"Report completed in {elapsed:.2f} seconds."
-        print(msg)
-        logger.info(msg)
-        return result
+    Parameters
+    ----------
+    name : str, optional
+        Friendly name for the report being executed.
+    """
 
-    return wrapper
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            display_name = name or func.__name__
+            start_msg = f"Running report {display_name}..."
+            print(start_msg)
+            logger.info(start_msg)
+            start = time.time()
+            result = func(*args, **kwargs)
+            elapsed = time.time() - start
+            if elapsed < 60:
+                formatted = f"{elapsed:.2f} seconds"
+            elif elapsed < 3600:
+                formatted = f"{elapsed/60:.2f} minutes"
+            else:
+                formatted = f"{elapsed/3600:.2f} hours"
+            msg = f"Report completed in {formatted}"
+            print(msg)
+            logger.info(msg)
+            return result
+
+        return wrapper
+
+    if func is None:
+        return decorator
+    else:
+        return decorator(func)
 
 def csv_out(data, heads):
     data.insert(0, heads)

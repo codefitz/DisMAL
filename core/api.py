@@ -81,12 +81,20 @@ def get_json(api_endpoint):
         try:
             api_endpoint = api_endpoint()
         except Exception as e:  # pragma: no cover - network errors
-            msg = (
-                "Not able to make api call.\nException: %s\n%s"
-                % (e.__class__, str(e))
-            )
-            print(msg)
-            logger.error(msg)
+            if logger.isEnabledFor(logging.DEBUG):
+                msg = (
+                    "Not able to make api call.\nException: %s\n%s"
+                    % (e.__class__, str(e))
+                )
+                print(msg)
+                logger.error(msg)
+            else:
+                msg = (
+                    "Not able to make api call. Rerun in debug mode for more "
+                    "information."
+                )
+                print(msg)
+                logger.error("Not able to make api call", exc_info=e)
             return {}
 
     if not hasattr(api_endpoint, "status_code"):
@@ -238,9 +246,19 @@ def query(search, args):
         else:
             results = search.search(args.a_query, format="object", limit=500)
     except Exception as e:
-        msg = "Not able to make api call.\nQuery: %s\nException: %s" % (args.a_query, e.__class__)
-        print(msg)
-        logger.error(msg)
+        if logger.isEnabledFor(logging.DEBUG):
+            msg = (
+                "Not able to make api call.\nQuery: %s\nException: %s\n%s"
+                % (args.a_query, e.__class__, str(e))
+            )
+            print(msg)
+            logger.error(msg)
+        else:
+            msg = "Not able to make api call. Rerun in debug mode for more information."
+            print(msg)
+            logger.error(
+                "Not able to make api call for query %s", args.a_query, exc_info=e
+            )
     if len(results) > 0:
         if args.output_csv:
             w = csv.writer(sys.stdout)
@@ -800,9 +818,19 @@ def search_results(api_endpoint, query):
                     pass
             return tools.list_table_to_json(results)
     except Exception as e:
-        msg = "Not able to make api call.\nQuery: %s\nException: %s\n%s" %(query,e.__class__,str(e))
-        print(msg)
-        logger.error(msg)
+        if logger.isEnabledFor(logging.DEBUG):
+            msg = (
+                "Not able to make api call.\nQuery: %s\nException: %s\n%s"
+                % (query, e.__class__, str(e))
+            )
+            print(msg)
+            logger.error(msg)
+        else:
+            msg = "Not able to make api call. Rerun in debug mode for more information."
+            print(msg)
+            logger.error(
+                "Not able to make api call for query %s", query, exc_info=e
+            )
         return []
 
 def hostname(args,dir):

@@ -912,7 +912,7 @@ def get_scans(results, list_of_ranges):
                 logger.debug("Scan Range: %s", scan_range)
                 r = scan_range
                 label = result.get('Label')
-                networks = tools.range_to_ips(r)
+                networks = _range_to_networks(r)
                 logger.debug("List of Networks: %s", networks)
                 for ip in list_of_ranges:
                     logger.debug("Checking IP %s in networks", ip)
@@ -928,9 +928,10 @@ def get_scans(results, list_of_ranges):
                                 logger.debug("IP %s added to scheduled_scans", ip)
                                 break
                     else:
-                        if ip in networks:
-                            scan_ranges.append(label)
-                            logger.debug("IP %s added to scheduled_scans", ip)
-                            break
+                        for net in networks:
+                            if isinstance(net, (ipaddress.IPv4Network, ipaddress.IPv6Network)) and ip in net:
+                                scan_ranges.append(label)
+                                logger.debug("IP %s added to scheduled_scans", ip)
+                                break
     scan_ranges = tools.sortlist(scan_ranges)
     return scan_ranges

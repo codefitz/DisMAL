@@ -1,6 +1,7 @@
 import os
 import sys
 import types
+import pytest
 
 sys.modules.setdefault("pandas", types.SimpleNamespace())
 sys.modules.setdefault("tabulate", types.SimpleNamespace(tabulate=lambda *a, **k: ""))
@@ -125,6 +126,7 @@ def test_successful_combines_query_results(monkeypatch):
     row = captured["data"][0]
     assert row[6] == 5
     assert row[7] == 4
+    assert row[8] == pytest.approx(5 / 9)
 
 
 def test_successful_uses_token_file(monkeypatch, tmp_path):

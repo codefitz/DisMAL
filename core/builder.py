@@ -491,6 +491,7 @@ def scheduling(vault, search, args):
     print("\nScheduled Runs with Credentials")
     print("-------------------------------")
     logger.info("Running Schedules Report...")
+    print("Running Schedules Report...")
     msg = None
 
     heads = ["Name", "Type", "Range ID", "Ranges", "Scan Level", "When", "Credentials"]
@@ -528,8 +529,8 @@ def scheduling(vault, search, args):
         return
     if len(excludes) == 0:
         msg = "No exclude ranges found"
-        print(msg)
         logger.info(msg)
+        print(msg)
         results = {"results": []}
     else:
         results = excludes[0]
@@ -591,8 +592,8 @@ def scheduling(vault, search, args):
         return
     if len(scan_ranges) == 0:
         msg = "No scan ranges found"
-        print(msg)
         logger.info(msg)
+        print(msg)
         results = {"results": []}
     else:
         first = scan_ranges[0]
@@ -656,6 +657,7 @@ def scheduling(vault, search, args):
 def unique_identities(search):
 
     logger.info("Running: Unique Identities report...")
+    print("Running: Unique Identities report...")
 
     devices = api.search_results(search, queries.deviceInfo)
     da_results = api.search_results(search, queries.da_ip_lookup)
@@ -773,6 +775,7 @@ def overlapping(tw_search, args):
     print("\nScheduled Scans Overlapping")
     print("---------------------------")
     logger.info("Running: Overlapping Report...")
+    print("Running: Overlapping Report...")
     heads = ["IP Address", "Scan Schedules"]
 
     logger.debug("Executing scan range query: %s", queries.scanrange.get("query", queries.scanrange))
@@ -786,8 +789,8 @@ def overlapping(tw_search, args):
         return
     if len(scan_ranges) == 0:
         msg = "No scan ranges found"
-        print(msg)
         logger.info(msg)
+        print(msg)
         results = {"results": []}
     else:
         first = scan_ranges[0]
@@ -835,8 +838,8 @@ def overlapping(tw_search, args):
         return
     if len(excludes) == 0:
         msg = "No exclude ranges found"
-        print(msg)
         logger.info(msg)
+        print(msg)
         e = {"results": []}
     else:
         e = excludes[0]

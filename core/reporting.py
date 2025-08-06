@@ -399,6 +399,7 @@ def devices(twsearch, twcreds, args):
     print("\nDevice Access Analyis")
     print("---------------------")
     logger.info("Running Data Analysis Report...")
+    print("Running Data Analysis Report...")
 
     vaultcreds = api.get_json(twcreds.get_vault_credentials)
 
@@ -1198,6 +1199,7 @@ def discovery_analysis(twsearch, twcreds, args):
     print("\nDiscovery Access Analysis")
     print("-------------------------")
     logger.info("Running DA Analysis Report")
+    print("Running DA Analysis Report")
 
     disco_data = _gather_discovery_data(twsearch, twcreds)
 

@@ -453,6 +453,7 @@ def sensitive(search, args, dir):
 def tpl_export(search, args, dir):
     reporting.tpl_export(search, queries.tpl_export, dir, "api", None, None, None)
 
+@output._timer("ECA Errors")
 def eca_errors(search, args, dir):
     results = search_results(search, queries.eca_error)
     count = len(results) if isinstance(results, list) else 0
@@ -476,6 +477,7 @@ def eca_errors(search, args, dir):
         "csv_file",
     )
 
+@output._timer("Open Ports")
 def open_ports(search, args, dir):
     results = search_results(search, queries.open_ports)
     count = len(results) if isinstance(results, list) else 0
@@ -499,6 +501,7 @@ def open_ports(search, args, dir):
         "csv_file",
     )
 
+@output._timer("Host Utilisation")
 def host_util(search, args, dir):
     results = search_results(search, queries.host_utilisation)
     count = len(results) if isinstance(results, list) else 0
@@ -522,9 +525,11 @@ def host_util(search, args, dir):
         "csv_file",
     )
 
+@output._timer("Orphan VMs")
 def orphan_vms(search, args, dir):
     output.define_csv(args,search,queries.orphan_vms,dir+defaults.orphan_vms_filename,args.output_file,args.target,"query")
 
+@output._timer("Missing VMs")
 def missing_vms(search, args, dir):
     if getattr(args, "resolve_hostnames", False):
         response = search_results(search, queries.missing_vms)
@@ -597,27 +602,35 @@ def missing_vms(search, args, dir):
             "query",
         )
 
+@output._timer("Near Removal")
 def near_removal(search, args, dir):
     output.define_csv(args,search,queries.near_removal,dir+defaults.near_removal_filename,args.output_file,args.target,"query")
 
+@output._timer("Removed")
 def removed(search, args, dir):
     output.define_csv(args,search,queries.removed,dir+defaults.removed_filename,args.output_file,args.target,"query")
 
+@output._timer("OS Lifecycle")
 def oslc(search, args, dir):
     output.define_csv(args,search,queries.os_lifecycle,dir+defaults.os_lifecycle_filename,args.output_file,args.target,"query")
 
+@output._timer("Software Lifecycle")
 def slc(search, args, dir):
     output.define_csv(args,search,queries.software_lifecycle,dir+defaults.si_lifecycle_filename,args.output_file,args.target,"query")
 
+@output._timer("Database Lifecycle")
 def dblc(search, args, dir):
     output.define_csv(args,search,queries.db_lifecycle,dir+defaults.db_lifecycle_filename,args.output_file,args.target,"query")
 
+@output._timer("SNMP Devices")
 def snmp(search, args, dir):
     output.define_csv(args,search,queries.snmp_devices,dir+defaults.snmp_unrecognised_filename,args.output_file,args.target,"query")
 
+@output._timer("Agents")
 def agents(search, args, dir):
     output.define_csv(args,search,queries.agents,dir+defaults.installed_agents_filename,args.output_file,args.target,"query")
 
+@output._timer("Software Users")
 def software_users(search, args, dir):
     output.define_csv(args,search,queries.user_accounts,dir+defaults.si_user_accounts_filename,args.output_file,args.target,"query")
 

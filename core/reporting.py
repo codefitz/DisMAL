@@ -139,7 +139,7 @@ def successful(creds, search, args):
         success = 0
         fails = 0
         session = None
-        percent = None
+        percent = 0.0
         failure = [ None, 0 ]
         sessions = [ None, 0 ]
         devinfos = [ None, 0 ]
@@ -198,9 +198,10 @@ def successful(creds, search, args):
             logger.debug("Failures:%s"%fails)
             
         total = success + fails
+        percent = 0.0
         if total > 0:
-            logger.debug("Success:%s\nTotal:%s"%(success,total))
-            percent = "{0:.0%}".format(success/(total))
+            logger.debug("Success:%s\nTotal:%s" % (success, total))
+            percent = success / total
 
         msg = None
         outpost_url = outpost_map.get(uuid)
@@ -233,7 +234,7 @@ def successful(creds, search, args):
                     detail.get('types'),
                     None,
                     None,
-                    "0%",
+                    0.0,
                     "Credential appears to not be in use (%s)" % status,
                     usage,
                     ip_range,
@@ -283,7 +284,7 @@ def successful(creds, search, args):
                     detail.get('types'),
                     None,
                     None,
-                    "0%",
+                    0.0,
                     "Credential appears to not be in use (%s)" % status,
                     usage,
                     outpost_url,
@@ -376,16 +377,17 @@ def successful_cli(client, args, sysuser, passwd, reporting_dir):
         logger.debug(msg)
             
         total = success + failure
+        percent = 0.0
         if total > 0:
-            logger.debug("Successes: %s\nOut of Total: %s"%(success,total))
-            percent = "{0:.0%}".format(success/(total))
+            logger.debug("Successes: %s\nOut of Total: %s" % (success, total))
+            percent = success / total
 
         if active:
             logger.debug("UUID %s found Active"%uuid)
             data.append([ detail.get('label'), uuid, detail.get('username'), types, success, failure, percent, status, list_of_ranges, ip_exclude ])
         else:
             logger.debug("UUID %s found Inactive"%uuid)
-            data.append([ detail.get('label'), uuid, detail.get('username'), types, None, None, "0%", "Credential appears to not be in use (%s)" % status, detail.get('usage'), detail.get('internal_store'), list_of_ranges, ip_exclude ])
+            data.append([ detail.get('label'), uuid, detail.get('username'), types, None, None, 0.0, "Credential appears to not be in use (%s)" % status, detail.get('usage'), detail.get('internal_store'), list_of_ranges, ip_exclude ])
         headers = [ "Credential", "UUID", "Login ID", "Protocol", "Successes", "Failures", "Success %", "State", "Usage", "Store", "Scan Ranges", "Exclude Ranges" ]
 
     headers.insert(0,"Discovery Instance")

@@ -303,6 +303,12 @@ def map_outpost_credentials(appliance):
         if not url:
             continue
         parsed = urlparse(url)
+        host = parsed.hostname or (parsed.netloc or parsed.path).split(":")[0]
+        if access.ping(host) != 0:
+            msg = f"Outpost {url} is not available"
+            print(msg)
+            logger.warning(msg)
+            continue
         target = (parsed.netloc or parsed.path).rstrip("/")
         try:
             op_app = tideway.outpost(target, token, api_version=api_version)

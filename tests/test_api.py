@@ -2,6 +2,7 @@ import os
 import sys
 import types
 import json
+import logging
 
 sys.modules.setdefault("pandas", types.SimpleNamespace())
 sys.modules.setdefault("tabulate", types.SimpleNamespace(tabulate=lambda *a, **k: ""))
@@ -187,11 +188,37 @@ def test_map_outpost_credentials_strips_scheme(monkeypatch):
 
     monkeypatch.setattr(api_mod, "get_outposts", fake_get_outposts)
     monkeypatch.setattr(api_mod.tideway, "outpost", fake_outpost, raising=False)
+    monkeypatch.setattr(api_mod.access, "ping", lambda host: 0)
 
     mapping = map_outpost_credentials(types.SimpleNamespace(token="t"))
 
     assert captured["target"] == "op.example.com"
     assert mapping == {"u1": "https://op.example.com"}
+
+
+def test_map_outpost_credentials_skips_unreachable(monkeypatch, capsys, caplog):
+    def fake_get_outposts(app):
+        return [{"url": "https://op.example.com"}]
+
+    called = {"outpost": False}
+
+    def fake_outpost(*args, **kwargs):
+        called["outpost"] = True
+        return None
+
+    monkeypatch.setattr(api_mod, "get_outposts", fake_get_outposts)
+    monkeypatch.setattr(api_mod.tideway, "outpost", fake_outpost, raising=False)
+    monkeypatch.setattr(api_mod.access, "ping", lambda host: 1)
+
+    with caplog.at_level(logging.WARNING):
+        mapping = map_outpost_credentials(types.SimpleNamespace(token="t"))
+    captured = capsys.readouterr()
+
+    assert mapping == {}
+    assert not called["outpost"]
+    msg = "Outpost https://op.example.com is not available"
+    assert msg in captured.out
+    assert msg in caplog.text
 
 
 def test_search_results_cleans_query(monkeypatch):

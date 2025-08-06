@@ -240,6 +240,26 @@ def test_search_results_sanitizes_once(monkeypatch):
     assert CountingStr.calls == 2
 
 
+def test_search_results_wraps_str_query(monkeypatch):
+    """Ensure plain string queries are wrapped and sanitized."""
+
+    captured = {}
+
+    class Recorder:
+        def search(self, query, format="object", limit=500):
+            captured["query"] = query
+            return DummyResponse(200, "[]")
+
+    qry = "search Device\nwhere name = 'foo'\r"
+    search_results(Recorder(), qry)
+
+    sent = captured["query"]
+    assert isinstance(sent, dict)
+    assert "query" in sent
+    assert "\n" not in sent["query"]
+    assert "\r" not in sent["query"]
+
+
 def test_search_results_returns_error_payload(caplog):
     resp = DummyResponse(400, '{"msg": "bad"}', reason="Bad")
     search = DummySearch(resp)

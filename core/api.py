@@ -863,6 +863,8 @@ def update_cred(appliance, uuid):
 
 def search_results(api_endpoint, query):
     try:
+        if isinstance(query, str):
+            query = {"query": query}
         if isinstance(query, dict) and isinstance(query.get("query"), str):
             query = dict(query)
             query["query"] = query["query"].replace("\n", " ").replace("\r", " ")

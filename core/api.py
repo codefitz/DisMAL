@@ -632,6 +632,30 @@ def dblc(search, args, dir):
 def snmp(search, args, dir):
     output.define_csv(args,search,queries.snmp_devices,dir+defaults.snmp_unrecognised_filename,args.output_file,args.target,"query")
 
+@output._timer("Device Capture Candidates")
+def device_capture_candidates(search, args, dir):
+    results = search_results(search, queries.device_capture_candidates)
+    count = len(results) if isinstance(results, list) else 0
+    tools.completage("Processing", count or 1, (count or 1) - 1)
+    print(os.linesep, end="\r")
+    header, rows = [], []
+    if isinstance(results, list) and results:
+        header, rows = tools.json2csv(results)
+        header.insert(0, "Discovery Instance")
+        for row in rows:
+            row.insert(0, args.target)
+    else:
+        header.insert(0, "Discovery Instance")
+    output.define_csv(
+        args,
+        header,
+        rows,
+        dir + defaults.device_capture_candidates_filename,
+        args.output_file,
+        args.target,
+        "csv_file",
+    )
+
 @output._timer("Agents")
 def agents(search, args, dir):
     output.define_csv(args,search,queries.agents,dir+defaults.installed_agents_filename,args.output_file,args.target,"query")

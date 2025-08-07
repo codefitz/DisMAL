@@ -303,6 +303,54 @@ def test_search_results_list_table():
     assert result == [{"A": 1, "B": 2}]
 
 
+def test_device_capture_candidates_writes_csv(monkeypatch):
+    results = [
+        {
+            "access_method": "SNMP v2c",
+            "request_time": "2025-08-06T17:02:48.981762+00:00",
+            "hostname": "hpi19e815",
+            "os": "HP ETHERNET MULTI-ENVIRONMENT",
+            "failure_reason": None,
+            "syscontact": None,
+            "syslocation": None,
+            "sysdescr": "HP ETHERNET MULTI-ENVIRONMENT",
+            "sysobjectid": "0.0",
+        }
+    ]
+
+    monkeypatch.setattr(api_mod, "search_results", lambda *a, **k: results)
+    monkeypatch.setattr(api_mod.tools, "completage", lambda *a, **k: 0)
+
+    captured = {}
+
+    def fake_define_csv(args, header, rows, path, *a):
+        captured["header"] = header
+        captured["rows"] = rows
+        captured["path"] = path
+
+    monkeypatch.setattr(
+        api_mod,
+        "output",
+        types.SimpleNamespace(define_csv=fake_define_csv),
+    )
+
+    args = types.SimpleNamespace(output_file=None, target="appl")
+
+    api_mod.device_capture_candidates(types.SimpleNamespace(), args, "/tmp")
+
+    expected_header = ["Discovery Instance"] + sorted(results[0].keys())
+    expected_row = [
+        "appl"
+    ] + [
+        (results[0][k] if results[0][k] is not None else "N/A")
+        for k in sorted(results[0])
+    ]
+
+    assert captured["header"] == expected_header
+    assert captured["rows"][0] == expected_row
+    assert captured["path"].endswith(api_mod.defaults.device_capture_candidates_filename)
+
+
 def test_update_schedule_timezone_applies_offset():
     runs = [{"range_id": "r1", "schedule": {"start_times": [10, 23]}}]
     resp = DummyResponse(200, json.dumps(runs))

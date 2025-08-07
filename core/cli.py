@@ -372,6 +372,18 @@ def unrecognised_snmp(client,args,user,passwd,dir):
     result = run_query(client,user,passwd,queries.snmp_devices)
     output.define_csv(args,None,result,dir+defaults.snmp_unrecognised_filename,args.output_file,args.target,"csv")
 
+def device_capture_candidates(client,args,user,passwd,dir):
+    result = run_query(client,user,passwd,queries.device_capture_candidates)
+    output.define_csv(
+        args,
+        None,
+        result,
+        dir+defaults.device_capture_candidates_filename,
+        args.output_file,
+        args.target,
+        "csv",
+    )
+
 def installed_agents(client,args,user,passwd,dir):
     result = run_query(client,user,passwd,queries.agents)
     output.define_csv(args,None,result,dir+defaults.installed_agents_filename,args.output_file,args.target,"csv")

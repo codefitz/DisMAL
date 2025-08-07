@@ -513,6 +513,21 @@ snmp_devices = """
                     process with countUnique()
                   """
 
+device_capture_candidates = """
+                    search DiscoveryAccess where end_state = 'UnsupportedDevice' and _last_marker
+                    traverse DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo where sysobjectid
+                    show
+                    access_method,
+                    request_time,
+                    hostname,
+                    os,
+                    failure_reason,
+                    syscontact,
+                    syslocation,
+                    sysdescr,
+                    sysobjectid
+                """
+
 missing_vms = """
                     search VirtualMachine
                     where nodecount(traverse HostContainer:HostContainment:ContainedHost:) = 0

@@ -13,17 +13,12 @@ def test_range_to_ips_empty():
 
 def test_range_to_ips_single_ip():
     result = tools.range_to_ips("192.168.1.1")
-    assert result == [ipaddress.ip_address("192.168.1.1")]
+    assert result == [ipaddress.ip_network("192.168.1.1/32")]
 
 
 def test_range_to_ips_subnet():
     result = tools.range_to_ips("192.168.1.0/30")
-    expected = [
-        ipaddress.ip_address("192.168.1.0"),
-        ipaddress.ip_address("192.168.1.1"),
-        ipaddress.ip_address("192.168.1.2"),
-        ipaddress.ip_address("192.168.1.3"),
-    ]
+    expected = [ipaddress.ip_network("192.168.1.0/30")]
     assert result == expected
 
 

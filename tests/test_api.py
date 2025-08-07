@@ -2,6 +2,7 @@ import os
 import sys
 import types
 import json
+import logging
 
 sys.modules.setdefault("pandas", types.SimpleNamespace())
 sys.modules.setdefault("tabulate", types.SimpleNamespace(tabulate=lambda *a, **k: ""))
@@ -90,6 +91,63 @@ def test_show_runs_handles_bad_response(capsys):
     captured = capsys.readouterr()
     assert "No runs in progress." in captured.out
 
+
+def test_show_runs_minimal_args(capsys):
+    """show_runs should handle args without optional attributes."""
+    resp = DummyResponse(401, 'not-json', reason="Unauthorized")
+    disco = DummyDisco(resp)
+    args = types.SimpleNamespace()
+
+    show_runs(disco, args)
+
+    captured = capsys.readouterr()
+    assert "No runs in progress." in captured.out
+
+
+def test_show_runs_prints_summary(capsys):
+    resp = DummyResponse(200, '[{"run_id": "1", "status": "running"}]')
+    disco = DummyDisco(resp)
+    args = types.SimpleNamespace()
+
+    show_runs(disco, args)
+
+    captured = capsys.readouterr()
+    assert "Active discovery runs: 1" in captured.out
+    assert "1" in captured.out
+    assert "running" in captured.out
+    assert "{" not in captured.out
+
+
+def test_show_runs_debug_prints_json(capsys):
+    resp = DummyResponse(200, '[{"run_id": "1", "status": "running"}]')
+    disco = DummyDisco(resp)
+    args = types.SimpleNamespace(debugging=True)
+
+    show_runs(disco, args)
+
+    captured = capsys.readouterr()
+    assert "'run_id': '1'" in captured.out
+    assert "'status': 'running'" in captured.out
+
+
+def test_show_runs_excavate_routes_to_define_csv(monkeypatch):
+    resp = DummyResponse(200, '[{"run_id": "1", "status": "running"}]')
+    disco = DummyDisco(resp)
+    recorded = {}
+
+    def fake_define_csv(args, header, data, path, file, target, typ):
+        recorded["header"] = header
+        recorded["data"] = data
+
+    monkeypatch.setattr(api_mod.output, "define_csv", fake_define_csv)
+
+    args = types.SimpleNamespace(excavate=["active_runs"], reporting_dir="/tmp", target="appl")
+
+    show_runs(disco, args)
+
+    assert recorded["header"] == ["run_id", "status"]
+    assert recorded["data"] == [["1", "running"]]
+
 def test_get_outposts_uses_deleted_false():
     """Verify get_outposts calls the correct API path."""
     class DummyAppliance:
@@ -130,11 +188,37 @@ def test_map_outpost_credentials_strips_scheme(monkeypatch):
 
     monkeypatch.setattr(api_mod, "get_outposts", fake_get_outposts)
     monkeypatch.setattr(api_mod.tideway, "outpost", fake_outpost, raising=False)
+    monkeypatch.setattr(api_mod.access, "ping", lambda host: 0)
 
     mapping = map_outpost_credentials(types.SimpleNamespace(token="t"))
 
     assert captured["target"] == "op.example.com"
     assert mapping == {"u1": "https://op.example.com"}
+
+
+def test_map_outpost_credentials_skips_unreachable(monkeypatch, capsys, caplog):
+    def fake_get_outposts(app):
+        return [{"url": "https://op.example.com"}]
+
+    called = {"outpost": False}
+
+    def fake_outpost(*args, **kwargs):
+        called["outpost"] = True
+        return None
+
+    monkeypatch.setattr(api_mod, "get_outposts", fake_get_outposts)
+    monkeypatch.setattr(api_mod.tideway, "outpost", fake_outpost, raising=False)
+    monkeypatch.setattr(api_mod.access, "ping", lambda host: 1)
+
+    with caplog.at_level(logging.WARNING):
+        mapping = map_outpost_credentials(types.SimpleNamespace(token="t"))
+    captured = capsys.readouterr()
+
+    assert mapping == {}
+    assert not called["outpost"]
+    msg = "Outpost https://op.example.com is not available"
+    assert msg in captured.out
+    assert msg in caplog.text
 
 
 def test_search_results_cleans_query(monkeypatch):
@@ -154,6 +238,53 @@ def test_search_results_cleans_query(monkeypatch):
     assert "\n" not in sent
     assert "'foo'" in sent
     assert '\\"foo\\"' not in sent
+
+
+def test_search_results_sanitizes_once(monkeypatch):
+    """Ensure query sanitization occurs exactly once."""
+
+    class CountingStr(str):
+        calls = 0
+
+        def replace(self, old, new, count=-1):
+            CountingStr.calls += 1
+            return CountingStr(super().replace(old, new, count))
+
+    captured = {}
+
+    class Recorder:
+        def search(self, query, format="object", limit=500):
+            captured["query"] = query
+            return DummyResponse(200, "[]")
+
+    CountingStr.calls = 0
+    qry = CountingStr("search Device\nwhere name = 'foo'\r")
+    search_results(Recorder(), {"query": qry})
+
+    sent = captured["query"]["query"]
+    assert "\n" not in sent
+    assert "\r" not in sent
+    assert CountingStr.calls == 2
+
+
+def test_search_results_wraps_str_query(monkeypatch):
+    """Ensure plain string queries are wrapped and sanitized."""
+
+    captured = {}
+
+    class Recorder:
+        def search(self, query, format="object", limit=500):
+            captured["query"] = query
+            return DummyResponse(200, "[]")
+
+    qry = "search Device\nwhere name = 'foo'\r"
+    search_results(Recorder(), qry)
+
+    sent = captured["query"]
+    assert isinstance(sent, dict)
+    assert "query" in sent
+    assert "\n" not in sent["query"]
+    assert "\r" not in sent["query"]
 
 
 def test_search_results_returns_error_payload(caplog):

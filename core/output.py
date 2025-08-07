@@ -4,6 +4,8 @@ import sys
 import logging
 import csv
 import os
+import time
+from functools import wraps
 
 # PIP Modules
 from tabulate import tabulate
@@ -12,6 +14,49 @@ from tabulate import tabulate
 from . import tools, api
 
 logger = logging.getLogger("_output_")
+
+def _timer(func=None, *, name=None):
+    """Decorator to time report generation and log the duration.
+
+    Parameters
+    ----------
+    func : callable or str, optional
+        Function to decorate or a friendly name for the report.
+    name : str, optional
+        Friendly name for the report being executed.
+    """
+
+    if func is not None and not callable(func):
+        name = func
+        func = None
+
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            display_name = name or func.__name__
+            start_msg = f"Running report {display_name}..."
+            print(start_msg)
+            logger.info(start_msg)
+            start = time.time()
+            result = func(*args, **kwargs)
+            elapsed = time.time() - start
+            if elapsed < 60:
+                formatted = f"{elapsed:.2f} seconds"
+            elif elapsed < 3600:
+                formatted = f"{elapsed/60:.2f} minutes"
+            else:
+                formatted = f"{elapsed/3600:.2f} hours"
+            msg = f"Report completed in {formatted}"
+            print(msg)
+            logger.info(msg)
+            return result
+
+        return wrapper
+
+    if func is None:
+        return decorator
+    else:
+        return decorator(func)
 
 def csv_out(data, heads):
     data.insert(0, heads)
@@ -52,7 +97,7 @@ def csv_file(data, heads, filename):
         try:
             writer = csv.writer(file, delimiter=",")
             writer.writerows(data)
-            msg = "Results written to %s" % filename
+            msg = "Report saved to %s" % filename
             print(msg)
             logger.info(msg)
         except Exception as e:

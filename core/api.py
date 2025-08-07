@@ -81,12 +81,20 @@ def get_json(api_endpoint):
         try:
             api_endpoint = api_endpoint()
         except Exception as e:  # pragma: no cover - network errors
-            msg = (
-                "Not able to make api call.\nException: %s\n%s"
-                % (e.__class__, str(e))
-            )
-            print(msg)
-            logger.error(msg)
+            if logger.isEnabledFor(logging.DEBUG):
+                msg = (
+                    "Not able to make api call.\nException: %s\n%s"
+                    % (e.__class__, str(e))
+                )
+                print(msg)
+                logger.error(msg)
+            else:
+                msg = (
+                    "Not able to make api call. Rerun in debug mode for more "
+                    "information."
+                )
+                print(msg)
+                logger.error("Not able to make api call", exc_info=e)
             return {}
 
     if not hasattr(api_endpoint, "status_code"):
@@ -119,7 +127,7 @@ def get_json(api_endpoint):
 
     if logger.isEnabledFor(logging.DEBUG):
         try:
-            logger.debug("API response text from %s:\n%s" % (url, api_endpoint.text))
+            logger.debug("API response text from %s:\n%s", url, api_endpoint.text)
         except Exception:
             pass
 
@@ -133,7 +141,7 @@ def get_json(api_endpoint):
     else:
         if logger.isEnabledFor(logging.DEBUG):
             try:
-                logger.debug("Decoded JSON from %s:\n%s" % (url, json.dumps(data, indent=2)))
+                logger.debug("Decoded JSON from %s:\n%s", url, json.dumps(data, indent=2))
             except Exception:
                 pass
         return data
@@ -238,9 +246,19 @@ def query(search, args):
         else:
             results = search.search(args.a_query, format="object", limit=500)
     except Exception as e:
-        msg = "Not able to make api call.\nQuery: %s\nException: %s" % (args.a_query, e.__class__)
-        print(msg)
-        logger.error(msg)
+        if logger.isEnabledFor(logging.DEBUG):
+            msg = (
+                "Not able to make api call.\nQuery: %s\nException: %s\n%s"
+                % (args.a_query, e.__class__, str(e))
+            )
+            print(msg)
+            logger.error(msg)
+        else:
+            msg = "Not able to make api call. Rerun in debug mode for more information."
+            print(msg)
+            logger.error(
+                "Not able to make api call for query %s", args.a_query, exc_info=e
+            )
     if len(results) > 0:
         if args.output_csv:
             w = csv.writer(sys.stdout)
@@ -249,7 +267,7 @@ def query(search, args):
             with open(args.output_file, 'w', newline='') as file:
                 writer = csv.writer(file)
                 writer.writerows(results)
-                msg = "Results written to %s" % args.output_file
+                msg = "Report saved to %s" % args.output_file
                 print(msg)
                 logger.info(msg)
         else:
@@ -285,6 +303,12 @@ def map_outpost_credentials(appliance):
         if not url:
             continue
         parsed = urlparse(url)
+        host = parsed.hostname or (parsed.netloc or parsed.path).split(":")[0]
+        if access.ping(host) != 0:
+            msg = f"Outpost {url} is not available"
+            print(msg)
+            logger.warning(msg)
+            continue
         target = (parsed.netloc or parsed.path).rstrip("/")
         try:
             op_app = tideway.outpost(target, token, api_version=api_version)
@@ -329,10 +353,18 @@ def discovery_runs(disco, args, dir):
         runs = json.loads(json.dumps(r))
         logger.debug('Runs:\n%s' % r)
         header, rows = tools.json2csv(runs)
-        header.insert(0,"Discovery Instance")
+        header.insert(0, "Discovery Instance")
         for row in rows:
             row.insert(0, args.target)
-        output.define_csv(args,None,rows,dir+defaults.current_scans_filename,args.output_file,args.target,"csv_file")
+        output.define_csv(
+            args,
+            header,
+            rows,
+            dir + defaults.current_scans_filename,
+            args.output_file,
+            args.target,
+            "csv_file",
+        )
 
 def show_runs(disco, args):
     logger.debug("Calling disco.get_discovery_runs")
@@ -365,38 +397,145 @@ def show_runs(disco, args):
             value = run.get(header)
             run_csv.append(value)
         run_csvs.append(run_csv)
-    run_csvs.insert(0, headers)
-    if args.export:
+
+    export = getattr(args, "export", False)
+    outfile = getattr(args, "file", getattr(args, "output_file", None))
+    if export:
         w = csv.writer(sys.stdout)
+        w.writerow(headers)
         w.writerows(run_csvs)
-    elif args.file:
-        with open(args.file, "w", newline="") as file:
+    elif outfile:
+        with open(outfile, "w", newline="") as file:
             writer = csv.writer(file)
+            writer.writerow(headers)
             writer.writerows(run_csvs)
-            msg = "Results written to %s" % args.file
+            msg = "Report saved to %s" % outfile
             print(msg)
             logger.info(msg)
     else:
-        pprint(runs)
+        if getattr(args, "excavate", None):
+            out_dir = getattr(args, "reporting_dir", "")
+            output.define_csv(
+                args,
+                headers,
+                run_csvs,
+                os.path.join(out_dir, defaults.current_scans_filename),
+                getattr(args, "output_file", None),
+                getattr(args, "target", None),
+                "csv_file",
+            )
+        elif getattr(args, "debugging", False):
+            pprint(runs)
+        else:
+            print(f"Active discovery runs: {len(runs)}")
+            for r in runs:
+                rid = r.get("run_id") or r.get("id") or r.get("label") or "N/A"
+                status = r.get("status", "unknown")
+                print(f" - {rid}: {status}")
 
 def sensitive(search, args, dir):
-    output.define_csv(args,search,queries.sensitive_data,dir+defaults.sensitive_data_filename,args.output_file,args.target,"query")
+    results = search_results(search, queries.sensitive_data)
+    count = len(results) if isinstance(results, list) else 0
+    tools.completage("Processing", count or 1, (count or 1) - 1)
+    print(os.linesep, end="\r")
+    header, rows = [], []
+    if isinstance(results, list) and results:
+        header, rows = tools.json2csv(results)
+        header.insert(0, "Discovery Instance")
+        for row in rows:
+            row.insert(0, args.target)
+    else:
+        header.insert(0, "Discovery Instance")
+    output.define_csv(
+        args,
+        header,
+        rows,
+        dir + defaults.sensitive_data_filename,
+        args.output_file,
+        args.target,
+        "csv_file",
+    )
 
 def tpl_export(search, args, dir):
     reporting.tpl_export(search, queries.tpl_export, dir, "api", None, None, None)
 
+@output._timer("ECA Errors")
 def eca_errors(search, args, dir):
-    output.define_csv(args,search,queries.eca_error,dir+defaults.eca_errors_filename,args.output_file,args.target,"query")
+    results = search_results(search, queries.eca_error)
+    count = len(results) if isinstance(results, list) else 0
+    tools.completage("Processing", count or 1, (count or 1) - 1)
+    print(os.linesep, end="\r")
+    header, rows = [], []
+    if isinstance(results, list) and results:
+        header, rows = tools.json2csv(results)
+        header.insert(0, "Discovery Instance")
+        for row in rows:
+            row.insert(0, args.target)
+    else:
+        header.insert(0, "Discovery Instance")
+    output.define_csv(
+        args,
+        header,
+        rows,
+        dir + defaults.eca_errors_filename,
+        args.output_file,
+        args.target,
+        "csv_file",
+    )
 
+@output._timer("Open Ports")
 def open_ports(search, args, dir):
-    output.define_csv(args,search,queries.open_ports,dir+defaults.open_ports_filename,args.output_file,args.target,"query")
+    results = search_results(search, queries.open_ports)
+    count = len(results) if isinstance(results, list) else 0
+    tools.completage("Processing", count or 1, (count or 1) - 1)
+    print(os.linesep, end="\r")
+    header, rows = [], []
+    if isinstance(results, list) and results:
+        header, rows = tools.json2csv(results)
+        header.insert(0, "Discovery Instance")
+        for row in rows:
+            row.insert(0, args.target)
+    else:
+        header.insert(0, "Discovery Instance")
+    output.define_csv(
+        args,
+        header,
+        rows,
+        dir + defaults.open_ports_filename,
+        args.output_file,
+        args.target,
+        "csv_file",
+    )
 
+@output._timer("Host Utilisation")
 def host_util(search, args, dir):
-    output.define_csv(args,search,queries.host_utilisation,dir+defaults.host_util_filename,args.output_file,args.target,"query")
+    results = search_results(search, queries.host_utilisation)
+    count = len(results) if isinstance(results, list) else 0
+    tools.completage("Processing", count or 1, (count or 1) - 1)
+    print(os.linesep, end="\r")
+    header, rows = [], []
+    if isinstance(results, list) and results:
+        header, rows = tools.json2csv(results)
+        header.insert(0, "Discovery Instance")
+        for row in rows:
+            row.insert(0, args.target)
+    else:
+        header.insert(0, "Discovery Instance")
+    output.define_csv(
+        args,
+        header,
+        rows,
+        dir + defaults.host_util_filename,
+        args.output_file,
+        args.target,
+        "csv_file",
+    )
 
+@output._timer("Orphan VMs")
 def orphan_vms(search, args, dir):
     output.define_csv(args,search,queries.orphan_vms,dir+defaults.orphan_vms_filename,args.output_file,args.target,"query")
 
+@output._timer("Missing VMs")
 def missing_vms(search, args, dir):
     if getattr(args, "resolve_hostnames", False):
         response = search_results(search, queries.missing_vms)
@@ -469,27 +608,35 @@ def missing_vms(search, args, dir):
             "query",
         )
 
+@output._timer("Near Removal")
 def near_removal(search, args, dir):
     output.define_csv(args,search,queries.near_removal,dir+defaults.near_removal_filename,args.output_file,args.target,"query")
 
+@output._timer("Removed")
 def removed(search, args, dir):
     output.define_csv(args,search,queries.removed,dir+defaults.removed_filename,args.output_file,args.target,"query")
 
+@output._timer("OS Lifecycle")
 def oslc(search, args, dir):
     output.define_csv(args,search,queries.os_lifecycle,dir+defaults.os_lifecycle_filename,args.output_file,args.target,"query")
 
+@output._timer("Software Lifecycle")
 def slc(search, args, dir):
     output.define_csv(args,search,queries.software_lifecycle,dir+defaults.si_lifecycle_filename,args.output_file,args.target,"query")
 
+@output._timer("Database Lifecycle")
 def dblc(search, args, dir):
     output.define_csv(args,search,queries.db_lifecycle,dir+defaults.db_lifecycle_filename,args.output_file,args.target,"query")
 
+@output._timer("SNMP Devices")
 def snmp(search, args, dir):
     output.define_csv(args,search,queries.snmp_devices,dir+defaults.snmp_unrecognised_filename,args.output_file,args.target,"query")
 
+@output._timer("Agents")
 def agents(search, args, dir):
     output.define_csv(args,search,queries.agents,dir+defaults.installed_agents_filename,args.output_file,args.target,"query")
 
+@output._timer("Software Users")
 def software_users(search, args, dir):
     output.define_csv(args,search,queries.user_accounts,dir+defaults.si_user_accounts_filename,args.output_file,args.target,"query")
 
@@ -735,19 +882,16 @@ def update_cred(appliance, uuid):
 
 def search_results(api_endpoint, query):
     try:
-        if isinstance(query, dict) and "query" in query:
-            sanitized = query["query"].replace("\n", " ").replace("\r", " ")
-            query = {"query": sanitized}
+        if isinstance(query, str):
+            query = {"query": query}
+        if isinstance(query, dict) and isinstance(query.get("query"), str):
+            query = dict(query)
+            query["query"] = query["query"].replace("\n", " ").replace("\r", " ")
         if logger.isEnabledFor(logging.DEBUG):
             try:
                 logger.debug("Search query: %s" % query)
             except Exception:
                 pass
-
-        if isinstance(query, dict) and isinstance(query.get("query"), str):
-            cleaned = query["query"].replace("\n", " ").replace("\r", " ")
-            query = dict(query)
-            query["query"] = cleaned
 
         if hasattr(api_endpoint, "search_bulk"):
             results = api_endpoint.search_bulk(query, format="object", limit=500)
@@ -776,9 +920,7 @@ def search_results(api_endpoint, query):
                     data = {"error": getattr(results, "text", "")}
                 if logger.isEnabledFor(logging.DEBUG):
                     try:
-                        logger.debug(
-                            "Parsed error payload: %s" % json.dumps(data)
-                        )
+                        logger.debug("Parsed error payload: %s", json.dumps(data))
                     except Exception:
                         pass
                 logger.error("Search failed: %s - %s", status_code, getattr(results, "reason", ""))
@@ -805,9 +947,19 @@ def search_results(api_endpoint, query):
                     pass
             return tools.list_table_to_json(results)
     except Exception as e:
-        msg = "Not able to make api call.\nQuery: %s\nException: %s\n%s" %(query,e.__class__,str(e))
-        print(msg)
-        logger.error(msg)
+        if logger.isEnabledFor(logging.DEBUG):
+            msg = (
+                "Not able to make api call.\nQuery: %s\nException: %s\n%s"
+                % (query, e.__class__, str(e))
+            )
+            print(msg)
+            logger.error(msg)
+        else:
+            msg = "Not able to make api call. Rerun in debug mode for more information."
+            print(msg)
+            logger.error(
+                "Not able to make api call for query %s", query, exc_info=e
+            )
         return []
 
 def hostname(args,dir):

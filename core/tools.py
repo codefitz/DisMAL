@@ -21,55 +21,44 @@ def getr(data,attribute,default_value=None):
     return data.get(attribute) or default_value
 
 def range_to_ips(iprange):
-    list_of_ips = []
-    logger.info("Running range_to_ips function on %s"%iprange)
+    """Return a list of :class:`ipaddress.IPv4Network`/`IPv6Network` objects.
+
+    The previous implementation expanded ranges into individual IP addresses
+    which was expensive for large networks.  This helper now preserves the
+    ranges and returns ``ip_network`` objects instead.  Cloud end points and
+    the special "all" range are returned unchanged as strings.
+    """
+
+    networks = []
+    logger.info("Running range_to_ips function on %s" % iprange)
     if not iprange:
-        # Return empty list
-        return list_of_ips
-    if re.search('[a-zA-Z]', iprange):
+        return networks
+
+    if re.search("[a-zA-Z]", iprange):
         logger.debug("IP range is cloud endpoint!")
-        list_of_ips.append(iprange)
+        networks.append(iprange)
     elif iprange == "0.0.0.0/0,::/0":
-        list_of_ips.append(iprange)
-        logger.debug("All - List of IPs: %s"%list_of_ips)
-    elif iprange:
-        iprange = [ip for ip in iprange.split(",") if ip]
-        #timer_count = 0
-        for ip in iprange:
-            #timer_count = Transform.completage("Processing IP Range", len(iprange), timer_count)
+        networks.append(iprange)
+        logger.debug("All - List of Networks: %s" % networks)
+    else:
+        parts = [ip for ip in iprange.split(",") if ip]
+        for ip in parts:
             try:
-                ipaddr = ipaddress.ip_address(ip)
-                list_of_ips.append(ipaddr)
-                logger.debug("Single - List of IPs: %s"%list_of_ips)
-            except:
+                net = ipaddress.ip_network(ip, strict=False)
+                networks.append(net)
+                logger.debug("Network appended: %s", net)
+            except Exception:
                 try:
-                    subnet = ipaddress.ip_network(ip)
-                    for ipaddr in subnet:
-                        list_of_ips.append(ipaddr)
-                        logger.debug("Subnet - List of IPs: %s"%list_of_ips)
-                except:
-                    try:
-                        subnet = ipaddress.ip_network(ip,strict=False)
-                        msg = 'Address %s is not valid CIDR syntax, recommended CIDR: %s' % (ip, subnet)
-                        print(msg)
-                        logger.warning(msg)
-                        for ipaddr in subnet:
-                            list_of_ips.append(ipaddr)
-                            logger.debug("Subnet (not strict) - List of IPs: %s"%list_of_ips)
-                    except:
-                        try:
-                            cidrip = cidrize(ip)
-                            size = 0
-                            for cidr in cidrip:
-                                subnet = ipaddress.ip_network(cidr)
-                                for ipaddr in subnet:
-                                    list_of_ips.append(ipaddr)
-                                    logger.debug("CIDRize - List of IPs: %s"%list_of_ips)
-                        except:
-                            msg = 'Address %s is not valid CIDR syntax, cannot process!' % (ip)
-                            print(msg)
-                            logger.warning(msg)
-    return list_of_ips
+                    cidrip = cidrize(ip)
+                    for cidr in cidrip:
+                        net = ipaddress.ip_network(cidr, strict=False)
+                        networks.append(net)
+                        logger.debug("CIDRize - Network appended: %s", net)
+                except Exception:
+                    msg = "Address %s is not valid CIDR syntax, cannot process!" % ip
+                    print(msg)
+                    logger.warning(msg)
+    return networks
 
 def get_credential(data,uuid):
     credentials = data
@@ -116,7 +105,11 @@ def sortdic(lst):
 def completage(message, record_count, timer_count):
     timer_count += 1
     pc = (float(timer_count) / float(record_count))
-    print('%s: %d%%' % (message,100.0 * pc),end='\r')
+    if timer_count >= record_count:
+        end_char = '\n'
+    else:
+        end_char = '\r'
+    print('%s: %d%%' % (message,100.0 * pc), end=end_char)
     return timer_count
 
 def list_of_lists(ci,attr,list_to_append):

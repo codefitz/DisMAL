@@ -2,12 +2,35 @@
 
 import logging
 import os
+from functools import lru_cache
+import ipaddress
 
 import tideway
+from collections import defaultdict
 
 from . import api, tools, output, queries
 
 logger = logging.getLogger("_builder_")
+
+
+@lru_cache(maxsize=None)
+def _range_to_networks(range_str):
+    """Return a list of :mod:`ipaddress` networks for *range_str*.
+
+    The results are cached so repeated ranges are only parsed once.
+    """
+    networks = []
+    if not range_str:
+        return networks
+    for part in range_str.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        try:
+            networks.append(ipaddress.ip_network(part, strict=False))
+        except ValueError:
+            logger.warning("Unable to parse scan range %s", part)
+    return networks
 
 def get_credentials(entry):
     details = {}
@@ -468,6 +491,7 @@ def scheduling(vault, search, args):
     print("\nScheduled Runs with Credentials")
     print("-------------------------------")
     logger.info("Running Schedules Report...")
+    print("Running Schedules Report...")
     msg = None
 
     heads = ["Name", "Type", "Range ID", "Ranges", "Scan Level", "When", "Credentials"]
@@ -505,8 +529,8 @@ def scheduling(vault, search, args):
         return
     if len(excludes) == 0:
         msg = "No exclude ranges found"
-        print(msg)
         logger.info(msg)
+        print(msg)
         results = {"results": []}
     else:
         results = excludes[0]
@@ -536,10 +560,16 @@ def scheduling(vault, search, args):
             for credential in credential_ips:
                 cred_ips = credential[1]
                 for cred_ip in cred_ips:
-                    if cred_ip in run_ips:
-                        logger.debug("Credential IP %s found in Exclude run"%(cred_ip))
+                    if isinstance(cred_ip, (ipaddress.IPv4Network, ipaddress.IPv6Network)):
+                        if any(
+                            isinstance(run_ip, (ipaddress.IPv4Network, ipaddress.IPv6Network))
+                            and cred_ip.overlaps(run_ip)
+                            for run_ip in run_ips
+                        ):
+                            logger.debug("Credential IP %s found in Exclude run"%(cred_ip))
+                            in_exclude.append("%s (%s)" % (credential[2],credential[0]))
+                    elif cred_ip == "0.0.0.0/0,::/0" and "0.0.0.0/0,::/0" in run_ips:
                         in_exclude.append("%s (%s)" % (credential[2],credential[0]))
-        #in_exclude = list(dict.fromkeys(in_exclude)) # sort and unique
         in_exclude = tools.sortlist(in_exclude)
         logger.debug("Excludes:%s"%(in_exclude))
 
@@ -562,8 +592,8 @@ def scheduling(vault, search, args):
         return
     if len(scan_ranges) == 0:
         msg = "No scan ranges found"
-        print(msg)
         logger.info(msg)
+        print(msg)
         results = {"results": []}
     else:
         first = scan_ranges[0]
@@ -594,9 +624,14 @@ def scheduling(vault, search, args):
             for credential in credential_ips:
                 cred_ips = credential[1]
                 for cred_ip in cred_ips:
-                    if cred_ip in run_ips:
-                        in_run.append("%s (%s)" % (credential[2],credential[0]))
-                        logger.debug("Credential IP %s found in run"%(cred_ip))
+                    if isinstance(cred_ip, (ipaddress.IPv4Network, ipaddress.IPv6Network)):
+                        if any(
+                            isinstance(run_ip, (ipaddress.IPv4Network, ipaddress.IPv6Network))
+                            and cred_ip.overlaps(run_ip)
+                            for run_ip in run_ips
+                        ):
+                            in_run.append("%s (%s)" % (credential[2],credential[0]))
+                            logger.debug("Credential IP %s found in run"%(cred_ip))
                     elif cred_ip == "0.0.0.0/0,::/0":
                         in_run.append("%s (%s)" % (credential[2],credential[0]))
                         logger.debug("No range specified - scan all - %s"%(cred_ip))
@@ -622,6 +657,7 @@ def scheduling(vault, search, args):
 def unique_identities(search):
 
     logger.info("Running: Unique Identities report...")
+    print("Running: Unique Identities report...")
 
     devices = api.search_results(search, queries.deviceInfo)
     da_results = api.search_results(search, queries.da_ip_lookup)
@@ -739,6 +775,7 @@ def overlapping(tw_search, args):
     print("\nScheduled Scans Overlapping")
     print("---------------------------")
     logger.info("Running: Overlapping Report...")
+    print("Running: Overlapping Report...")
     heads = ["IP Address", "Scan Schedules"]
 
     logger.debug("Executing scan range query: %s", queries.scanrange.get("query", queries.scanrange))
@@ -752,8 +789,8 @@ def overlapping(tw_search, args):
         return
     if len(scan_ranges) == 0:
         msg = "No scan ranges found"
-        print(msg)
         logger.info(msg)
+        print(msg)
         results = {"results": []}
     else:
         first = scan_ranges[0]
@@ -764,55 +801,31 @@ def overlapping(tw_search, args):
 
     logger.debug("Parsed %d scan range results", len(results.get("results", [])))
 
-    range_ips = []
-    full_range = []
-    scheduled_ip_list = []
-    matched_runs = []  # store matched runs from all scan ranges
+    ip_to_ranges = defaultdict(set)
+    scheduled_ip_set = set()
 
     timer_count = 0
     for result in results.get('results'):
-        timer_count = tools.completage("Gathering Results...", len(results.get('results')), timer_count)
-        logger.debug("Scan Result:\n%s"%(result))
+        timer_count = tools.completage(
+            "Gathering Results...",
+            len(results.get('results')),
+            timer_count,
+        )
+        logger.debug("Scan Result:\n%s", result)
+        label = result.get('Label')
         for scan_range in result.get('Scan_Range'):
-            r = scan_range
-            i = result.get('ID')
-            l = result.get('Label')
-            list_of_ips = tools.range_to_ips(r)
-            range_ips.append([i,list_of_ips,l])
-            full_range.append([i,list_of_ips,l])
-            logger.debug("List of IPs:%s"%(list_of_ips))
+            nets = tools.range_to_ips(scan_range)
+            logger.debug("List of Networks:%s", nets)
+            for net in nets:
+                net_str = str(net)
+                ip_to_ranges[net_str].add(label)
+                scheduled_ip_set.add(net_str)
 
-        runs = []
-
-        for run in range_ips:
-            logger.debug("Processing run:%s"%(run))
-            run_ips = run[1]
-            run_id = run[0]
-            label = run[2]
-            for ip in run_ips:
-                logger.debug("Processing IP:%s"%(ip))
-                scheduled_ip_list.append(str(ip))
-                scheds = [ label ]
-                matched = {}
-                for range in full_range:
-                    logger.debug("Processing Range:%s"%(range))
-                    range_ip = range[1]
-                    range_run = range[0]
-                    range_label = range[2]
-                    logger.debug("IP: %s, Range_IP: %s, Range_Run: %s, Run_ID: %s"%(ip,range_ip,range_run,run_id))
-                    if ip in range_ip and range_run != run_id:
-                        scheds.append(range_label)
-                        scheds.sort()
-                        matched = {"ip":ip,"runs":scheds}
-                if matched:
-                    runs.append(matched)
-
-        # Unique per scan range
-        matched_runs.extend(tools.sortdic(runs))
-        logger.debug("Matched Runs so far: %s"%(matched_runs))
-
-    # Remove duplicates across all ranges
-    matched_runs = tools.sortdic(matched_runs)
+    matched_runs = [
+        {"ip": ip, "runs": sorted(list(labels))}
+        for ip, labels in ip_to_ranges.items()
+        if len(labels) > 1
+    ]
 
     logger.debug("Executing excludes query: %s", queries.excludes)
     excludes_resp = tw_search.search(queries.excludes, format="object")
@@ -825,8 +838,8 @@ def overlapping(tw_search, args):
         return
     if len(excludes) == 0:
         msg = "No exclude ranges found"
-        print(msg)
         logger.info(msg)
+        print(msg)
         e = {"results": []}
     else:
         e = excludes[0]
@@ -840,20 +853,22 @@ def overlapping(tw_search, args):
     for result in e.get('results'):
         r = result['Scan_Range'][0]
         list_of_ips = tools.range_to_ips(r)
-        logger.debug("List of Exclude Ips to be added to Scheduled_ip_list: %s"%(list_of_ips))
+        logger.debug(
+            "List of Exclude Ips to be added to Scheduled_ip_list: %s", list_of_ips
+        )
         for ip in list_of_ips:
-            scheduled_ip_list.append(str(ip))
+            scheduled_ip_set.add(str(ip))
 
-    scheduled_ip_list = tools.sortlist(scheduled_ip_list)
+    scheduled_ip_list = tools.sortlist(list(scheduled_ip_set))
 
     # Check for missing IPs
     missing_ips = []
-    ip_schedules = api.search_results(tw_search,queries.ip_schedules)
+    ip_schedules = api.search_results(tw_search, queries.ip_schedules)
     for ip_sched in ip_schedules:
-        endpoint = tools.getr(ip_sched,'endpoint')
-        if endpoint not in scheduled_ip_list:
+        endpoint = tools.getr(ip_sched, 'endpoint')
+        if endpoint not in scheduled_ip_set:
             missing_ips.append(endpoint)
-            logger.debug("Missing endpoint: %s"%(endpoint))
+            logger.debug("Missing endpoint: %s", endpoint)
     missing_ips = tools.sortlist(missing_ips)
 
     data=[]
@@ -881,32 +896,45 @@ def overlapping(tw_search, args):
     output.report(data, heads, args, name="overlapping_ips")
 
 def get_scans(results, list_of_ranges):
+    """Return labels of scans that include any of ``list_of_ranges``.
+
+    ``list_of_ranges`` is converted to a :class:`set` to avoid redundant
+    comparisons. Each scan range is parsed into :mod:`ipaddress` network
+    objects (with results cached by :func:`_range_to_networks`), and
+    membership is evaluated using ``ip in network``.
+    """
     scan_ranges = []
     if not results:
         return scan_ranges
+    ip_set = set(list_of_ranges)
     for result in results:
-        msg = "Result: %s" % result
-        logger.debug(msg)
+        logger.debug("Result: %s", result)
         ranges = result.get('Scan_Range')
         if ranges and isinstance(ranges, list):
             for scan_range in ranges:
-                msg = "Scan Range: %s" % scan_range
-                logger.debug(msg)
+                logger.debug("Scan Range: %s", scan_range)
                 r = scan_range
-                l = result.get('Label')
-                list_of_ips = tools.range_to_ips(r)
-                msg = "List of IPs: %s" % list_of_ips
-                logger.debug(msg)
+                label = result.get('Label')
+                networks = _range_to_networks(r)
+                logger.debug("List of Networks: %s", networks)
                 for ip in list_of_ranges:
-                    msg = "Checking IP %s in list_of_ips" % ip
-                    logger.debug(msg)
-                    if ip in list_of_ips:
-                        scan_ranges.append(l)
-                        msg = "IP %s added to scheduled_scans" % ip
-                        logger.debug(msg)
-                    elif ip == "0.0.0.0/0,::/0":
-                        scan_ranges.append(l)
-                        msg = "IP %s added to scheduled_scans" % ip
-                        logger.debug(msg)
+                    logger.debug("Checking IP %s in networks", ip)
+                    if ip == "0.0.0.0/0,::/0":
+                        scan_ranges.append(label)
+                        logger.debug("IP %s added to scheduled_scans", ip)
+                        continue
+
+                    if isinstance(ip, (ipaddress.IPv4Network, ipaddress.IPv6Network)):
+                        for net in networks:
+                            if isinstance(net, (ipaddress.IPv4Network, ipaddress.IPv6Network)) and ip.overlaps(net):
+                                scan_ranges.append(label)
+                                logger.debug("IP %s added to scheduled_scans", ip)
+                                break
+                    else:
+                        for net in networks:
+                            if isinstance(net, (ipaddress.IPv4Network, ipaddress.IPv6Network)) and ip in net:
+                                scan_ranges.append(label)
+                                logger.debug("IP %s added to scheduled_scans", ip)
+                                break
     scan_ranges = tools.sortlist(scan_ranges)
     return scan_ranges

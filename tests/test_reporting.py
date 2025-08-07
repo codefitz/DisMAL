@@ -1,6 +1,7 @@
 import os
 import sys
 import types
+import pytest
 
 sys.modules.setdefault("pandas", types.SimpleNamespace())
 sys.modules.setdefault("tabulate", types.SimpleNamespace(tabulate=lambda *a, **k: ""))
@@ -66,6 +67,66 @@ def test_successful_runs_without_scan_data(monkeypatch):
     args = types.SimpleNamespace(output_csv=False, output_file=None, token=None, target="http://x")
     reporting.successful(DummyCreds(), DummySearch(), args)
     assert "ran" in called
+
+
+def test_successful_combines_query_results(monkeypatch):
+    calls = []
+
+    def fake_search_results(search, query):
+        calls.append(query)
+        if query is reporting.queries.credential_success:
+            return [{"UUID": "u1", "Session_Type": "ssh", "Count": 2}]
+        if query is reporting.queries.deviceinfo_success:
+            return [{"UUID": "u1", "Session_Type": "ssh", "Count": 3}]
+        if query is reporting.queries.credential_failure:
+            return [{"UUID": "u1", "Session_Type": "ssh", "Count": 4}]
+        return []
+
+    call = {"n": 0}
+
+    def fake_get_json(*a, **k):
+        call["n"] += 1
+        if call["n"] == 1:
+            return [
+                {
+                    "uuid": "u1",
+                    "label": "c",
+                    "index": 1,
+                    "enabled": True,
+                    "username": "user",
+                    "usage": "",
+                    "iprange": None,
+                    "exclusions": None,
+                }
+            ]
+        return []
+
+    monkeypatch.setattr(reporting.api, "get_json", fake_get_json)
+    monkeypatch.setattr(reporting.api, "search_results", fake_search_results)
+    monkeypatch.setattr(reporting.builder, "get_credentials", lambda entry: entry)
+    monkeypatch.setattr(reporting.builder, "get_scans", lambda *a, **k: [])
+
+    captured = {}
+
+    def fake_report(data, headers, args, name=""):
+        captured["data"] = data
+        captured["headers"] = headers
+
+    monkeypatch.setattr(reporting, "output", types.SimpleNamespace(report=fake_report))
+
+    args = types.SimpleNamespace(output_csv=False, output_file=None, token=None, target="http://x")
+
+    reporting.successful(DummyCreds(), DummySearch(), args)
+
+    assert set(calls) == {
+        reporting.queries.credential_success,
+        reporting.queries.deviceinfo_success,
+        reporting.queries.credential_failure,
+    }
+    row = captured["data"][0]
+    assert row[6] == 5
+    assert row[7] == 4
+    assert row[8] == pytest.approx(5 / 9)
 
 
 def test_successful_uses_token_file(monkeypatch, tmp_path):

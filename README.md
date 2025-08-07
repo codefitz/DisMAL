@@ -16,20 +16,26 @@ Use at your own risk.
    pip install -r requirements.txt
    ```
 
-   The `tideway` module is distributed with BMC Discovery and may need to be
-   installed from your appliance rather than PyPI.
+   The `tideway` module is distributed with BMC Discovery and must be obtained from a BMC Discovery appliance because it is not available on PyPI.
 
-4. *(Optional)* Install additional development requirements for running the
-   test suite:
+4. *(Optional)* Install additional development requirements for running the test suite:
 
    ```bash
    pip install -r requirements-dev.txt
    ```
 
+## Running the test suite
+
+Run all tests with:
+
+```bash
+python3 -m pytest
+```
+
 ## Usage
 
-`dismal.py` exposes many reporting and administration commands. Appliance
-credentials can be supplied directly on the command line or via files.
+`dismal.py` exposes many reporting and administration commands.
+Appliance credentials can be supplied directly on the command line or via files.
 
 Basic example using API access:
 
@@ -47,20 +53,17 @@ python3 dismal.py --access_method cli \
     -w <tideway_password> --tideway disk_info
 ```
 
-The options `-P`, `-T` and `-W` can be used to read the UI password, API token
-and tideway password from files instead of providing them inline.
+The options `-P`, `-T` and `-W` can be used to read the UI password, API token and tideway password from files instead of providing them inline.
 
-By default, reports are written to an `output_<appliance>` directory in the
-current working directory. Use the `--stdout` option to suppress file output and
-print results directly to the terminal.
+By default, reports are saved to an `output_<appliance>` directory in the current working directory.
+Use the `--stdout` option to suppress file output and print results directly to the terminal.
 
 ## Reports
 
 Two related reports focus on Discovery Access history:
 
-- **discovery_access** – exports the latest access details for each endpoint,
-  including credential information and timestamps.
-- **discovery_analysis** – adds a comparison between consecutive runs using the
-  same data to highlight state changes.
-- **overlapping_ips** – analyze overlapping discovery ranges and report
-  unscheduled endpoints. Uses the same data sources as the schedules report.
+- **discovery_access** – exports the latest access details for each endpoint, including credential information and timestamps.
+- **discovery_analysis** – adds a comparison between consecutive runs using the same data to highlight state changes.
+- **overlapping_ips** – analyze overlapping discovery ranges and report unscheduled endpoints. Uses the same data sources as the schedules report.
+More reports are included.
+Run `python3 dismal.py --help` to see the complete list.

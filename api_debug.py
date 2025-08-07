@@ -216,7 +216,7 @@ def get_json(api_endpoint):
     else:
         if logger.isEnabledFor(logging.DEBUG):
             try:
-                logger.debug("Decoded JSON from %s:\n%s" % (url, json.dumps(data, indent=2)))
+                logger.debug("Decoded JSON from %s:\n%s", url, json.dumps(data, indent=2))
             except Exception:
                 pass
         return data
@@ -276,7 +276,8 @@ def success(twcreds, twsearch, args, dir):
     print("vaultcreds Type: ", type(vaultcreds))
     print("vaultcreds JSON: ", vaultcreds)
 
-    logger.debug('List Credentials:' + json.dumps(vaultcreds))
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug('List Credentials: %s', json.dumps(vaultcreds))
 
     credsux_results = search_results(twsearch, queries.credential_success)
     devinfosux = search_results(twsearch, queries.deviceinfo_success)
@@ -285,9 +286,10 @@ def success(twcreds, twsearch, args, dir):
     data = []
     headers = []
 
-    logger.info('Successful SessionResults:' + json.dumps(credsux_results))
-    logger.info('Successful DeviceInfos:' + json.dumps(devinfosux))
-    logger.info('Failures:' + json.dumps(credfail_results))
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug('Successful SessionResults: %s', json.dumps(credsux_results))
+        logger.debug('Successful DeviceInfos: %s', json.dumps(devinfosux))
+        logger.debug('Failures: %s', json.dumps(credfail_results))
 
     suxCreds = tools.session_get(credsux_results)
     suxDev = tools.session_get(devinfosux)

@@ -9,6 +9,7 @@ vers = "0.1.3"
 import argparse
 import datetime
 import logging
+import time
 import os
 import sys
 from argparse import RawTextHelpFormatter
@@ -161,6 +162,7 @@ excavation.add_argument('--resolve-hostnames', dest='resolve_hostnames', action=
 
 global args
 args = parser.parse_args()
+start_time = time.time()
 
 # Detect if --excavate was provided with no report or with 'default'
 excavate_default = False
@@ -681,5 +683,10 @@ if args.access_method=="api":
 
 if cli_target:
     cli_target.close()
+
+elapsed = time.time() - start_time
+msg = f"Completed in {elapsed:.2f} seconds"
+print(msg)
+logger.info(msg)
 
 print(os.linesep)

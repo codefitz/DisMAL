@@ -7,6 +7,7 @@ import os
 from collections import Counter
 import json
 import re
+from concurrent.futures import ThreadPoolExecutor
 
 # PIP Packages
 import pandas as pd
@@ -17,12 +18,14 @@ import tideway
 
 logger = logging.getLogger("_reporting_")
 
+@output._timer("Success Report")
 def successful(creds, search, args):
     msg = "Running: Success Report )"
     logger.info(msg)
 
     vaultcreds = api.get_json(creds.get_vault_credentials)
-    logger.debug('List Credentials:'+json.dumps(vaultcreds))
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug('List Credentials: %s', json.dumps(vaultcreds))
 
     outpost_map = {}
     if getattr(args, "target", None) and hasattr(tideway, "appliance"):
@@ -42,16 +45,38 @@ def successful(creds, search, args):
     devinfosux = {}
     credfail_results = {}
 
-    credsux_results = api.search_results(search,queries.credential_success)
-    devinfosux = api.search_results(search,queries.deviceinfo_success)
-    credfail_results = api.search_results(search,queries.credential_failure)
+    with ThreadPoolExecutor() as executor:
+        futures = {
+            "credsux_results": executor.submit(
+                api.search_results, search, queries.credential_success
+            ),
+            "devinfosux": executor.submit(
+                api.search_results, search, queries.deviceinfo_success
+            ),
+            "credfail_results": executor.submit(
+                api.search_results, search, queries.credential_failure
+            ),
+        }
+
+        results = {}
+        for key, future in futures.items():
+            try:
+                results[key] = future.result()
+            except Exception as e:
+                logger.error("Failed to retrieve %s: %s", key, e)
+                results[key] = []
+
+    credsux_results = results.get("credsux_results", [])
+    devinfosux = results.get("devinfosux", [])
+    credfail_results = results.get("credfail_results", [])
 
     data = []
     headers = []
 
-    logger.info('Successful SessionResults:' + json.dumps(credsux_results))
-    logger.info('Successful DeviceInfos:' + json.dumps(devinfosux))
-    logger.info('Failures:' + json.dumps(credfail_results))
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug('Successful SessionResults: %s', json.dumps(credsux_results))
+        logger.debug('Successful DeviceInfos: %s', json.dumps(devinfosux))
+        logger.debug('Failures: %s', json.dumps(credfail_results))
 
     suxCreds = tools.session_get(credsux_results)
     suxDev = tools.session_get(devinfosux)
@@ -114,7 +139,7 @@ def successful(creds, search, args):
         success = 0
         fails = 0
         session = None
-        percent = None
+        percent = 0.0
         failure = [ None, 0 ]
         sessions = [ None, 0 ]
         devinfos = [ None, 0 ]
@@ -173,9 +198,10 @@ def successful(creds, search, args):
             logger.debug("Failures:%s"%fails)
             
         total = success + fails
+        percent = 0.0
         if total > 0:
-            logger.debug("Success:%s\nTotal:%s"%(success,total))
-            percent = "{0:.0%}".format(success/(total))
+            logger.debug("Success:%s\nTotal:%s" % (success, total))
+            percent = success / total
 
         msg = None
         outpost_url = outpost_map.get(uuid)
@@ -208,7 +234,7 @@ def successful(creds, search, args):
                     detail.get('types'),
                     None,
                     None,
-                    "0%",
+                    0.0,
                     "Credential appears to not be in use (%s)" % status,
                     usage,
                     ip_range,
@@ -258,7 +284,7 @@ def successful(creds, search, args):
                     detail.get('types'),
                     None,
                     None,
-                    "0%",
+                    0.0,
                     "Credential appears to not be in use (%s)" % status,
                     usage,
                     outpost_url,
@@ -287,6 +313,7 @@ def successful(creds, search, args):
         print(msg)
     output.report(data, headers, args, name="credential_success")
 
+@output._timer("Success Report (CLI)")
 def successful_cli(client, args, sysuser, passwd, reporting_dir):
     credentials = access.remote_cmd('tw_vault_control --show --json -u %s -p %s'%(sysuser,passwd),client)
     credjson = []
@@ -350,16 +377,17 @@ def successful_cli(client, args, sysuser, passwd, reporting_dir):
         logger.debug(msg)
             
         total = success + failure
+        percent = 0.0
         if total > 0:
-            logger.debug("Successes: %s\nOut of Total: %s"%(success,total))
-            percent = "{0:.0%}".format(success/(total))
+            logger.debug("Successes: %s\nOut of Total: %s" % (success, total))
+            percent = success / total
 
         if active:
             logger.debug("UUID %s found Active"%uuid)
             data.append([ detail.get('label'), uuid, detail.get('username'), types, success, failure, percent, status, list_of_ranges, ip_exclude ])
         else:
             logger.debug("UUID %s found Inactive"%uuid)
-            data.append([ detail.get('label'), uuid, detail.get('username'), types, None, None, "0%", "Credential appears to not be in use (%s)" % status, detail.get('usage'), detail.get('internal_store'), list_of_ranges, ip_exclude ])
+            data.append([ detail.get('label'), uuid, detail.get('username'), types, None, None, 0.0, "Credential appears to not be in use (%s)" % status, detail.get('usage'), detail.get('internal_store'), list_of_ranges, ip_exclude ])
         headers = [ "Credential", "UUID", "Login ID", "Protocol", "Successes", "Failures", "Success %", "State", "Usage", "Store", "Scan Ranges", "Exclude Ranges" ]
 
     headers.insert(0,"Discovery Instance")
@@ -367,11 +395,13 @@ def successful_cli(client, args, sysuser, passwd, reporting_dir):
         row.insert(0, args.target)
     output.csv_file(data, headers, reporting_dir+"/credentials.csv")
 
+@output._timer("Device Access Analysis")
 def devices(twsearch, twcreds, args):
 
     print("\nDevice Access Analyis")
     print("---------------------")
     logger.info("Running Data Analysis Report...")
+    print("Running Data Analysis Report...")
 
     vaultcreds = api.get_json(twcreds.get_vault_credentials)
 
@@ -668,6 +698,7 @@ def devices(twsearch, twcreds, args):
         print(msg)
     output.report(data, headers, args, name="devices")
 
+@output._timer("IP Address Lookup")
 def ipaddr(search, credentials, args):
     ipaddr = args.excavate[1]
     msg = "\nIP Address Lookup: %s" % ipaddr
@@ -1049,6 +1080,7 @@ def _gather_discovery_data(twsearch, twcreds):
     return disco_data
 
 
+@output._timer("Discovery Access Export")
 def discovery_access(twsearch, twcreds, args):
     print("\nDiscovery Access Export")
     print("-----------------------")
@@ -1164,10 +1196,12 @@ def discovery_access(twsearch, twcreds, args):
     output.report(data, headers, args, name="discovery_access")
 
 
+@output._timer("Discovery Access Analysis")
 def discovery_analysis(twsearch, twcreds, args):
     print("\nDiscovery Access Analysis")
     print("-------------------------")
     logger.info("Running DA Analysis Report")
+    print("Running DA Analysis Report")
 
     disco_data = _gather_discovery_data(twsearch, twcreds)
 
@@ -1294,6 +1328,7 @@ def discovery_analysis(twsearch, twcreds, args):
     output.report(data, headers, args, name="discovery_analysis")
 
 
+@output._timer("TPL Export")
 def tpl_export(search, query, dir, method, client, sysuser, syspass):
     tpldir = dir + "/tpl"
     if not os.path.exists(tpldir):

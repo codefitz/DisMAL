@@ -16,6 +16,15 @@ Use at your own risk.
    pip install -r requirements.txt
    ```
 
+   This project requires the following packages:
+
+   - pandas
+   - paramiko
+   - tideway *(obtain from a BMC Discovery appliance)*
+   - pyautogui
+   - tabulate
+   - cidrize
+
    The `tideway` module is distributed with BMC Discovery and must be obtained from a BMC Discovery appliance because it is not available on PyPI.
 
 4. *(Optional)* Install additional development requirements for running the test suite:
@@ -23,6 +32,10 @@ Use at your own risk.
    ```bash
    pip install -r requirements-dev.txt
    ```
+
+   Development dependencies:
+
+   - pytest
 
 ## Running the test suite
 

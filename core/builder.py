@@ -654,26 +654,76 @@ def scheduling(vault, search, args):
 
     output.report(data, heads, args, name="schedules")
 
-def unique_identities(search):
+def unique_identities(search, include_endpoints=None, endpoint_prefix=None):
+    """Return a list of unique device identities.
+
+    Parameters
+    ----------
+    search: object
+        API search handle.
+    include_endpoints: list[str] | None
+        Explicit list of endpoint IPs to include.  If provided, only these
+        endpoints are processed.
+    endpoint_prefix: str | None
+        Optional prefix that endpoints must start with.  Ignored when
+        ``include_endpoints`` is supplied.
+    """
 
     logger.info("Running: Unique Identities report...")
     print("Running: Unique Identities report...")
 
-    devices = api.search_results(search, queries.deviceInfo)
-    da_results = api.search_results(search, queries.da_ip_lookup)
+    # Optionally constrain the API queries to specific endpoints.  This helps
+    # reduce the amount of data returned and therefore overall execution time.
+    device_query = queries.deviceInfo.copy()
+    da_query = queries.da_ip_lookup.copy()
+
+    endpoint_filter = None
+    if include_endpoints:
+        endpoint_filter = ",".join(f"'{ep}'" for ep in include_endpoints)
+        device_query["query"] = device_query["query"].replace(
+            "search DeviceInfo",
+            "search DeviceInfo where #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.endpoint in (%s)" % endpoint_filter,
+        )
+        da_query["query"] = da_query["query"].replace(
+            "search DiscoveryAccess",
+            "search DiscoveryAccess where endpoint in (%s)" % endpoint_filter,
+        )
+    elif endpoint_prefix:
+        device_query["query"] = device_query["query"].replace(
+            "search DeviceInfo",
+            "search DeviceInfo where #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.endpoint beginswith '%s'" % endpoint_prefix,
+        )
+        da_query["query"] = da_query["query"].replace(
+            "search DiscoveryAccess",
+            "search DiscoveryAccess where endpoint beginswith '%s'" % endpoint_prefix,
+        )
+
+    devices = api.search_results(search, device_query)
+    da_results = api.search_results(search, da_query)
 
     if not isinstance(devices, list) or not isinstance(da_results, list):
         logger.error("Failed to retrieve unique identity data")
         return []
+      
+    def _endpoint_in_scope(endpoint: str) -> bool:
+        if not endpoint:
+            return False
+        if include_endpoints:
+            return endpoint in include_endpoints
+        if endpoint_prefix:
+            return endpoint.startswith(endpoint_prefix)
+        return True
 
     # Build initial map of endpoints to sets for IPs and names
     endpoint_map = {}
+
     timer_count = 0
     for da in da_results:
         timer_count = tools.completage("Getting Unique IPs", len(da_results), timer_count)
         if not isinstance(da, dict):
             logger.warning("Unexpected discovery access entry: %r", da)
             continue
+            
         endpoint = da.get("ip")
         if endpoint and endpoint not in endpoint_map:
             logger.debug("Unique Endpoint: %s", endpoint)
@@ -701,6 +751,7 @@ def unique_identities(search):
 
     # Populate endpoint map while iterating over devices once
     timer_count = 0
+
     for device in devices:
         timer_count = tools.completage("Processing", len(devices), timer_count)
         if not isinstance(device, dict):

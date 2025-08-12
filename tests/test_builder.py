@@ -332,7 +332,6 @@ def test_unique_identities_merges_device_data(monkeypatch):
         },
     ]
 
-
 def test_get_scans_uses_networks(monkeypatch):
     import ipaddress
 

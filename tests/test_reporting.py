@@ -30,13 +30,13 @@ class DummyCreds:
 
 
 def _run_with_patches(monkeypatch, func):
-    monkeypatch.setattr(reporting.builder, "unique_identities", lambda s: [])
+    monkeypatch.setattr(reporting.builder, "unique_identities", lambda s, *a, **k: [])
     monkeypatch.setattr(reporting.api, "search_results", lambda *a, **k: [])
     monkeypatch.setattr(reporting.api, "get_json", lambda *a, **k: [])
     monkeypatch.setattr(reporting.api, "map_outpost_credentials", lambda *a, **k: {})
     called = {}
     monkeypatch.setattr(reporting, "output", types.SimpleNamespace(report=lambda *a, **k: called.setdefault("ran", True)))
-    args = types.SimpleNamespace(output_csv=False, output_file=None, token=None, target="http://x")
+    args = types.SimpleNamespace(output_csv=False, output_file=None, token=None, target="http://x", include_endpoints=None, endpoint_prefix=None)
     func(DummySearch(), DummyCreds(), args)
     assert "ran" in called
 
@@ -64,7 +64,7 @@ def test_successful_runs_without_scan_data(monkeypatch):
     monkeypatch.setattr(reporting.builder, "get_scans", lambda *a, **k: [])
     called = {}
     monkeypatch.setattr(reporting, "output", types.SimpleNamespace(report=lambda *a, **k: called.setdefault("ran", True)))
-    args = types.SimpleNamespace(output_csv=False, output_file=None, token=None, target="http://x")
+    args = types.SimpleNamespace(output_csv=False, output_file=None, token=None, target="http://x", include_endpoints=None, endpoint_prefix=None)
     reporting.successful(DummyCreds(), DummySearch(), args)
     assert "ran" in called
 
@@ -114,7 +114,7 @@ def test_successful_combines_query_results(monkeypatch):
 
     monkeypatch.setattr(reporting, "output", types.SimpleNamespace(report=fake_report))
 
-    args = types.SimpleNamespace(output_csv=False, output_file=None, token=None, target="http://x")
+    args = types.SimpleNamespace(output_csv=False, output_file=None, token=None, target="http://x", include_endpoints=None, endpoint_prefix=None)
 
     reporting.successful(DummyCreds(), DummySearch(), args)
 
@@ -147,7 +147,7 @@ def test_successful_uses_token_file(monkeypatch, tmp_path):
     monkeypatch.setattr(reporting.api, "map_outpost_credentials", lambda app: {})
     monkeypatch.setattr(reporting.api, "search_results", lambda *a, **k: [])
     monkeypatch.setattr(reporting.api, "get_json", lambda *a, **k: [])
-    monkeypatch.setattr(reporting.builder, "unique_identities", lambda s: [])
+    monkeypatch.setattr(reporting.builder, "unique_identities", lambda s, *a, **k: [])
     monkeypatch.setattr(reporting, "output", types.SimpleNamespace(report=lambda *a, **k: None))
 
     args = types.SimpleNamespace(
@@ -156,6 +156,8 @@ def test_successful_uses_token_file(monkeypatch, tmp_path):
         token=None,
         f_token=str(file_path),
         target="http://x",
+        include_endpoints=None,
+        endpoint_prefix=None,
     )
 
     reporting.successful(DummyCreds(), DummySearch(), args)
@@ -177,7 +179,7 @@ def test_discovery_access_with_dropped_only(monkeypatch):
         def to_dict(self):
             return self
 
-    monkeypatch.setattr(reporting.builder, "unique_identities", lambda s: [])
+    monkeypatch.setattr(reporting.builder, "unique_identities", lambda s, *a, **k: [])
 
     def fake_search_results(search, query):
         if query is reporting.queries.last_disco:
@@ -194,7 +196,7 @@ def test_discovery_access_with_dropped_only(monkeypatch):
 
     called = {}
     monkeypatch.setattr(reporting, "output", types.SimpleNamespace(report=lambda *a, **k: called.setdefault("ran", True)))
-    args = types.SimpleNamespace(output_csv=False, output_file=None, token=None, target="http://x")
+    args = types.SimpleNamespace(output_csv=False, output_file=None, token=None, target="http://x", include_endpoints=None, endpoint_prefix=None)
 
     reporting.discovery_access(DummySearch(), DummyCreds(), args)
 

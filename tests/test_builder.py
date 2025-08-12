@@ -297,6 +297,42 @@ def test_unique_identities_handles_bad_api(monkeypatch):
     assert result == []
 
 
+def test_unique_identities_merges_device_data(monkeypatch):
+    monkeypatch.setattr(builder.tools, "completage", lambda *a, **k: 0)
+    monkeypatch.setattr(builder.tools, "sortlist", lambda l, dv=None: sorted(set(l)))
+
+    devices = [
+        {
+            "DA_Endpoint": "10.0.0.1",
+            "Inferred_All_IP_Addrs": ["10.0.0.1", "10.0.0.2"],
+            "Device_Sysname": "host1",
+        },
+        {
+            "DA_Endpoint": "10.0.0.2",
+            "Inferred_All_IP_Addrs": ["10.0.0.2"],
+            "Device_Sysname": "host2",
+        },
+    ]
+    da_results = [{"ip": "10.0.0.1"}, {"ip": "10.0.0.2"}]
+
+    seq = iter([devices, da_results])
+    monkeypatch.setattr(builder.api, "search_results", lambda *a, **k: next(seq))
+
+    result = builder.unique_identities(None)
+    assert result == [
+        {
+            "originating_endpoint": "10.0.0.1",
+            "list_of_ips": ["10.0.0.1", "10.0.0.2"],
+            "list_of_names": ["host1"],
+        },
+        {
+            "originating_endpoint": "10.0.0.2",
+            "list_of_ips": ["10.0.0.1", "10.0.0.2"],
+            "list_of_names": ["host1", "host2"],
+        },
+    ]
+
+
 def test_get_scans_uses_networks(monkeypatch):
     import ipaddress
 

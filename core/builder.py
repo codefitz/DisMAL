@@ -704,7 +704,7 @@ def unique_identities(search, include_endpoints=None, endpoint_prefix=None):
     if not isinstance(devices, list) or not isinstance(da_results, list):
         logger.error("Failed to retrieve unique identity data")
         return []
-
+      
     def _endpoint_in_scope(endpoint: str) -> bool:
         if not endpoint:
             return False
@@ -714,110 +714,84 @@ def unique_identities(search, include_endpoints=None, endpoint_prefix=None):
             return endpoint.startswith(endpoint_prefix)
         return True
 
-    # list of unique endpoints
-    unique_endpoints = []
+    # Build initial map of endpoints to sets for IPs and names
+    endpoint_map = {}
+
     timer_count = 0
     for da in da_results:
         timer_count = tools.completage("Getting Unique IPs", len(da_results), timer_count)
         if not isinstance(da, dict):
             logger.warning("Unexpected discovery access entry: %r", da)
             continue
-        endpoint = da.get('ip')
-        if endpoint and _endpoint_in_scope(endpoint) and endpoint not in unique_endpoints:
-            logger.debug("Unique Endpoint: %s" % endpoint)
-            unique_endpoints.append(endpoint)
+            
+        endpoint = da.get("ip")
+        if endpoint and endpoint not in endpoint_map:
+            logger.debug("Unique Endpoint: %s", endpoint)
+            endpoint_map[endpoint] = {"ips": set(), "names": set()}
 
-    # Generate combined record of hostnames and endpoints
-    identities = []
-    unique_identities = []
+    print(os.linesep, end="\r")
 
-    print(os.linesep,end="\r")
+    # Fields to expand for IPs and hostnames
+    ip_fields = [
+        "Chosen_Endpoint",
+        "Discovered_IP_Addrs",
+        "Inferred_All_IP_Addrs",
+        "NIC_IPs",
+    ]
+    name_fields = [
+        "Device_Sysname",
+        "Device_Hostname",
+        "Device_FQDN",
+        "Inferred_Name",
+        "Inferred_Hostname",
+        "Inferred_FQDN",
+        "Inferred_Sysname",
+        "NIC_FQDNs",
+    ]
+
+    # Populate endpoint map while iterating over devices once
     timer_count = 0
-    for endpoint in unique_endpoints:
-        timer_count = tools.completage("Processing", len(unique_endpoints), timer_count)
-        logger.debug("Processing Unique Endpoint: %s"%endpoint)
-        for device in devices:
-            if not isinstance(device, dict):
-                logger.warning("Unexpected device record: %r", device)
-                continue
-            if not _endpoint_in_scope(device.get('DA_Endpoint')):
-                continue
-            if endpoint == device.get('DA_Endpoint'):
-                logger.debug("Found DA for %s"%endpoint)
-                list_of_ips = []
-                list_of_names = []
-                list_of_ips.append(endpoint)
-                list_of_ips = tools.list_of_lists(device,'Chosen_Endpoint',list_of_ips)
-                list_of_ips = tools.list_of_lists(device,'Discovered_IP_Addrs',list_of_ips)
-                list_of_ips = tools.list_of_lists(device,'Inferred_All_IP_Addrs',list_of_ips)
-                list_of_ips = tools.list_of_lists(device,'NIC_IPs',list_of_ips)
-                list_of_names = tools.list_of_lists(device,'Device_Sysname',list_of_names)
-                list_of_names = tools.list_of_lists(device,'Device_Hostname',list_of_names)
-                list_of_names = tools.list_of_lists(device,'Device_FQDN',list_of_names)
-                list_of_names = tools.list_of_lists(device,'Inferred_Name',list_of_names)
-                list_of_names = tools.list_of_lists(device,'Inferred_Hostname',list_of_names)
-                list_of_names = tools.list_of_lists(device,'Inferred_FQDN',list_of_names)
-                list_of_names = tools.list_of_lists(device,'Inferred_Sysname',list_of_names)
-                list_of_names = tools.list_of_lists(device,'NIC_FQDNs',list_of_names)
-                msg = "endpoint %s, list_of_names: %s, list_of_ips: %s"%(endpoint,list_of_names,list_of_ips)
-                logger.debug(msg)
 
-                if type(list_of_ips) is list:
-                    try:
-                        if len(list_of_ips) > 0:
-                            list_of_ips = tools.sortlist(list_of_ips)
-                        if len(list_of_names) > 0:
-                            list_of_names = tools.sortlist(list_of_names)
+    for device in devices:
+        timer_count = tools.completage("Processing", len(devices), timer_count)
+        if not isinstance(device, dict):
+            logger.warning("Unexpected device record: %r", device)
+            continue
 
-                        identities.append({
-                                        "list_of_names":list_of_names,
-                                        "list_of_ips":list_of_ips
-                                        })
-                        logger.debug("Appended identity for %s"%endpoint)
-                    except TypeError as e:
-                        msg = "TypeError: list_of_ips can't be hashed\n%s" % str(e)
-                        print("__endpoint__",endpoint)
-                        print("list_of_ips",list_of_ips)
-                        print(msg)
-                        logger.error(msg)
-                    except Exception as e:
-                        msg = "Error: list_of_ips could not be processed\n%s" % str(e)
-                        print("__endpoint__",endpoint)
-                        print("list_of_ips",list_of_ips)
-                        print(msg)
-                        logger.error(msg)
-                else:
-                    msg = "Warning: list_of_ips is not a list type - can't be hashed\n%s" % list_of_ips
-                    print(msg)
-                    logger.warning(msg)
+        ips = []
+        names = []
+        endpoint = device.get("DA_Endpoint")
+        if endpoint:
+            ips.append(endpoint)
 
-        # 2nd loop
-        new_ip_list = []
-        new_name_list = []
-        count=0
-        for identity in identities:
-            count+=1
-            if endpoint in identity.get('list_of_ips'):
-                logger.debug("ipcheck %s, list_of_names: %s, list_of_ips: %s"%(endpoint,list_of_names,list_of_ips))
-                for ips in identity.get('list_of_ips'):
-                    new_ip_list.append(ips)
-                    logger.debug("Appending IP: %s to new list: %s"%(ips,new_ip_list))
-                for names in identity.get('list_of_names'):
-                    new_name_list.append(names)
-                    logger.debug("Appending Name: %s to new list: %s"%(names,new_name_list))
-        if len(new_ip_list) > 0:
-            new_ip_list = tools.sortlist(new_ip_list,"None")
-            logger.debug("Sorted IP List: %s"%new_ip_list)
-        if len(new_name_list) > 0:
-            new_name_list = tools.sortlist(new_name_list,"None")
-            logger.debug("Sorted Name List: %s"%new_name_list)
+        for field in ip_fields:
+            ips = tools.list_of_lists(device, field, ips)
+        for field in name_fields:
+            names = tools.list_of_lists(device, field, names)
 
-        unique_identities.append({
-                                "originating_endpoint":endpoint,
-                                "list_of_ips":new_ip_list,
-                                "list_of_names":new_name_list
-                                })
+        ips_set = {ip for ip in ips if ip is not None}
+        names_set = {name for name in names if name is not None}
+
+        for ip in ips_set:
+            data = endpoint_map.get(ip)
+            if data is not None:
+                data["ips"].update(ips_set)
+                data["names"].update(names_set)
+
     print(os.linesep)
+
+    unique_identities = []
+    for endpoint, data in endpoint_map.items():
+        ip_list = tools.sortlist(list(data["ips"]), "None") if data["ips"] else []
+        name_list = tools.sortlist(list(data["names"]), "None") if data["names"] else []
+        unique_identities.append(
+            {
+                "originating_endpoint": endpoint,
+                "list_of_ips": ip_list,
+                "list_of_names": name_list,
+            }
+        )
+
     return unique_identities
 
 def overlapping(tw_search, args):

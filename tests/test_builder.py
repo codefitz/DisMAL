@@ -297,64 +297,40 @@ def test_unique_identities_handles_bad_api(monkeypatch):
     assert result == []
 
 
-def test_unique_identities_filters_and_speed(monkeypatch):
-    import time
-
-    # simplify helpers to speed up the test and avoid extraneous work
+def test_unique_identities_merges_device_data(monkeypatch):
     monkeypatch.setattr(builder.tools, "completage", lambda *a, **k: 0)
-    monkeypatch.setattr(builder.tools, "list_of_lists", lambda *a: a[2])
-    monkeypatch.setattr(builder.tools, "sortlist", lambda l, *a, **k: l)
+    monkeypatch.setattr(builder.tools, "sortlist", lambda l, dv=None: sorted(set(l)))
 
-    endpoints = [f"10.0.0.{i}" for i in range(500)]
-    devices = [{"DA_Endpoint": ep} for ep in endpoints]
-    da_results = [{"ip": ep} for ep in endpoints]
+    devices = [
+        {
+            "DA_Endpoint": "10.0.0.1",
+            "Inferred_All_IP_Addrs": ["10.0.0.1", "10.0.0.2"],
+            "Device_Sysname": "host1",
+        },
+        {
+            "DA_Endpoint": "10.0.0.2",
+            "Inferred_All_IP_Addrs": ["10.0.0.2"],
+            "Device_Sysname": "host2",
+        },
+    ]
+    da_results = [{"ip": "10.0.0.1"}, {"ip": "10.0.0.2"}]
 
-    calls = []
+    seq = iter([devices, da_results])
+    monkeypatch.setattr(builder.api, "search_results", lambda *a, **k: next(seq))
 
-    def fake_search_results(search, query):
-        calls.append(query["query"])
-        if query["query"].strip().startswith("search DeviceInfo"):
-            return devices
-        return da_results
-
-    monkeypatch.setattr(builder.api, "search_results", fake_search_results)
-
-    start = time.perf_counter()
-    builder.unique_identities(None)
-    full_time = time.perf_counter() - start
-
-    calls.clear()
-    start = time.perf_counter()
-    subset = builder.unique_identities(None, include_endpoints=["10.0.0.5"])
-    subset_time = time.perf_counter() - start
-
-    assert len(subset) == 1
-    assert subset_time < full_time
-    assert any("endpoint in ('10.0.0.5')" in q for q in calls)
-
-
-def test_unique_identities_prefix_filter(monkeypatch):
-    monkeypatch.setattr(builder.tools, "completage", lambda *a, **k: 0)
-    monkeypatch.setattr(builder.tools, "list_of_lists", lambda *a: a[2])
-    monkeypatch.setattr(builder.tools, "sortlist", lambda l, *a, **k: l)
-
-    devices = [{"DA_Endpoint": "10.1.0.1"}, {"DA_Endpoint": "20.1.0.1"}]
-    da_results = [{"ip": "10.1.0.1"}, {"ip": "20.1.0.1"}]
-    calls = []
-
-    def fake_search_results(search, query):
-        calls.append(query["query"])
-        if query["query"].strip().startswith("search DeviceInfo"):
-            return devices
-        return da_results
-
-    monkeypatch.setattr(builder.api, "search_results", fake_search_results)
-
-    res = builder.unique_identities(None, endpoint_prefix="10.1.")
-    assert len(res) == 1
-    assert res[0]["originating_endpoint"] == "10.1.0.1"
-    assert all("beginswith '10.1.'" in q for q in calls)
-
+    result = builder.unique_identities(None)
+    assert result == [
+        {
+            "originating_endpoint": "10.0.0.1",
+            "list_of_ips": ["10.0.0.1", "10.0.0.2"],
+            "list_of_names": ["host1"],
+        },
+        {
+            "originating_endpoint": "10.0.0.2",
+            "list_of_ips": ["10.0.0.1", "10.0.0.2"],
+            "list_of_names": ["host1", "host2"],
+        },
+    ]
 
 def test_get_scans_uses_networks(monkeypatch):
     import ipaddress

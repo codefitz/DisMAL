@@ -71,6 +71,20 @@ The options `-P`, `-T` and `-W` can be used to read the UI password, API token a
 By default, reports are saved to an `output_<appliance>` directory in the current working directory.
 Use the `--stdout` option to suppress file output and print results directly to the terminal.
 
+### Endpoint filtering
+
+Device-centric reports can now be limited to a subset of endpoints.  Supplying
+`--include-endpoints` with one or more IP addresses, or `--endpoint-prefix`
+with a partial address, will restrict searches and speed up processing.  For
+example:
+
+```bash
+python3 dismal.py --access_method api -i <appliance_host> -u <username> -p <password> \
+    --excavate device_ids --include-endpoints 10.0.0.1 10.0.0.2
+```
+
+Only the two specified endpoints are queried and reported on.
+
 ## Reports
 
 Two related reports focus on Discovery Access history:

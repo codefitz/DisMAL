@@ -406,7 +406,9 @@ def devices(twsearch, twcreds, args):
     vaultcreds = api.get_json(twcreds.get_vault_credentials)
 
     ### list of unique identities
-    identities = builder.unique_identities(twsearch)
+    identities = builder.unique_identities(
+        twsearch, args.include_endpoints, args.endpoint_prefix
+    )
     results = api.search_results(twsearch,queries.deviceInfo)
 
     devices = []
@@ -772,7 +774,9 @@ def ipaddr(search, credentials, args):
     logger.debug("Unique List: %s,%s"%(msg,devices_found))
 
     id_list = []
-    unique_ids = builder.unique_identities(search)
+    unique_ids = builder.unique_identities(
+        search, args.include_endpoints, args.endpoint_prefix
+    )
     for identity in unique_ids:
         logger.debug("Checking IP address %s in Identity %s"%(ipaddr,identity))
         if ipaddr in identity.get('list_of_ips'):
@@ -860,11 +864,13 @@ def ipaddr(search, credentials, args):
     )
 
 
-def _gather_discovery_data(twsearch, twcreds):
+def _gather_discovery_data(twsearch, twcreds, args):
     """Return discovery access records without change analysis."""
 
     vaultcreds = api.get_json(twcreds.get_vault_credentials)
-    identities = builder.unique_identities(twsearch)
+    identities = builder.unique_identities(
+        twsearch, args.include_endpoints, args.endpoint_prefix
+    )
     discos = api.search_results(twsearch, queries.last_disco)
     dropped = api.search_results(twsearch, queries.dropped_endpoints)
 
@@ -1086,7 +1092,7 @@ def discovery_access(twsearch, twcreds, args):
     print("-----------------------")
     logger.info("Running DA Report")
 
-    disco_data = _gather_discovery_data(twsearch, twcreds)
+    disco_data = _gather_discovery_data(twsearch, twcreds, args)
 
     msg = os.linesep
     data = []
@@ -1203,7 +1209,7 @@ def discovery_analysis(twsearch, twcreds, args):
     logger.info("Running DA Analysis Report")
     print("Running DA Analysis Report")
 
-    disco_data = _gather_discovery_data(twsearch, twcreds)
+    disco_data = _gather_discovery_data(twsearch, twcreds, args)
 
     for record in disco_data:
         current = record.get("end_state")

@@ -161,6 +161,23 @@ Providing no <report> or using "default" will run all options that do not requir
 excavation.add_argument('--resolve-hostnames', dest='resolve_hostnames', action='store_true', required=False,
                         help='Ping guest full names and record the resolved IP address in results.')
 
+excavation.add_argument(
+    '--include-endpoints',
+    dest='include_endpoints',
+    nargs='*',
+    required=False,
+    help='Only include the specified endpoints in device related reports. '
+         'Multiple IPs may be supplied separated by spaces.',
+    metavar='<ip>',
+)
+excavation.add_argument(
+    '--endpoint-prefix',
+    dest='endpoint_prefix',
+    required=False,
+    help='Limit device related reports to endpoints beginning with this prefix.',
+    metavar='<prefix>',
+)
+
 global args
 args = parser.parse_args()
 start_time = time.time()
@@ -589,7 +606,7 @@ if args.access_method=="api":
         reporting.devices(search, creds, args)
 
     if excavate_default or (args.excavate and args.excavate[0] == "device_ids"):
-        identities = builder.unique_identities(search)
+        identities = builder.unique_identities(search, args.include_endpoints, args.endpoint_prefix)
         data = []
         for identity in identities:
             data.append([identity['originating_endpoint'],identity['list_of_ips'],identity['list_of_names']])

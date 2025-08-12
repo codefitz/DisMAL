@@ -297,6 +297,65 @@ def test_unique_identities_handles_bad_api(monkeypatch):
     assert result == []
 
 
+def test_unique_identities_filters_and_speed(monkeypatch):
+    import time
+
+    # simplify helpers to speed up the test and avoid extraneous work
+    monkeypatch.setattr(builder.tools, "completage", lambda *a, **k: 0)
+    monkeypatch.setattr(builder.tools, "list_of_lists", lambda *a: a[2])
+    monkeypatch.setattr(builder.tools, "sortlist", lambda l, *a, **k: l)
+
+    endpoints = [f"10.0.0.{i}" for i in range(500)]
+    devices = [{"DA_Endpoint": ep} for ep in endpoints]
+    da_results = [{"ip": ep} for ep in endpoints]
+
+    calls = []
+
+    def fake_search_results(search, query):
+        calls.append(query["query"])
+        if query["query"].strip().startswith("search DeviceInfo"):
+            return devices
+        return da_results
+
+    monkeypatch.setattr(builder.api, "search_results", fake_search_results)
+
+    start = time.perf_counter()
+    builder.unique_identities(None)
+    full_time = time.perf_counter() - start
+
+    calls.clear()
+    start = time.perf_counter()
+    subset = builder.unique_identities(None, include_endpoints=["10.0.0.5"])
+    subset_time = time.perf_counter() - start
+
+    assert len(subset) == 1
+    assert subset_time < full_time
+    assert any("endpoint in ('10.0.0.5')" in q for q in calls)
+
+
+def test_unique_identities_prefix_filter(monkeypatch):
+    monkeypatch.setattr(builder.tools, "completage", lambda *a, **k: 0)
+    monkeypatch.setattr(builder.tools, "list_of_lists", lambda *a: a[2])
+    monkeypatch.setattr(builder.tools, "sortlist", lambda l, *a, **k: l)
+
+    devices = [{"DA_Endpoint": "10.1.0.1"}, {"DA_Endpoint": "20.1.0.1"}]
+    da_results = [{"ip": "10.1.0.1"}, {"ip": "20.1.0.1"}]
+    calls = []
+
+    def fake_search_results(search, query):
+        calls.append(query["query"])
+        if query["query"].strip().startswith("search DeviceInfo"):
+            return devices
+        return da_results
+
+    monkeypatch.setattr(builder.api, "search_results", fake_search_results)
+
+    res = builder.unique_identities(None, endpoint_prefix="10.1.")
+    assert len(res) == 1
+    assert res[0]["originating_endpoint"] == "10.1.0.1"
+    assert all("beginswith '10.1.'" in q for q in calls)
+
+
 def test_get_scans_uses_networks(monkeypatch):
     import ipaddress
 

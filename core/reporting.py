@@ -896,6 +896,16 @@ def _gather_discovery_data(twsearch, twcreds, args):
 
     sorted_endpoints = tools.sortlist(list(disco_by_endpoint.keys()))
 
+    # Build a lookup map so each endpoint can retrieve its identity without
+    # repeatedly scanning the entire identity list.  This maps every IP to the
+    # corresponding identity record once up front.
+    identity_map = {
+        ip: identity
+        for identity in identities
+        for ip in identity.get("list_of_ips", [])
+        if ip is not None
+    }
+
     bins = [0, 59, 1440, 10080, 43830, 131487, 262974, 525949, 525950]
     labels = [
         "Less than 60 minutes ago",

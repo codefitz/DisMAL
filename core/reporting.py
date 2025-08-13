@@ -892,6 +892,16 @@ def _gather_discovery_data(twsearch, twcreds, args):
 
     unique_endpoints = tools.sortlist(unique_endpoints)
 
+    # Build a lookup map so each endpoint can retrieve its identity without
+    # repeatedly scanning the entire identity list.  This maps every IP to the
+    # corresponding identity record once up front.
+    identity_map = {
+        ip: identity
+        for identity in identities
+        for ip in identity.get("list_of_ips", [])
+        if ip is not None
+    }
+
     bins = [0, 59, 1440, 10080, 43830, 131487, 262974, 525949, 525950]
     labels = [
         "Less than 60 minutes ago",
@@ -962,10 +972,10 @@ def _gather_discovery_data(twsearch, twcreds, args):
                 node_id = result.get("DA_ID")
                 prev_node_id = result.get("Previous_DA_ID")
                 next_node_id = result.get("Next_DA_ID")
-                for identity in identities:
-                    if endpoint in identity.get("list_of_ips"):
-                        list_of_endpoints = identity.get("list_of_ips")
-                        list_of_names = identity.get("list_of_names")
+                identity = identity_map.get(endpoint)
+                if identity:
+                    list_of_endpoints = identity.get("list_of_ips")
+                    list_of_names = identity.get("list_of_names")
 
                 if last_credential:
                     credential_details = tools.get_credential(vaultcreds, last_credential)
@@ -1059,10 +1069,10 @@ def _gather_discovery_data(twsearch, twcreds, args):
                 reason_not_updated = tools.getr(result, "Reason_Not_Updated", None)
                 list_of_names = None
                 list_of_endpoints = None
-                for identity in identities:
-                    if endpoint in identity.get("list_of_ips"):
-                        list_of_endpoints = identity.get("list_of_ips")
-                        list_of_names = identity.get("list_of_names")
+                identity = identity_map.get(endpoint)
+                if identity:
+                    list_of_endpoints = identity.get("list_of_ips")
+                    list_of_names = identity.get("list_of_names")
 
                 ep_timestamp = run_end_timestamp
 

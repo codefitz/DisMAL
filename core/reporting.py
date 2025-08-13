@@ -1087,12 +1087,16 @@ def _gather_discovery_data(twsearch, twcreds, args):
 
 
 @output._timer("Discovery Access Export")
-def discovery_access(twsearch, twcreds, args):
+def discovery_access(twsearch, twcreds, args, disco_data=None):
     print("\nDiscovery Access Export")
     print("-----------------------")
     logger.info("Running DA Report")
 
-    disco_data = _gather_discovery_data(twsearch, twcreds, args)
+    # Allow pre-fetched data to be supplied for efficiency; fall back to
+    # gathering it locally if not provided. This keeps standalone usage
+    # unchanged while enabling reuse of the same data for multiple reports.
+    if disco_data is None:
+        disco_data = _gather_discovery_data(twsearch, twcreds, args)
 
     msg = os.linesep
     data = []
@@ -1203,13 +1207,16 @@ def discovery_access(twsearch, twcreds, args):
 
 
 @output._timer("Discovery Access Analysis")
-def discovery_analysis(twsearch, twcreds, args):
+def discovery_analysis(twsearch, twcreds, args, disco_data=None):
     print("\nDiscovery Access Analysis")
     print("-------------------------")
     logger.info("Running DA Analysis Report")
     print("Running DA Analysis Report")
 
-    disco_data = _gather_discovery_data(twsearch, twcreds, args)
+    # Reuse provided discovery data if available; otherwise gather it
+    # independently so the function can be executed stand-alone.
+    if disco_data is None:
+        disco_data = _gather_discovery_data(twsearch, twcreds, args)
 
     for record in disco_data:
         current = record.get("end_state")

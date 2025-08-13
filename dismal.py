@@ -636,11 +636,18 @@ if args.access_method=="api":
     if excavate_default or (args.excavate and args.excavate[0] == "overlapping_ips"):
         builder.overlapping(search, args)
 
+    # Gather discovery data once and reuse for both reporting calls.
+    disco_data = None
+    if excavate_default or (
+        args.excavate and args.excavate[0] in ("discovery_access", "discovery_analysis")
+    ):
+        disco_data = reporting._gather_discovery_data(search, creds, args)
+
     if excavate_default or (args.excavate and args.excavate[0] == "discovery_access"):
-        reporting.discovery_access(search, creds, args)
+        reporting.discovery_access(search, creds, args, disco_data)
 
     if excavate_default or (args.excavate and args.excavate[0] == "discovery_analysis"):
-        reporting.discovery_analysis(search, creds, args)
+        reporting.discovery_analysis(search, creds, args, disco_data)
 
     if excavate_default or (args.excavate and args.excavate[0] == "active_runs"):
         api.show_runs(disco, args)

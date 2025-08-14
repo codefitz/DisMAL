@@ -2,6 +2,8 @@ import os
 import sys
 import types
 import pytest
+import core.builder as builder
+import core.output as output
 
 sys.modules.setdefault("pandas", types.SimpleNamespace())
 sys.modules.setdefault("tabulate", types.SimpleNamespace(tabulate=lambda *a, **k: ""))
@@ -39,6 +41,56 @@ def _run_with_patches(monkeypatch, func):
     args = types.SimpleNamespace(output_csv=False, output_file=None, token=None, target="http://x", include_endpoints=None, endpoint_prefix=None)
     func(DummySearch(), DummyCreds(), args)
     assert "ran" in called
+
+
+def test_device_ids_report_includes_coverage(monkeypatch):
+    sample = [
+        {
+            "originating_endpoint": "10.0.0.1",
+            "list_of_ips": ["10.0.0.1"],
+            "list_of_names": ["h1"],
+            "coverage_pct": 50.0,
+        }
+    ]
+    monkeypatch.setattr(builder, "unique_identities", lambda *a, **k: sample)
+
+    captured = {}
+
+    def fake_report(data, headers, args, name=None):
+        captured["data"] = data
+        captured["headers"] = headers
+        captured["name"] = name
+
+    monkeypatch.setattr(output, "report", fake_report)
+
+    args = types.SimpleNamespace(
+        output_csv=False,
+        output_file=None,
+        include_endpoints=None,
+        endpoint_prefix=None,
+    )
+
+    identities = builder.unique_identities(None, args.include_endpoints, args.endpoint_prefix)
+    data = []
+    for identity in identities:
+        data.append(
+            [
+                identity["originating_endpoint"],
+                identity["list_of_ips"],
+                identity["list_of_names"],
+                identity["coverage_pct"],
+            ]
+        )
+
+    output.report(
+        data,
+        ["Origating Endpoint", "List of IPs", "List of Names", "Coverage %"],
+        args,
+        name="device_ids",
+    )
+
+    assert captured["headers"][-1] == "Coverage %"
+    assert captured["data"][0][-1] == 50.0
 
 
 def test_discovery_access_handles_bad_api(monkeypatch):

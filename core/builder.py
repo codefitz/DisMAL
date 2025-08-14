@@ -740,6 +740,9 @@ def unique_identities(search, include_endpoints=None, endpoint_prefix=None):
 
     print(os.linesep, end="\r")
 
+    # Total endpoints for coverage calculation
+    total_endpoints = len(endpoint_map)
+
     # Fields to expand for IPs and hostnames
     ip_fields = [
         "Chosen_Endpoint",
@@ -793,11 +796,13 @@ def unique_identities(search, include_endpoints=None, endpoint_prefix=None):
     for endpoint, data in endpoint_map.items():
         ip_list = tools.sortlist(list(data["ips"]), "None") if data["ips"] else []
         name_list = tools.sortlist(list(data["names"]), "None") if data["names"] else []
+        pct = (len(data["ips"]) / total_endpoints * 100) if total_endpoints else 0
         unique_identities.append(
             {
                 "originating_endpoint": endpoint,
                 "list_of_ips": ip_list,
                 "list_of_names": name_list,
+                "coverage_pct": pct,
             }
         )
 

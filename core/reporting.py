@@ -1357,7 +1357,7 @@ def tpl_export(search, query, dir, method, client, sysuser, syspass):
     if method == "api":
         response = api.search_results(search, query)
         if type(response) == list and len(response) > 0:
-            header, data = tools.json2csv(response)
+            header, data, header_hf = tools.json2csv(response)
             for row in data:
                 filename = "%s/%s.tpl"%(tpldir,row[1])
                 files+=1

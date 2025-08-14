@@ -145,8 +145,36 @@ def test_show_runs_excavate_routes_to_define_csv(monkeypatch):
 
     show_runs(disco, args)
 
-    assert recorded["header"] == ["run_id", "status"]
+    assert recorded["header"] == ["Run Id", "Status"]
     assert recorded["data"] == [["1", "running"]]
+
+
+def test_discovery_runs_emits_ints_and_camel_headers(monkeypatch):
+    runs = [{
+        "range_id": "r1",
+        "done": "1",
+        "pre_scanning": "2",
+        "scanning": "3",
+        "total": "4",
+    }]
+    disco = DummyDisco(DummyResponse(200, json.dumps(runs)))
+    captured = {}
+
+    def fake_define_csv(args, header, rows, path, file, target, typ):
+        captured["header"] = header
+        captured["rows"] = rows
+
+    monkeypatch.setattr(api_mod.output, "define_csv", fake_define_csv)
+
+    args = types.SimpleNamespace(target="appl", output_file=None)
+
+    api_mod.discovery_runs(disco, args, "/tmp")
+
+    assert captured["header"] == ["Discovery Instance", "Done", "Pre Scanning", "Range Id", "Scanning", "Total"]
+    assert captured["rows"] == [["appl", 1, 2, "r1", 3, 4]]
+    row = captured["rows"][0]
+    for index in [1, 2, 4, 5]:
+        assert isinstance(row[index], int)
 
 def test_get_outposts_uses_deleted_false():
     """Verify get_outposts calls the correct API path."""
@@ -338,7 +366,7 @@ def test_device_capture_candidates_writes_csv(monkeypatch):
 
     api_mod.device_capture_candidates(types.SimpleNamespace(), args, "/tmp")
 
-    expected_header = ["Discovery Instance"] + sorted(results[0].keys())
+    expected_header = ["Discovery Instance"] + [api_mod.tools.snake_to_camel(h) for h in sorted(results[0].keys())]
     expected_row = [
         "appl"
     ] + [

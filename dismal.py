@@ -126,7 +126,7 @@ Providing no <report> or using "default" will run all options that do not requir
 "credential_success"        - Report on credential success with total number of accesses, success %% and ranges
 "db_lifecycle"              - Export Database lifecycle report
 "device" <name>             - Report on a specific device node by name (Host, NetworkDevice, Printer, SNMPManagedDevice, StorageDevice, ManagementController)
-"device_ids"                - Export list of unique device identities
+"device_ids"                - Export list of unique device identities with coverage percentage per endpoint
 "devices"                   - Report of unique device profiles - includes last DiscoveryAccess and last _successful_ DiscoveryAccess results with credential details
 "devices_with_cred" <UUID>  - Run devices report for a specific credential
 "discovery_analysis"        - Report of unique DiscoveryAccesses and dropped endpoints with credential details, consistency analysis and end state change
@@ -607,8 +607,18 @@ if args.access_method=="api":
         identities = builder.unique_identities(search, args.include_endpoints, args.endpoint_prefix)
         data = []
         for identity in identities:
-            data.append([identity['originating_endpoint'],identity['list_of_ips'],identity['list_of_names']])
-        output.report(data, [ "Origating Endpoint", "List of IPs", "List of Names" ], args, name="device_ids")
+            data.append([
+                identity['originating_endpoint'],
+                identity['list_of_ips'],
+                identity['list_of_names'],
+                identity.get('coverage_pct'),
+            ])
+        output.report(
+            data,
+            ["Origating Endpoint", "List of IPs", "List of Names", "Coverage %"],
+            args,
+            name="device_ids",
+        )
 
     if args.excavate and args.excavate[0] == "ipaddr":
         reporting.ipaddr(search, creds, args)

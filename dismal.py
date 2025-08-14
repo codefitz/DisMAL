@@ -129,7 +129,6 @@ Providing no <report> or using "default" will run all options that do not requir
 "device_ids"                - Export list of unique device identities
 "devices"                   - Report of unique device profiles - includes last DiscoveryAccess and last _successful_ DiscoveryAccess results with credential details
 "devices_with_cred" <UUID>  - Run devices report for a specific credential
-"discovery_access"          - Report of all DiscoveryAccesses and dropped endpoints with credential details, consistency if available
 "discovery_analysis"        - Report of unique DiscoveryAccesses and dropped endpoints with credential details, consistency analysis and end state change
 "eca_errors"                - Export list of ECA Errors
 "excludes"                  - Export of exclude schedules
@@ -333,7 +332,6 @@ if args.access_method == "all":
         builder.scheduling(creds, search, args)
         api.excludes(search, args, reporting_dir)
         builder.ip_analysis(search, args)
-        reporting.discovery_access(search, creds, args)
         reporting.discovery_analysis(search, creds, args)
         api.show_runs(disco, args)
         api.discovery_runs(disco, args, reporting_dir)
@@ -636,17 +634,9 @@ if args.access_method=="api":
     if excavate_default or (args.excavate and args.excavate[0] == "ip_analysis"):
         builder.ip_analysis(search, args)
 
-    # Gather discovery data once and reuse for both reporting calls.
-    disco_data = None
-    if excavate_default or (
-        args.excavate and args.excavate[0] in ("discovery_access", "discovery_analysis")
-    ):
-        disco_data = reporting._gather_discovery_data(search, creds, args)
-
-    if excavate_default or (args.excavate and args.excavate[0] == "discovery_access"):
-        reporting.discovery_access(search, creds, args, disco_data)
-
+    # Gather discovery data and run analysis when requested.
     if excavate_default or (args.excavate and args.excavate[0] == "discovery_analysis"):
+        disco_data = reporting._gather_discovery_data(search, creds, args)
         reporting.discovery_analysis(search, creds, args, disco_data)
 
     if excavate_default or (args.excavate and args.excavate[0] == "active_runs"):

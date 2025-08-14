@@ -415,9 +415,10 @@ def show_runs(disco, args):
     else:
         if getattr(args, "excavate", None):
             out_dir = getattr(args, "reporting_dir", "")
+            csv_headers = tools.normalize_keys(headers)
             output.define_csv(
                 args,
-                headers,
+                csv_headers,
                 run_csvs,
                 os.path.join(out_dir, defaults.current_scans_filename),
                 getattr(args, "output_file", None),
@@ -578,9 +579,10 @@ def missing_vms(search, args, dir):
                     row.extend(["N/A", "N/A", "N/A"])
             print(os.linesep, end="\r")
 
+            csv_header = tools.normalize_keys(header)
             output.define_csv(
                 args,
-                header,
+                csv_header,
                 data,
                 dir + defaults.missing_vms_filename,
                 args.output_file,
@@ -646,9 +648,10 @@ def device_capture_candidates(search, args, dir):
             row.insert(0, args.target)
     else:
         header.insert(0, "Discovery Instance")
+    csv_header = tools.normalize_keys(header)
     output.define_csv(
         args,
-        header,
+        csv_header,
         rows,
         dir + defaults.device_capture_candidates_filename,
         args.output_file,

@@ -11,7 +11,7 @@ sys.modules.setdefault("paramiko", types.SimpleNamespace())
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from core.api import get_json, search_results, show_runs, get_outposts, map_outpost_credentials
 import core.api as api_mod
-from core import queries
+from core import queries, tools
 
 class DummyResponse:
     def __init__(self, status_code=200, data="{}", reason="OK", url="http://x"):
@@ -338,7 +338,9 @@ def test_device_capture_candidates_writes_csv(monkeypatch):
 
     api_mod.device_capture_candidates(types.SimpleNamespace(), args, "/tmp")
 
-    expected_header = ["Discovery Instance"] + sorted(results[0].keys())
+    expected_header = ["Discovery Instance"] + [
+        tools.snake_to_title(k) for k in sorted(results[0].keys())
+    ]
     expected_row = [
         "appl"
     ] + [

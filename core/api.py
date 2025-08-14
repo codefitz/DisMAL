@@ -641,6 +641,7 @@ def device_capture_candidates(search, args, dir):
     header, rows = [], []
     if isinstance(results, list) and results:
         header, rows = tools.json2csv(results)
+        header = [tools.snake_to_title(h) for h in header]
         header.insert(0, "Discovery Instance")
         for row in rows:
             row.insert(0, args.target)

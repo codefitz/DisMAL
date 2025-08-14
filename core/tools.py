@@ -200,6 +200,36 @@ def json2csv(jsdata):
         data.append(values)
     return header, data
 
+def snake_to_title(value):
+    """Convert ``snake_case`` strings to Title Case with spaces.
+
+    Common abbreviations such as ``os`` and ``id`` are preserved in uppercase.
+    Non-string values or already formatted labels are returned unchanged.
+    """
+    if not isinstance(value, str):
+        return value
+
+    if not value.islower():
+        return value
+
+    abbreviations = {"os": "OS", "id": "ID"}
+    parts = value.split("_")
+    words = []
+    for part in parts:
+        if part in abbreviations:
+            words.append(abbreviations[part])
+            continue
+        for abbr, repl in abbreviations.items():
+            if part.endswith(abbr) and part != abbr:
+                prefix = part[:-len(abbr)]
+                if prefix:
+                    words.append(prefix.capitalize())
+                words.append(repl)
+                break
+        else:
+            words.append(part.capitalize())
+    return " ".join(words)
+
 def list_table_to_json(rows):
     """Convert a list-of-lists table to a list of dictionaries.
 

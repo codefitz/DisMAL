@@ -11,6 +11,7 @@ sys.modules.setdefault("paramiko", types.SimpleNamespace())
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from core.api import get_json, search_results, show_runs, get_outposts, map_outpost_credentials
 import core.api as api_mod
+from core.tools import normalize_keys
 from core import queries, tools
 import core.access as access
 
@@ -146,7 +147,7 @@ def test_show_runs_excavate_routes_to_define_csv(monkeypatch):
 
     show_runs(disco, args)
 
-    assert recorded["header"] == ["Run Id", "Status"]
+    assert recorded["header"] == normalize_keys(["Run Id", "Status"])
     assert recorded["data"] == [["1", "running"]]
 
 
@@ -367,12 +368,13 @@ def test_capture_candidates_writes_csv(monkeypatch):
 
     api_mod.capture_candidates(types.SimpleNamespace(), args, "/tmp")
 
-    expected_header = ["Discovery Instance"] + [api_mod.tools.snake_to_camel(h) for h in sorted(results[0].keys())]
+    keys = sorted(results[0])
+    expected_header = ["Discovery Instance"] + normalize_keys(keys)
     expected_row = [
         "appl"
     ] + [
         (results[0][k] if results[0][k] is not None else "N/A")
-        for k in sorted(results[0])
+        for k in keys
     ]
 
     assert captured["header"] == expected_header

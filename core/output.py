@@ -258,6 +258,8 @@ def define_txt(args,result,path,filename):
 def define_csv(args,head_ep,data,path,file,target,type):
     # Manage all Output options
     cli_out = getattr(args, "output_cli", False)
+    if isinstance(head_ep, list):
+        head_ep = tools.normalize_keys(head_ep)
     if type == "cmd":
         if args.output_file:
             cmd2csv(head_ep, data, ":", file, target)

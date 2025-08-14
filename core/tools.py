@@ -314,3 +314,20 @@ def list_table_to_json(rows):
         headers = rows[0]
         return [dict(zip(headers, r)) for r in rows[1:]]
     return rows
+
+def normalize_keys(keys):
+    """Return header names in Title Case with spaces.
+
+    Any key containing underscores or entirely lowercase characters is
+    converted to a human-friendly form. Keys that already contain
+    capital letters or spaces are returned unchanged.
+    """
+
+    normalized = []
+    for key in keys:
+        if "_" in key or key.islower():
+            normalized.append(key.replace("_", " ").title())
+        else:
+            normalized.append(key)
+    return normalized
+

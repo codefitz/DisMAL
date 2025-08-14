@@ -420,8 +420,10 @@ def show_runs(disco, args):
     else:
         if getattr(args, "excavate", None):
             out_dir = getattr(args, "reporting_dir", "")
+            csv_headers = tools.normalize_keys(headers)
             output.define_csv(
                 args,
+                csv_headers,
                 header_hf,
                 run_csvs,
                 os.path.join(out_dir, defaults.current_scans_filename),
@@ -592,22 +594,10 @@ def missing_vms(search, args, dir):
                     row.extend(["N/A", "N/A", "N/A"])
             print(os.linesep, end="\r")
 
-            # Convert select headers to CamelCase now that lookups are done
-            header = [
-                tools.to_camel_case(h)
-                if h in {
-                    "Guest_Full_Name",
-                    "last_identity",
-                    "last_scanned",
-                    "last_result",
-                }
-                else h
-                for h in header
-            ]
-
+            csv_header = tools.normalize_keys(header)
             output.define_csv(
                 args,
-                header_hf,
+                csv_header,
                 data,
                 dir + defaults.missing_vms_filename,
                 args.output_file,
@@ -672,10 +662,11 @@ def capture_candidates(search, args, dir):
         for row in rows:
             row.insert(0, args.target)
     else:
-        header_hf.insert(0, "Discovery Instance")
+        header.insert(0, "Discovery Instance")
+    csv_header = tools.normalize_keys(header)
     output.define_csv(
         args,
-        header_hf,
+        csv_header,
         rows,
         dir + defaults.capture_candidates_filename,
         args.output_file,

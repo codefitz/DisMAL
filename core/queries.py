@@ -114,6 +114,7 @@ scanrange = {
 last_disco = {
             "query":"""
                     search DiscoveryAccess where endtime
+                    ORDER BY discovery_endtime DESC
                     show
                     #id as "DA_ID",
                     #Next:Sequential:Previous:DiscoveryAccess.#id as "Previous_DA_ID",
@@ -160,6 +161,7 @@ last_disco = {
                             or #DiscoveryAccess:Metadata:Detail:SessionResult.session_type) as 'Access_Method',
                     #::InferredElement:.__all_ip_addrs as 'Inferred_All_IP_Addrs',
                     #::InferredElement:.#DeviceWithInterface:DeviceInterface:InterfaceOfDevice:NetworkInterface.ip_addr as 'NIC_IPs'
+                    process with unique(endpoint)
 """
 }
 ip_schedules = """search DiscoveryAccess

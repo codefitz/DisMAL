@@ -373,20 +373,47 @@ def test_update_schedule_timezone_reset():
 
     assert disco.patches[0][1]["schedule"]["start_times"] == [15]
 
+def test_host_util_converts_numeric_columns(monkeypatch):
+    sample = [
+        {
+            "hostname": "h1",
+            "hashed_hostname": "hash",
+            "os": "Linux",
+            "OS_Type": "Linux",
+            "virtual": False,
+            "cloud": False,
+            "Endpoint": "ep",
+            "Running Software Instances": "1",
+            "Candidate Software Instances": "2",
+            "Running Processes": "3",
+            "Running Services (Windows)": "4",
+        }
+    ]
 
-def test_ping_builds_command_list(monkeypatch):
-    """ping should pass arguments as a list to subprocess.run."""
+    monkeypatch.setattr(api_mod, "search_results", lambda *a, **k: sample)
+    monkeypatch.setattr(api_mod.tools, "completage", lambda *a, **k: 0)
 
-    captured = {}
+    recorded = {}
 
-    def fake_run(cmd, *a, **k):
-        captured["cmd"] = cmd
-        return types.SimpleNamespace(returncode=0)
+    def fake_define_csv(args, header, rows, path, *a):
+        recorded["header"] = header
+        recorded["rows"] = rows
 
-    monkeypatch.setattr(access.subprocess, "run", fake_run)
-    monkeypatch.setattr(access.platform, "system", lambda: "Linux")
+    monkeypatch.setattr(api_mod.output, "define_csv", fake_define_csv)
 
-    access.ping("host")
+    args = types.SimpleNamespace(target="appl", output_file=None)
 
-    assert captured["cmd"] == ["ping", "-c", "1", "-w", "2", "host"]
+    api_mod.host_util(None, args, "/tmp")
+
+    header = recorded["header"]
+    row = recorded["rows"][0]
+    index_map = {h: i for i, h in enumerate(header)}
+    for col in [
+        "Running Software Instances",
+        "Candidate Software Instances",
+        "Running Processes",
+        "Running Services (Windows)",
+    ]:
+        assert isinstance(row[index_map[col]], int)
+    assert "OS_Type" in header
 

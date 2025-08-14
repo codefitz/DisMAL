@@ -129,6 +129,68 @@ def test_successful_combines_query_results(monkeypatch):
     assert row[8] == pytest.approx(5 / 9)
 
 
+def test_successful_coerces_string_counts(monkeypatch):
+    """Counts provided as strings should be converted to numbers."""
+
+    def fake_search_results(search, query):
+        if query is reporting.queries.credential_success:
+            return [{"UUID": "u1", "Session_Type": "ssh", "Count": "2"}]
+        if query is reporting.queries.deviceinfo_success:
+            return [{"UUID": "u1", "Session_Type": "ssh", "Count": "3"}]
+        if query is reporting.queries.credential_failure:
+            return [{"UUID": "u1", "Session_Type": "ssh", "Count": "4"}]
+        return []
+
+    call = {"n": 0}
+
+    def fake_get_json(*a, **k):
+        call["n"] += 1
+        if call["n"] == 1:
+            return [
+                {
+                    "uuid": "u1",
+                    "label": "c",
+                    "index": 1,
+                    "enabled": True,
+                    "username": "user",
+                    "usage": "",
+                    "iprange": None,
+                    "exclusions": None,
+                }
+            ]
+        return []
+
+    monkeypatch.setattr(reporting.api, "get_json", fake_get_json)
+    monkeypatch.setattr(reporting.api, "search_results", fake_search_results)
+    monkeypatch.setattr(reporting.builder, "get_credentials", lambda entry: entry)
+    monkeypatch.setattr(reporting.builder, "get_scans", lambda *a, **k: [])
+
+    captured = {}
+
+    def fake_report(data, headers, args, name=""):
+        captured["row"] = data[0]
+
+    monkeypatch.setattr(reporting, "output", types.SimpleNamespace(report=fake_report))
+
+    args = types.SimpleNamespace(
+        output_csv=False,
+        output_file=None,
+        token=None,
+        target="http://x",
+        include_endpoints=None,
+        endpoint_prefix=None,
+    )
+
+    reporting.successful(DummyCreds(), DummySearch(), args)
+
+    row = captured["row"]
+    assert row[6] == 5
+    assert row[7] == 4
+    assert isinstance(row[6], int)
+    assert isinstance(row[7], int)
+    assert isinstance(row[8], float)
+
+
 def test_successful_uses_token_file(monkeypatch, tmp_path):
     file_path = tmp_path / "token.txt"
     file_path.write_text("abc")
@@ -185,7 +247,16 @@ def test_discovery_access_with_dropped_only(monkeypatch):
         if query is reporting.queries.last_disco:
             return []
         if query is reporting.queries.dropped_endpoints:
-            return [{"Endpoint": "1.2.3.4", "End": "2024-01-01 00:00:00", "Run": "r", "Start": "2024-01-01 00:00:00", "End_State": "DarkSpace"}]
+            return [
+                {
+                    "Endpoint": "1.2.3.4",
+                    "End": "2024-01-01 00:00:00",
+                    "End_Raw": "2024-01-01T00:00:00+00:00",
+                    "Run": "r",
+                    "Start": "2024-01-01 00:00:00",
+                    "End_State": "DarkSpace",
+                }
+            ]
         return []
 
     monkeypatch.setattr(reporting.api, "search_results", fake_search_results)
@@ -201,3 +272,75 @@ def test_discovery_access_with_dropped_only(monkeypatch):
     reporting.discovery_access(DummySearch(), DummyCreds(), args)
 
     assert "ran" in called
+
+
+def test_discovery_analysis_includes_raw_timestamp(monkeypatch):
+    class DummyDF(dict):
+        def __init__(self, data):
+            super().__init__({k: {0: v[0] if isinstance(v, list) else v} for k, v in data.items()})
+
+        def __getitem__(self, key):
+            return self.get(key)
+
+        def __setitem__(self, key, value):
+            dict.__setitem__(self, key, {0: value})
+
+        def to_dict(self):
+            return self
+
+    monkeypatch.setattr(reporting.builder, "unique_identities", lambda s, *a, **k: [])
+
+    def fake_search_results(search, query):
+        if query is reporting.queries.last_disco:
+            return [
+                {
+                    "Endpoint": "1.1.1.1",
+                    "Scan_Endtime": "2024-01-01 00:00:00",
+                    "Scan_Endtime_Raw": "2024-01-01T00:00:00+00:00",
+                    "End_State": "OK",
+                }
+            ]
+        if query is reporting.queries.dropped_endpoints:
+            return [
+                {
+                    "Endpoint": "2.2.2.2",
+                    "End": "2024-01-02 00:00:00",
+                    "End_Raw": "2024-01-02T00:00:00+00:00",
+                    "Run": "r",
+                    "Start": "2024-01-02 00:00:00",
+                    "End_State": "DarkSpace",
+                }
+            ]
+        return []
+
+    monkeypatch.setattr(reporting.api, "search_results", fake_search_results)
+    monkeypatch.setattr(reporting.api, "get_json", lambda *a, **k: [])
+    monkeypatch.setattr(reporting.api, "map_outpost_credentials", lambda *a, **k: {})
+    monkeypatch.setattr(reporting.pd, "DataFrame", lambda data: DummyDF(data), raising=False)
+    monkeypatch.setattr(reporting.pd, "cut", lambda *a, **k: "recent", raising=False)
+
+    captured = {}
+
+    def fake_report(data, headers, args, name=""):
+        captured["data"] = data
+        captured["headers"] = headers
+
+    monkeypatch.setattr(reporting, "output", types.SimpleNamespace(report=fake_report))
+
+    args = types.SimpleNamespace(
+        output_csv=True,
+        output_file=None,
+        token=None,
+        target="http://x",
+        include_endpoints=None,
+        endpoint_prefix=None,
+    )
+
+    reporting.discovery_analysis(DummySearch(), DummyCreds(), args)
+
+    idx = captured["headers"].index("scan_end_raw")
+    disco_row = next(row for row in captured["data"] if row[0] == "1.1.1.1")
+    dropped_row = next(row for row in captured["data"] if row[0] == "2.2.2.2")
+
+    assert disco_row[idx] == "2024-01-01T00:00:00+00:00"
+    assert dropped_row[idx] == "2024-01-02T00:00:00+00:00"

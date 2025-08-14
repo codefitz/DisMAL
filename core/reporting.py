@@ -939,6 +939,8 @@ def _gather_discovery_data(twsearch, twcreds, args):
             run_end = tools.getr(result, "Run_Endtime", None)
             scan_start = tools.getr(result, "Scan_Starttime", None)
             scan_end = tools.getr(result, "Scan_Endtime")
+            # Raw end time for export; retains original timestamp format
+            disco_end_raw = tools.getr(result, "Discovery_Endtime", None)
             scan_end_str = " ".join(scan_end.split(" ")[:2])
             ep_timestamp = datetime.datetime.strptime(
                 scan_end_str, "%Y-%m-%d %H:%M:%S"
@@ -1011,6 +1013,7 @@ def _gather_discovery_data(twsearch, twcreds, args):
                     "run_end": run_end,
                     "scan_start": scan_start,
                     "scan_end": scan_end,
+                    "discovery_endtime": disco_end_raw,
                     "when_was_that": whenWasThat,
                     "consistency": consistency,
                     "current_access": current_access,
@@ -1125,6 +1128,7 @@ def discovery_access(twsearch, twcreds, args, disco_data=None):
                 ddata.get("run_end"),
                 ddata.get("scan_start"),
                 ddata.get("scan_end"),
+                ddata.get("discovery_endtime"),
                 ddata.get("when_was_that"),
                 ddata.get("consistency"),
                 ddata.get("current_access"),
@@ -1157,6 +1161,7 @@ def discovery_access(twsearch, twcreds, args, disco_data=None):
                 "discovery_run_end",
                 "scan_start",
                 "scan_end",
+                "discovery_endtime",
                 "when_was_that",
                 "consistency",
                 "current_access",
@@ -1182,6 +1187,7 @@ def discovery_access(twsearch, twcreds, args, disco_data=None):
             data.append([
                 ddata.get("endpoint"),
                 ddata.get("hostname"),
+                ddata.get("discovery_endtime"),
                 ddata.get("when_was_that"),
                 ddata.get("node_updated"),
                 ddata.get("consistency"),
@@ -1190,6 +1196,7 @@ def discovery_access(twsearch, twcreds, args, disco_data=None):
             headers = [
                 "endpoint",
                 "device_name",
+                "discovery_endtime",
                 "when_was_that",
                 "inferred_node_updated",
                 "consistency",

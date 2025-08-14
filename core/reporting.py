@@ -124,7 +124,8 @@ def successful(creds, search, args):
         detail = builder.get_credentials(cred)
 
         uuid = detail.get('uuid')
-        index = tools.getr(detail,'index',0)
+        # Ensure index is numeric for downstream calculations
+        index = int(tools.getr(detail, 'index', 0) or 0)
         
         ip_range = tools.getr(detail,'iprange',None)
         list_of_ranges = tools.range_to_ips(ip_range)
@@ -173,14 +174,14 @@ def successful(creds, search, args):
             msg = "Sessions and DevInfos: %s" % success
             logger.debug(msg)
         elif sessions[0]:
-            #print (sessions)
-            success = sessions[1]
+            # Successful sessions without device info results
+            success = int(sessions[1])
             session = sessions[0]
             msg = "Sessions only: %s" % success
             logger.debug(msg)
         elif devinfos[0]:
-            #print (devinfos)
-            success = devinfos[1]
+            # Device info successes only
+            success = int(devinfos[1])
             session = devinfos[0]
             msg = "DevInfos only: %s" % success
             logger.debug(msg)
@@ -194,9 +195,12 @@ def successful(creds, search, args):
         logger.debug(msg)
 
         if failure[1]:
-            fails = failure[1]
+            fails = int(failure[1])
             logger.debug("Failures:%s"%fails)
-            
+
+        # Coerce success/fail counts to ints and compute percentage as float
+        success = int(success)
+        fails = int(fails)
         total = success + fails
         percent = 0.0
         if total > 0:
@@ -1357,7 +1361,7 @@ def tpl_export(search, query, dir, method, client, sysuser, syspass):
     if method == "api":
         response = api.search_results(search, query)
         if type(response) == list and len(response) > 0:
-            header, data = tools.json2csv(response)
+            header, data, header_hf = tools.json2csv(response)
             for row in data:
                 filename = "%s/%s.tpl"%(tpldir,row[1])
                 files+=1

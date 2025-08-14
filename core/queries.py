@@ -279,6 +279,7 @@ host_utilisation = """
                         hostname,
                         hash(hostname) as 'hashed_hostname',
                         os,
+                        os_type as 'OS_Type',
                         virtual,
                         cloud,
                         #InferredElement:Inference:Associate:DiscoveryAccess.endpoint as 'Endpoint',
@@ -513,7 +514,7 @@ snmp_devices = """
                     process with countUnique()
                   """
 
-device_capture_candidates = """
+capture_candidates = """
                     search DiscoveryAccess where end_state = 'UnsupportedDevice' and _last_marker
                     traverse DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo where sysobjectid
                     show

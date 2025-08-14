@@ -153,7 +153,7 @@ Providing no <report> or using "default" will run all options that do not requir
 "suggest_cred_opt"          - Display suggested order of credentials based on restricted ips, excluded ips, success/failure, privilege, type
 "tku"                       - TKU version summary
 "unrecognised_snmp"         - Report of unrecognised SNMP devices (Model > Device)
-"device_capture_candidates" - Report of device capture candidates
+"capture_candidates" - Report of capture candidates
 "vault"                     - Vault details
 "default"                   - Run all options that do not require a value
 \n
@@ -312,7 +312,7 @@ if args.access_method == "all":
         cli.software_lifecycle(cli_target, args, system_user, system_passwd, reporting_dir)
         cli.db_lifecycle(cli_target, args, system_user, system_passwd, reporting_dir)
         cli.unrecognised_snmp(cli_target, args, system_user, system_passwd, reporting_dir)
-        cli.device_capture_candidates(cli_target, args, system_user, system_passwd, reporting_dir)
+        cli.capture_candidates(cli_target, args, system_user, system_passwd, reporting_dir)
         cli.installed_agents(cli_target, args, system_user, system_passwd, reporting_dir)
         cli.software_usernames(cli_target, args, system_user, system_passwd, reporting_dir)
         cli.module_summary(cli_target, args, system_user, system_passwd, reporting_dir)
@@ -346,7 +346,7 @@ if args.access_method == "all":
         api.near_removal(search, args, reporting_dir)
         api.removed(search, args, reporting_dir)
         api.snmp(search, args, reporting_dir)
-        api.device_capture_candidates(search, args, reporting_dir)
+        api.capture_candidates(search, args, reporting_dir)
         api.oslc(search, args, reporting_dir)
         api.slc(search, args, reporting_dir)
         api.dblc(search, args, reporting_dir)
@@ -501,8 +501,8 @@ if args.access_method=="cli":
     if excavate_default or (args.excavate and args.excavate[0] == "unrecogised_snmp"):
         cli.unrecognised_snmp(cli_target, args, system_user, system_passwd, reporting_dir)
 
-    if excavate_default or (args.excavate and args.excavate[0] == "device_capture_candidates"):
-        cli.device_capture_candidates(cli_target, args, system_user, system_passwd, reporting_dir)
+    if excavate_default or (args.excavate and args.excavate[0] == "capture_candidates"):
+        cli.capture_candidates(cli_target, args, system_user, system_passwd, reporting_dir)
 
     if excavate_default or (args.excavate and args.excavate[0] == "installed_agents"):
         cli.installed_agents(cli_target, args, system_user, system_passwd, reporting_dir)
@@ -692,8 +692,8 @@ if args.access_method=="api":
     if excavate_default or (args.excavate and args.excavate[0] == "unrecogised_snmp"):
         api.snmp(search, args, reporting_dir)
 
-    if excavate_default or (args.excavate and args.excavate[0] == "device_capture_candidates"):
-        api.device_capture_candidates(search, args, reporting_dir)
+    if excavate_default or (args.excavate and args.excavate[0] == "capture_candidates"):
+        api.capture_candidates(search, args, reporting_dir)
 
     if excavate_default or (args.excavate and args.excavate[0] == "installed_agents"):
         api.agents(search, args, reporting_dir)

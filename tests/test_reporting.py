@@ -129,6 +129,68 @@ def test_successful_combines_query_results(monkeypatch):
     assert row[8] == pytest.approx(5 / 9)
 
 
+def test_successful_coerces_string_counts(monkeypatch):
+    """Counts provided as strings should be converted to numbers."""
+
+    def fake_search_results(search, query):
+        if query is reporting.queries.credential_success:
+            return [{"UUID": "u1", "Session_Type": "ssh", "Count": "2"}]
+        if query is reporting.queries.deviceinfo_success:
+            return [{"UUID": "u1", "Session_Type": "ssh", "Count": "3"}]
+        if query is reporting.queries.credential_failure:
+            return [{"UUID": "u1", "Session_Type": "ssh", "Count": "4"}]
+        return []
+
+    call = {"n": 0}
+
+    def fake_get_json(*a, **k):
+        call["n"] += 1
+        if call["n"] == 1:
+            return [
+                {
+                    "uuid": "u1",
+                    "label": "c",
+                    "index": 1,
+                    "enabled": True,
+                    "username": "user",
+                    "usage": "",
+                    "iprange": None,
+                    "exclusions": None,
+                }
+            ]
+        return []
+
+    monkeypatch.setattr(reporting.api, "get_json", fake_get_json)
+    monkeypatch.setattr(reporting.api, "search_results", fake_search_results)
+    monkeypatch.setattr(reporting.builder, "get_credentials", lambda entry: entry)
+    monkeypatch.setattr(reporting.builder, "get_scans", lambda *a, **k: [])
+
+    captured = {}
+
+    def fake_report(data, headers, args, name=""):
+        captured["row"] = data[0]
+
+    monkeypatch.setattr(reporting, "output", types.SimpleNamespace(report=fake_report))
+
+    args = types.SimpleNamespace(
+        output_csv=False,
+        output_file=None,
+        token=None,
+        target="http://x",
+        include_endpoints=None,
+        endpoint_prefix=None,
+    )
+
+    reporting.successful(DummyCreds(), DummySearch(), args)
+
+    row = captured["row"]
+    assert row[6] == 5
+    assert row[7] == 4
+    assert isinstance(row[6], int)
+    assert isinstance(row[7], int)
+    assert isinstance(row[8], float)
+
+
 def test_successful_uses_token_file(monkeypatch, tmp_path):
     file_path = tmp_path / "token.txt"
     file_path.write_text("abc")

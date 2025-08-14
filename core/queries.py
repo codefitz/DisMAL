@@ -114,6 +114,7 @@ scanrange = {
 last_disco = {
             "query":"""
                     search DiscoveryAccess where endtime
+                    ORDER BY discovery_endtime DESC
                     show
                     #id as "DA_ID",
                     #Next:Sequential:Previous:DiscoveryAccess.#id as "Previous_DA_ID",
@@ -128,6 +129,7 @@ last_disco = {
                     friendlyTime(discovery_starttime) as 'Scan_Starttime',
                     friendlyTime(discovery_endtime) as 'Scan_Endtime',
                     discovery_endtime as 'Scan_Endtime_Raw',
+                    discovery_endtime as 'Discovery_Endtime',
                     whenWasThat(discovery_endtime) as 'When_Last_Scan',
                     (#DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.last_access_method in ['windows', 'rcmd']
                         and #DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.last_slave
@@ -161,6 +163,7 @@ last_disco = {
                             or #DiscoveryAccess:Metadata:Detail:SessionResult.session_type) as 'Access_Method',
                     #::InferredElement:.__all_ip_addrs as 'Inferred_All_IP_Addrs',
                     #::InferredElement:.#DeviceWithInterface:DeviceInterface:InterfaceOfDevice:NetworkInterface.ip_addr as 'NIC_IPs'
+                    process with unique(endpoint)
 """
 }
 ip_schedules = """search DiscoveryAccess
@@ -281,6 +284,7 @@ host_utilisation = """
                         hostname,
                         hash(hostname) as 'hashed_hostname',
                         os,
+                        os_type as 'OS_Type',
                         virtual,
                         cloud,
                         #InferredElement:Inference:Associate:DiscoveryAccess.endpoint as 'Endpoint',
@@ -515,19 +519,19 @@ snmp_devices = """
                     process with countUnique()
                   """
 
-device_capture_candidates = """
+capture_candidates = """
                     search DiscoveryAccess where end_state = 'UnsupportedDevice' and _last_marker
                     traverse DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo where sysobjectid
                     show
-                    access_method,
-                    request_time,
-                    hostname,
-                    os,
-                    failure_reason,
-                    syscontact,
-                    syslocation,
-                    sysdescr,
-                    sysobjectid
+                    access_method as 'Access Method',
+                    request_time as 'Request Time',
+                    hostname as 'Hostname',
+                    os as 'OS',
+                    failure_reason as 'Failure Reason',
+                    syscontact as 'Syscontact',
+                    syslocation as 'Syslocation',
+                    sysdescr as 'Sysdescr',
+                    sysobjectid as 'Sysobject ID'
                 """
 
 missing_vms = """

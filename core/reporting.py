@@ -124,7 +124,8 @@ def successful(creds, search, args):
         detail = builder.get_credentials(cred)
 
         uuid = detail.get('uuid')
-        index = tools.getr(detail,'index',0)
+        # Ensure index is numeric for downstream calculations
+        index = int(tools.getr(detail, 'index', 0) or 0)
         
         ip_range = tools.getr(detail,'iprange',None)
         list_of_ranges = tools.range_to_ips(ip_range)
@@ -173,14 +174,14 @@ def successful(creds, search, args):
             msg = "Sessions and DevInfos: %s" % success
             logger.debug(msg)
         elif sessions[0]:
-            #print (sessions)
-            success = sessions[1]
+            # Successful sessions without device info results
+            success = int(sessions[1])
             session = sessions[0]
             msg = "Sessions only: %s" % success
             logger.debug(msg)
         elif devinfos[0]:
-            #print (devinfos)
-            success = devinfos[1]
+            # Device info successes only
+            success = int(devinfos[1])
             session = devinfos[0]
             msg = "DevInfos only: %s" % success
             logger.debug(msg)
@@ -194,9 +195,12 @@ def successful(creds, search, args):
         logger.debug(msg)
 
         if failure[1]:
-            fails = failure[1]
+            fails = int(failure[1])
             logger.debug("Failures:%s"%fails)
-            
+
+        # Coerce success/fail counts to ints and compute percentage as float
+        success = int(success)
+        fails = int(fails)
         total = success + fails
         percent = 0.0
         if total > 0:
@@ -305,6 +309,7 @@ def successful(creds, search, args):
     print(os.linesep,end="\r")
 
     if data:
+        headers = tools.normalize_headers(headers)
         headers.insert(0, "Discovery Instance")
         for row in data:
             row.insert(0, getattr(args, "target", None))
@@ -390,6 +395,7 @@ def successful_cli(client, args, sysuser, passwd, reporting_dir):
             data.append([ detail.get('label'), uuid, detail.get('username'), types, None, None, 0.0, "Credential appears to not be in use (%s)" % status, detail.get('usage'), detail.get('internal_store'), list_of_ranges, ip_exclude ])
         headers = [ "Credential", "UUID", "Login ID", "Protocol", "Successes", "Failures", "Success %", "State", "Usage", "Store", "Scan Ranges", "Exclude Ranges" ]
 
+    headers = tools.normalize_headers(headers)
     headers.insert(0,"Discovery Instance")
     for row in data:
         row.insert(0, args.target)
@@ -864,6 +870,7 @@ def ipaddr(search, credentials, args):
     )
 
 
+
 def _gather_discovery_data(twsearch, twcreds, args):
     """Return discovery access records without change analysis."""
 
@@ -897,8 +904,7 @@ def _gather_discovery_data(twsearch, twcreds, args):
     sorted_endpoints = tools.sortlist(list(disco_by_endpoint.keys()))
 
     # Build a lookup map so each endpoint can retrieve its identity without
-    # repeatedly scanning the entire identity list.  This maps every IP to the
-    # corresponding identity record once up front.
+    # repeatedly scanning the entire identity list.
     identity_map = {
         ip: identity
         for identity in identities
@@ -926,11 +932,41 @@ def _gather_discovery_data(twsearch, twcreds, args):
             timer_count,
         )
 
-        list_of_end_states = []
         records = disco_by_endpoint[endpoint]
 
+        end_states = [
+            tools.getr(r, "End_State", None)
+            for r in records["discos"] + records["dropped"]
+        ]
+        consistency = None
+        if end_states:
+            total = len(end_states)
+            counter = dict(Counter(end_states))
+            largest = max(counter, key=counter.get)
+            if counter[largest] == total:
+                consistency = f"Always {largest}"
+            elif counter[largest] >= total - 2:
+                consistency = f"Usually {largest}"
+            else:
+                consistency = f"Most Often {largest}"
+
+        identity = identity_map.get(endpoint, {})
+        list_of_endpoints = identity.get("list_of_ips")
+        list_of_names = identity.get("list_of_names")
+
+        endpoint_records = []
+
+        def _calc_when(ts):
+            delta = datetime.datetime.now() - ts
+            overall_mins = delta.days * 24 * 60 + (delta.seconds) / 60
+            whenData = pd.DataFrame({"in_minutes": [overall_mins]})
+            whenData["when"] = pd.cut(
+                whenData["in_minutes"], bins=bins, labels=labels, right=False
+            )
+            when = whenData.to_dict().get("when")
+            return when.get(0)
+
         for result in records["discos"]:
-            ep_record = {"endpoint": endpoint}
             hostname = tools.getr(result, "Hostname", None)
             os_type = tools.getr(result, "OS_Type", None)
             os_class = tools.getr(result, "OS_Class", None)
@@ -969,7 +1005,6 @@ def _gather_discovery_data(twsearch, twcreds, args):
             node_updated = tools.getr(result, "Host_Node_Updated", None)
             end_state = tools.getr(result, "End_State", None)
             prev_end_state = tools.getr(result, "Previous_End_State", None)
-            list_of_end_states.append(end_state)
             reason_not_updated = tools.getr(result, "Reason_Not_Updated", None)
             session_results_logged = tools.getr(
                 result, "Session_Results_Logged", None
@@ -980,33 +1015,13 @@ def _gather_discovery_data(twsearch, twcreds, args):
             last_credential = tools.getr(result, "Last_Credential", None)
             credential_name = None
             credential_login = None
-            list_of_names = None
-            list_of_endpoints = None
+            if last_credential:
+                cred_det = tools.get_credential(vaultcreds, last_credential)
+                credential_name = tools.getr(cred_det, "label", "Not Found")
+                credential_login = tools.getr(cred_det, "username", "Not Found")
             node_id = result.get("DA_ID")
             prev_node_id = result.get("Previous_DA_ID")
             next_node_id = result.get("Next_DA_ID")
-            for identity in identities:
-                if endpoint in identity.get("list_of_ips"):
-                    list_of_endpoints = identity.get("list_of_ips")
-                    list_of_names = identity.get("list_of_names")
-
-            if last_credential:
-                credential_details = tools.get_credential(vaultcreds, last_credential)
-                credential_name = tools.getr(credential_details, "label", "Not Found")
-                credential_login = tools.getr(
-                    credential_details, "username", "Not Found"
-                )
-
-            end_states_total = len(list_of_end_states)
-            end_states_counter = dict(Counter(list_of_end_states))
-            largest = max(end_states_counter, key=end_states_counter.get)
-            if end_states_counter[largest] == end_states_total:
-                consistency = f"Always {largest}"
-            elif end_states_counter[largest] >= end_states_total - 2:
-                consistency = f"Usually {largest}"
-            else:
-                consistency = f"Most Often {largest}"
-
             last_marker = result.get("Last_Marker")
 
             ep_record.update(
@@ -1045,7 +1060,6 @@ def _gather_discovery_data(twsearch, twcreds, args):
             disco_data.append(ep_record)
 
         for result in records["dropped"]:
-            ep_record = {"endpoint": endpoint}
             run_end = tools.getr(result, "End")
             scan_end_raw = tools.getr(result, "End_Raw", None)
             ep_timestamp = None
@@ -1072,19 +1086,32 @@ def _gather_discovery_data(twsearch, twcreds, args):
             whenWasThat = when.get(0)
             disco_run = tools.getr(result, "Run", None)
             run_start = tools.getr(result, "Start", None)
-            run_end = tools.getr(result, "End", None)
             end_state = tools.getr(result, "End_State", None)
-            list_of_end_states.append(end_state)
+            reason_not_updated = tools.getr(result, "Reason_Not_Updated", None)
+            ep_record = {
+                "endpoint": endpoint,
+                "list_of_names": list_of_names,
+                "list_of_endpoints": list_of_endpoints,
+                "disco_run": disco_run,
+                "run_start": run_start,
+                "run_end": run_end,
+                "when_was_that": whenWasThat,
+                "reason_not_updated": reason_not_updated,
+                "end_state": end_state,
+                "timestamp": run_end_timestamp,
+            }
+            endpoint_records.append(ep_record)
 
-            end_states_total = len(list_of_end_states)
-            end_states_counter = dict(Counter(list_of_end_states))
-            largest = max(end_states_counter, key=end_states_counter.get)
-            if end_states_counter[largest] == end_states_total:
-                consistency = f"Always {largest}"
-            elif end_states_counter[largest] >= end_states_total - 2:
-                consistency = f"Usually {largest}"
-            else:
-                consistency = f"Most Often {largest}"
+        if not endpoint_records:
+            continue
+
+        named_records = [
+            r for r in endpoint_records if r.get("hostname") or r.get("credential_name")
+        ]
+        if named_records:
+            chosen = max(named_records, key=lambda r: r["timestamp"])
+        else:
+            chosen = max(endpoint_records, key=lambda r: r["timestamp"])
 
             reason_not_updated = tools.getr(result, "Reason_Not_Updated", None)
             list_of_names = None
@@ -1148,6 +1175,7 @@ def discovery_access(twsearch, twcreds, args, disco_data=None):
                 ddata.get("scan_start"),
                 ddata.get("scan_end"),
                 ddata.get("scan_end_raw"),
+                ddata.get("discovery_endtime"),
                 ddata.get("when_was_that"),
                 ddata.get("consistency"),
                 ddata.get("current_access"),
@@ -1181,6 +1209,7 @@ def discovery_access(twsearch, twcreds, args, disco_data=None):
                 "scan_start",
                 "scan_end",
                 "scan_end_raw",
+                "discovery_endtime",
                 "when_was_that",
                 "consistency",
                 "current_access",
@@ -1206,6 +1235,7 @@ def discovery_access(twsearch, twcreds, args, disco_data=None):
             data.append([
                 ddata.get("endpoint"),
                 ddata.get("hostname"),
+                ddata.get("discovery_endtime"),
                 ddata.get("when_was_that"),
                 ddata.get("node_updated"),
                 ddata.get("consistency"),
@@ -1214,6 +1244,7 @@ def discovery_access(twsearch, twcreds, args, disco_data=None):
             headers = [
                 "endpoint",
                 "device_name",
+                "discovery_endtime",
                 "when_was_that",
                 "inferred_node_updated",
                 "consistency",
@@ -1383,7 +1414,7 @@ def tpl_export(search, query, dir, method, client, sysuser, syspass):
     if method == "api":
         response = api.search_results(search, query)
         if type(response) == list and len(response) > 0:
-            header, data = tools.json2csv(response)
+            header, data, header_hf = tools.json2csv(response)
             for row in data:
                 filename = "%s/%s.tpl"%(tpldir,row[1])
                 files+=1

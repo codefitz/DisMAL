@@ -85,6 +85,10 @@ python3 dismal.py --access_method api -i <appliance_host> -u <username> -p <pass
 
 Only the two specified endpoints are queried and reported on.
 
+The resulting device-IDs report includes a **Coverage %** column indicating
+the proportion of unique IP addresses seen for each originating endpoint
+compared to the total endpoints examined.
+
 ## Reports
 
 Two related reports focus on Discovery Access history:

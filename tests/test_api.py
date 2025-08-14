@@ -11,7 +11,7 @@ sys.modules.setdefault("paramiko", types.SimpleNamespace())
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from core.api import get_json, search_results, show_runs, get_outposts, map_outpost_credentials
 import core.api as api_mod
-from core import queries
+from core import queries, tools
 import core.access as access
 
 class DummyResponse:

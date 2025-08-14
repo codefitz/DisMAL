@@ -718,7 +718,8 @@ if cli_target:
     cli_target.close()
 
 elapsed = time.time() - start_time
-msg = f"Completed in {elapsed:.2f} seconds"
+formatted = output.format_duration(elapsed)
+msg = f"Completed in {formatted}"
 print(msg)
 logger.info(msg)
 

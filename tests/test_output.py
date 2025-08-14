@@ -40,3 +40,9 @@ def test_timer_variants(capsys, monkeypatch):
     run(decorated_called, "decorated_called")
     run(decorated_positional, "Report Name")
     run(decorated_keyword, "Report Name")
+
+
+def test_format_duration_units():
+    assert output.format_duration(45) == "45.00 seconds"
+    assert output.format_duration(120) == "2.00 minutes"
+    assert output.format_duration(7200) == "2.00 hours"

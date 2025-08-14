@@ -15,6 +15,27 @@ from . import tools, api
 
 logger = logging.getLogger("_output_")
 
+def format_duration(seconds: float) -> str:
+    """Format a duration in seconds into a human-friendly string.
+
+    Parameters
+    ----------
+    seconds : float
+        The number of seconds to format.
+
+    Returns
+    -------
+    str
+        A string representing the duration in seconds, minutes, or hours
+        depending on the magnitude.
+    """
+
+    if seconds < 60:
+        return f"{seconds:.2f} seconds"
+    if seconds < 3600:
+        return f"{seconds / 60:.2f} minutes"
+    return f"{seconds / 3600:.2f} hours"
+
 def _timer(func=None, *, name=None):
     """Decorator to time report generation and log the duration.
 
@@ -40,12 +61,7 @@ def _timer(func=None, *, name=None):
             start = time.time()
             result = func(*args, **kwargs)
             elapsed = time.time() - start
-            if elapsed < 60:
-                formatted = f"{elapsed:.2f} seconds"
-            elif elapsed < 3600:
-                formatted = f"{elapsed/60:.2f} minutes"
-            else:
-                formatted = f"{elapsed/3600:.2f} hours"
+            formatted = format_duration(elapsed)
             msg = f"Report completed in {formatted}"
             print(msg)
             logger.info(msg)

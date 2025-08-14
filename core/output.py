@@ -129,6 +129,7 @@ def save2csv(clidata, filename, appliance):
         header = clidata.split("\n",1)[0].strip().split(',')
         body = clidata.split("\n",1)[1]
         data = []
+        header = tools.normalize_headers(header)
         header.insert(0,"Discovery Instance")
         for line in body.split("\r\n"):
             if line:
@@ -203,6 +204,7 @@ def report(data, heads, args, name=None):
 
 def cmd2csv(header,result,seperator,filename,appliance):
     data = []
+    header = tools.normalize_headers(header)
     header.insert(0,"Discovery Instance")
     for line in result.split("\r\n"):
         lines = line.split("\n")
@@ -223,11 +225,11 @@ def cmd2csv(header,result,seperator,filename,appliance):
 def query2csv(search, query, filename, appliance):
     response = api.search_results(search, query)
     if type(response) == list and len(response) > 0:
-        header, data = tools.json2csv(response)
-        header.insert(0,"Discovery Instance")
+        header, data, header_hf = tools.json2csv(response)
+        header_hf.insert(0, "Discovery Instance")
         for row in data:
             row.insert(0, appliance)
-        csv_file(data, header, filename)
+        csv_file(data, header_hf, filename)
     else:
         txt_dump("No results.",filename)
 

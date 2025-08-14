@@ -124,7 +124,8 @@ def successful(creds, search, args):
         detail = builder.get_credentials(cred)
 
         uuid = detail.get('uuid')
-        index = tools.getr(detail,'index',0)
+        # Ensure index is numeric for downstream calculations
+        index = int(tools.getr(detail, 'index', 0) or 0)
         
         ip_range = tools.getr(detail,'iprange',None)
         list_of_ranges = tools.range_to_ips(ip_range)
@@ -173,14 +174,14 @@ def successful(creds, search, args):
             msg = "Sessions and DevInfos: %s" % success
             logger.debug(msg)
         elif sessions[0]:
-            #print (sessions)
-            success = sessions[1]
+            # Successful sessions without device info results
+            success = int(sessions[1])
             session = sessions[0]
             msg = "Sessions only: %s" % success
             logger.debug(msg)
         elif devinfos[0]:
-            #print (devinfos)
-            success = devinfos[1]
+            # Device info successes only
+            success = int(devinfos[1])
             session = devinfos[0]
             msg = "DevInfos only: %s" % success
             logger.debug(msg)
@@ -194,9 +195,12 @@ def successful(creds, search, args):
         logger.debug(msg)
 
         if failure[1]:
-            fails = failure[1]
+            fails = int(failure[1])
             logger.debug("Failures:%s"%fails)
-            
+
+        # Coerce success/fail counts to ints and compute percentage as float
+        success = int(success)
+        fails = int(fails)
         total = success + fails
         percent = 0.0
         if total > 0:
@@ -305,6 +309,7 @@ def successful(creds, search, args):
     print(os.linesep,end="\r")
 
     if data:
+        headers = tools.normalize_headers(headers)
         headers.insert(0, "Discovery Instance")
         for row in data:
             row.insert(0, getattr(args, "target", None))
@@ -390,6 +395,7 @@ def successful_cli(client, args, sysuser, passwd, reporting_dir):
             data.append([ detail.get('label'), uuid, detail.get('username'), types, None, None, 0.0, "Credential appears to not be in use (%s)" % status, detail.get('usage'), detail.get('internal_store'), list_of_ranges, ip_exclude ])
         headers = [ "Credential", "UUID", "Login ID", "Protocol", "Successes", "Failures", "Success %", "State", "Usage", "Store", "Scan Ranges", "Exclude Ranges" ]
 
+    headers = tools.normalize_headers(headers)
     headers.insert(0,"Discovery Instance")
     for row in data:
         row.insert(0, args.target)
@@ -1357,7 +1363,7 @@ def tpl_export(search, query, dir, method, client, sysuser, syspass):
     if method == "api":
         response = api.search_results(search, query)
         if type(response) == list and len(response) > 0:
-            header, data = tools.json2csv(response)
+            header, data, header_hf = tools.json2csv(response)
             for row in data:
                 filename = "%s/%s.tpl"%(tpldir,row[1])
                 files+=1

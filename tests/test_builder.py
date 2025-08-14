@@ -70,7 +70,7 @@ def test_ordering_inserts_instance_and_outpost(monkeypatch):
     assert captured["name"] == "suggest_cred_opt"
     assert captured["headers"][0] == "Discovery Instance"
     assert "Scope" in captured["headers"]
-    assert "Outpost URL" in captured["headers"]
+    assert "OutpostUrl" in captured["headers"]
     assert captured["data"]
     assert captured["data"][0][0] == "appl"
 

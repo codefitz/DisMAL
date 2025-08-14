@@ -513,7 +513,7 @@ snmp_devices = """
                     process with countUnique()
                   """
 
-device_capture_candidates = """
+capture_candidates = """
                     search DiscoveryAccess where end_state = 'UnsupportedDevice' and _last_marker
                     traverse DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo where sysobjectid
                     show

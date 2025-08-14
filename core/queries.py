@@ -279,6 +279,7 @@ host_utilisation = """
                         hostname,
                         hash(hostname) as 'hashed_hostname',
                         os,
+                        os_type as 'OS_Type',
                         virtual,
                         cloud,
                         #InferredElement:Inference:Associate:DiscoveryAccess.endpoint as 'Endpoint',

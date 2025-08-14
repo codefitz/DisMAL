@@ -517,8 +517,24 @@ def host_util(search, args, dir):
     if isinstance(results, list) and results:
         header, rows = tools.json2csv(results)
         header.insert(0, "Discovery Instance")
+        numeric_fields = [
+            "Candidate Software Instances",
+            "Running Processes",
+            "Running Services (Windows)",
+            "Running Software Instances",
+        ]
+        numeric_indexes = [
+            header.index(field)
+            for field in numeric_fields
+            if field in header
+        ]
         for row in rows:
             row.insert(0, args.target)
+            for idx in numeric_indexes:
+                try:
+                    row[idx] = int(row[idx])
+                except (ValueError, TypeError):
+                    row[idx] = 0
     else:
         header.insert(0, "Discovery Instance")
     output.define_csv(

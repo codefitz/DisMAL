@@ -795,12 +795,12 @@ def unique_identities(search, include_endpoints=None, endpoint_prefix=None):
 
     return unique_identities
 
-def overlapping(tw_search, args):
+def ip_analysis(tw_search, args):
 
-    print("\nScheduled Scans Overlapping")
-    print("---------------------------")
-    logger.info("Running: Overlapping Report...")
-    print("Running: Overlapping Report...")
+    print("\nIP Analysis")
+    print("-----------")
+    logger.info("Running: IP analysis report...")
+    print("Running: IP analysis report...")
     heads = ["IP Address", "Scan Schedules"]
 
     logger.debug("Executing scan range query: %s", queries.scanrange.get("query", queries.scanrange))
@@ -810,7 +810,7 @@ def overlapping(tw_search, args):
     logger.debug("Raw scan range results: %s", scan_ranges)
     if scan_ranges is None or not isinstance(scan_ranges, list):
         logger.error("Failed to retrieve scan ranges")
-        output.report([], heads, args, name="overlapping_ips")
+        output.report([], heads, args, name="ip_analysis")
         return
     if len(scan_ranges) == 0:
         msg = "No scan ranges found"
@@ -859,7 +859,7 @@ def overlapping(tw_search, args):
     logger.debug("Raw exclude results: %s", excludes)
     if excludes is None or not isinstance(excludes, list):
         logger.error("Failed to retrieve excludes")
-        output.report([], heads, args, name="overlapping_ips")
+        output.report([], heads, args, name="ip_analysis")
         return
     if len(excludes) == 0:
         msg = "No exclude ranges found"
@@ -870,7 +870,7 @@ def overlapping(tw_search, args):
         e = excludes[0]
         if not isinstance(e, dict) or 'results' not in e:
             logger.error("Invalid excludes result structure")
-            output.report([], heads, args, name="overlapping_ips")
+            output.report([], heads, args, name="ip_analysis")
             return
 
     logger.debug("Parsed %d exclude results", len(e.get("results", [])))
@@ -918,7 +918,7 @@ def overlapping(tw_search, args):
         logger.info(msg)
         print(msg)
 
-    output.report(data, heads, args, name="overlapping_ips")
+    output.report(data, heads, args, name="ip_analysis")
 
 def get_scans(results, list_of_ranges):
     """Return labels of scans that include any of ``list_of_ranges``.

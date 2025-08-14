@@ -28,7 +28,7 @@ class DummySearch:
         return DummyResponse()
 
 
-def test_overlapping_handles_bad_api(monkeypatch):
+def test_ip_analysis_handles_bad_api(monkeypatch):
     called = {}
 
     def fake_report(*a, **k):
@@ -38,7 +38,7 @@ def test_overlapping_handles_bad_api(monkeypatch):
     args = types.SimpleNamespace(output_csv=False, output_file=None)
 
     # Should not raise even though API call fails
-    builder.overlapping(DummySearch(), args)
+    builder.ip_analysis(DummySearch(), args)
 
     # When the API call fails the function should still report an empty result
     assert "ran" in called
@@ -102,7 +102,7 @@ def _setup_schedule_patches(monkeypatch, cred_list, excludes, scan_ranges):
     return vault, search, args, captured
 
 
-def _setup_overlap_patches(monkeypatch, scan_ranges, excludes):
+def _setup_ip_analysis_patches(monkeypatch, scan_ranges, excludes):
     seq = iter([scan_ranges, excludes])
 
     monkeypatch.setattr(builder.api, "get_json", lambda *a, **k: next(seq))
@@ -233,7 +233,7 @@ def test_scheduling_scan_ranges_no_results_key(monkeypatch):
     assert any(row[1] == "Scan Range" for row in captured["data"])
 
 
-def test_overlapping_scan_ranges_no_results_key(monkeypatch):
+def test_ip_analysis_scan_ranges_no_results_key(monkeypatch):
     scan_ranges = [{"Scan_Range": ["10.0.0.0/24"], "ID": 1, "Label": "r", "Level": "L", "Date_Rules": ""}]
     excludes = [{"results": []}]
 
@@ -260,26 +260,26 @@ def test_overlapping_scan_ranges_no_results_key(monkeypatch):
     search = types.SimpleNamespace(search=lambda *a, **k: None)
     args = types.SimpleNamespace(output_csv=False, output_file=None)
 
-    builder.overlapping(search, args)
+    builder.ip_analysis(search, args)
 
     assert "data" in called
 
 
-def test_overlapping_empty_excludes(monkeypatch, capsys):
+def test_ip_analysis_empty_excludes(monkeypatch, capsys):
     scan_ranges = [{"results": [{"Scan_Range": ["10.0.0.0/24"], "ID": 1, "Label": "r", "Level": "L", "Date_Rules": ""}]}]
-    search, args, captured = _setup_overlap_patches(monkeypatch, scan_ranges, [])
+    search, args, captured = _setup_ip_analysis_patches(monkeypatch, scan_ranges, [])
 
-    builder.overlapping(search, args)
+    builder.ip_analysis(search, args)
     out = capsys.readouterr().out
 
     assert "No exclude ranges found" in out
     assert captured["data"] == []
 
 
-def test_overlapping_empty_scan_ranges(monkeypatch, capsys):
-    search, args, captured = _setup_overlap_patches(monkeypatch, [], [{"results": []}])
+def test_ip_analysis_empty_scan_ranges(monkeypatch, capsys):
+    search, args, captured = _setup_ip_analysis_patches(monkeypatch, [], [{"results": []}])
 
-    builder.overlapping(search, args)
+    builder.ip_analysis(search, args)
     out = capsys.readouterr().out
 
     assert "No scan ranges found" in out

@@ -143,7 +143,7 @@ Providing no <report> or using "default" will run all options that do not requir
 "open_ports"                - Export of open ports analysis
 "orphan_vms"                - Report of Virtual Machines that are not related to a container Host
 "os_lifecycle"              - Export OS lifecycle report
-"overlapping_ips"           - Run overlapping range analysis report
+"ip_analysis"               - Run IP analysis report
 "pattern_modules"           - Summary of installed pattern modules
 "removed"                   - Export list of devices removed in the last 7 days (aged out)
 "schedules"                 - Export of schedules with additional list of which credentials will be used with scan/exclude
@@ -332,7 +332,7 @@ if args.access_method == "all":
         api.success(creds, search, args, reporting_dir)
         builder.scheduling(creds, search, args)
         api.excludes(search, args, reporting_dir)
-        builder.overlapping(search, args)
+        builder.ip_analysis(search, args)
         reporting.discovery_access(search, creds, args)
         reporting.discovery_analysis(search, creds, args)
         api.show_runs(disco, args)
@@ -633,8 +633,8 @@ if args.access_method=="api":
     if excavate_default or (args.excavate and args.excavate[0] == "excludes"):
         api.excludes(search, args, reporting_dir)
 
-    if excavate_default or (args.excavate and args.excavate[0] == "overlapping_ips"):
-        builder.overlapping(search, args)
+    if excavate_default or (args.excavate and args.excavate[0] == "ip_analysis"):
+        builder.ip_analysis(search, args)
 
     # Gather discovery data once and reuse for both reporting calls.
     disco_data = None

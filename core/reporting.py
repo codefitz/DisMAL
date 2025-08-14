@@ -975,13 +975,31 @@ def _gather_discovery_data(twsearch, twcreds, args):
             run_end = tools.getr(result, "Run_Endtime", None)
             scan_start = tools.getr(result, "Scan_Starttime", None)
             scan_end = tools.getr(result, "Scan_Endtime")
-            # Raw end time for export; retains original timestamp format
-            disco_end_raw = tools.getr(result, "Discovery_Endtime", None)
-            scan_end_str = " ".join(scan_end.split(" ")[:2])
-            ep_timestamp = datetime.datetime.strptime(
-                scan_end_str, "%Y-%m-%d %H:%M:%S"
+            scan_end_raw = tools.getr(result, "Scan_Endtime_Raw", None)
+            ep_timestamp = None
+            if scan_end_raw:
+                try:
+                    ep_timestamp = datetime.datetime.fromisoformat(
+                        scan_end_raw.replace("Z", "+00:00")
+                    )
+                except ValueError:
+                    logger.debug(
+                        "Failed to parse Scan_Endtime_Raw %r", scan_end_raw
+                    )
+            if ep_timestamp is None and scan_end:
+                scan_end_str = " ".join(scan_end.split(" ")[:2])
+                ep_timestamp = datetime.datetime.strptime(
+                    scan_end_str, "%Y-%m-%d %H:%M:%S"
+                )
+            time_now = datetime.datetime.now(ep_timestamp.tzinfo) if ep_timestamp else datetime.datetime.now()
+            delta = time_now - ep_timestamp if ep_timestamp else datetime.timedelta()
+            overall_mins = delta.days * 24 * 60 + (delta.seconds) / 60
+            whenData = pd.DataFrame({"in_minutes": [overall_mins]})
+            whenData["when"] = pd.cut(
+                whenData["in_minutes"], bins=bins, labels=labels, right=False
             )
-            whenWasThat = _calc_when(ep_timestamp)
+            when = whenData.to_dict().get("when")
+            whenWasThat = when.get(0)
             current_access = tools.getr(result, "Current_Access", None)
             os_version = tools.getr(result, "OS_Version", None)
             node_updated = tools.getr(result, "Host_Node_Updated", None)
@@ -1005,45 +1023,67 @@ def _gather_discovery_data(twsearch, twcreds, args):
             prev_node_id = result.get("Previous_DA_ID")
             next_node_id = result.get("Next_DA_ID")
             last_marker = result.get("Last_Marker")
-            ep_record = {
-                "endpoint": endpoint,
-                "hostname": hostname,
-                "list_of_names": list_of_names,
-                "list_of_endpoints": list_of_endpoints,
-                "node_kind": node_kind,
-                "os_type": os_type,
-                "os_version": os_version,
-                "os_class": os_class,
-                "disco_run": disco_run,
-                "run_start": run_start,
-                "run_end": run_end,
-                "scan_start": scan_start,
-                "scan_end": scan_end,
-                "when_was_that": whenWasThat,
-                "current_access": current_access,
-                "node_updated": node_updated,
-                "reason_not_updated": reason_not_updated,
-                "end_state": end_state,
-                "previous_end_state": prev_end_state,
-                "session_results_logged": session_results_logged,
-                "last_credential": last_credential,
-                "credential_name": credential_name,
-                "credential_login": credential_login,
-                "timestamp": ep_timestamp,
-                "da_id": node_id,
-                "prev_da_id": prev_node_id,
-                "next_node_id": next_node_id,
-                "last_marker": last_marker,
-            }
-            endpoint_records.append(ep_record)
+
+            ep_record.update(
+                {
+                    "hostname": hostname,
+                    "list_of_names": list_of_names,
+                    "list_of_endpoints": list_of_endpoints,
+                    "node_kind": node_kind,
+                    "os_type": os_type,
+                    "os_version": os_version,
+                    "os_class": os_class,
+                    "disco_run": disco_run,
+                    "run_start": run_start,
+                    "run_end": run_end,
+                    "scan_start": scan_start,
+                    "scan_end": scan_end,
+                    "scan_end_raw": scan_end_raw,
+                    "when_was_that": whenWasThat,
+                    "consistency": consistency,
+                    "current_access": current_access,
+                    "node_updated": node_updated,
+                    "reason_not_updated": reason_not_updated,
+                    "end_state": end_state,
+                    "previous_end_state": prev_end_state,
+                    "session_results_logged": session_results_logged,
+                    "last_credential": last_credential,
+                    "credential_name": credential_name,
+                    "credential_login": credential_login,
+                    "timestamp": ep_timestamp,
+                    "da_id": node_id,
+                    "prev_da_id": prev_node_id,
+                    "next_node_id": next_node_id,
+                    "last_marker": last_marker,
+                }
+            )
+            disco_data.append(ep_record)
 
         for result in records["dropped"]:
             run_end = tools.getr(result, "End")
-            run_end_str = " ".join(run_end.split(" ")[:2])
-            run_end_timestamp = datetime.datetime.strptime(
-                run_end_str, "%Y-%m-%d %H:%M:%S"
+            scan_end_raw = tools.getr(result, "End_Raw", None)
+            ep_timestamp = None
+            if scan_end_raw:
+                try:
+                    ep_timestamp = datetime.datetime.fromisoformat(
+                        scan_end_raw.replace("Z", "+00:00")
+                    )
+                except ValueError:
+                    logger.debug("Failed to parse End_Raw %r", scan_end_raw)
+            if ep_timestamp is None and run_end:
+                run_end_str = " ".join(run_end.split(" ")[:2])
+                ep_timestamp = datetime.datetime.strptime(
+                    run_end_str, "%Y-%m-%d %H:%M:%S"
+                )
+            time_now = datetime.datetime.now(ep_timestamp.tzinfo) if ep_timestamp else datetime.datetime.now()
+            delta = time_now - ep_timestamp if ep_timestamp else datetime.timedelta()
+            overall_mins = delta.days * 24 * 60 + (delta.seconds) / 60
+            whenData = pd.DataFrame({"in_minutes": [overall_mins]})
+            whenData["when"] = pd.cut(
+                whenData["in_minutes"], bins=bins, labels=labels, right=False
             )
-            whenWasThat = _calc_when(run_end_timestamp)
+            when = whenData.to_dict().get("when")
+            whenWasThat = when.get(0)
             disco_run = tools.getr(result, "Run", None)
             run_start = tools.getr(result, "Start", None)
             end_state = tools.getr(result, "End_State", None)
@@ -1073,14 +1113,31 @@ def _gather_discovery_data(twsearch, twcreds, args):
         else:
             chosen = max(endpoint_records, key=lambda r: r["timestamp"])
 
-        newest = max(endpoint_records, key=lambda r: r["timestamp"])
-        if newest["timestamp"] > chosen["timestamp"]:
-            chosen["timestamp"] = newest["timestamp"]
-            chosen["when_was_that"] = newest["when_was_that"]
+            reason_not_updated = tools.getr(result, "Reason_Not_Updated", None)
+            list_of_names = None
+            list_of_endpoints = None
+            for identity in identities:
+                if endpoint in identity.get("list_of_ips"):
+                    list_of_endpoints = identity.get("list_of_ips")
+                    list_of_names = identity.get("list_of_names")
 
-        chosen["dropped"] = len(records["dropped"])
-        chosen["consistency"] = consistency
-        disco_data.append(chosen)
+            ep_record.update(
+                {
+                    "list_of_names": list_of_names,
+                    "list_of_endpoints": list_of_endpoints,
+                    "disco_run": disco_run,
+                    "run_start": run_start,
+                    "run_end": run_end,
+                    "scan_end_raw": scan_end_raw,
+                    "when_was_that": whenWasThat,
+                    "consistency": consistency,
+                    "reason_not_updated": reason_not_updated,
+                    "end_state": end_state,
+                    "timestamp": ep_timestamp,
+                    "dropped": 1,
+                }
+            )
+            disco_data.append(ep_record)
 
     return disco_data
 
@@ -1117,6 +1174,7 @@ def discovery_access(twsearch, twcreds, args, disco_data=None):
                 ddata.get("run_end"),
                 ddata.get("scan_start"),
                 ddata.get("scan_end"),
+                ddata.get("scan_end_raw"),
                 ddata.get("discovery_endtime"),
                 ddata.get("when_was_that"),
                 ddata.get("consistency"),
@@ -1150,6 +1208,7 @@ def discovery_access(twsearch, twcreds, args, disco_data=None):
                 "discovery_run_end",
                 "scan_start",
                 "scan_end",
+                "scan_end_raw",
                 "discovery_endtime",
                 "when_was_that",
                 "consistency",
@@ -1252,6 +1311,7 @@ def discovery_analysis(twsearch, twcreds, args, disco_data=None):
                 ddata.get("run_end"),
                 ddata.get("scan_start"),
                 ddata.get("scan_end"),
+                ddata.get("scan_end_raw"),
                 ddata.get("when_was_that"),
                 ddata.get("consistency"),
                 ddata.get("current_access"),
@@ -1285,6 +1345,7 @@ def discovery_analysis(twsearch, twcreds, args, disco_data=None):
                 "discovery_run_end",
                 "scan_start",
                 "scan_end",
+                "scan_end_raw",
                 "when_was_that",
                 "consistency",
                 "current_access",

@@ -128,6 +128,7 @@ last_disco = {
                     friendlyTime(#Member:List:List:DiscoveryRun.endtime) as 'Run_Endtime',
                     friendlyTime(discovery_starttime) as 'Scan_Starttime',
                     friendlyTime(discovery_endtime) as 'Scan_Endtime',
+                    discovery_endtime as 'Scan_Endtime_Raw',
                     discovery_endtime as 'Discovery_Endtime',
                     whenWasThat(discovery_endtime) as 'When_Last_Scan',
                     (#DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.last_access_method in ['windows', 'rcmd']
@@ -177,6 +178,7 @@ dropped_endpoints = """
                     __reason as 'End_State',
                     friendlyTime(starttime) as 'Start',
                     friendlyTime(endtime) as 'End',
+                    endtime as 'End_Raw',
                     whenWasThat(endtime) as 'When_Last_Scan',
                     #EndpointRange:EndpointRange:DiscoveryRun:DiscoveryRun.label as "Run"
                 """

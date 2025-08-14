@@ -18,6 +18,10 @@ EXPECTED_REPORTS = OrderedDict([
     ("overlapping_ips", "Overlapping IP ranges"),
 ])
 
+def snake_to_title(value: str) -> str:
+    """Convert snake_case strings to Title Case with spaces."""
+    return " ".join(part.capitalize() for part in value.split("_"))
+
 # Configuration
 base_dir = "."
 output_dirs = sorted(glob(os.path.join(base_dir, "output*")))
@@ -48,7 +52,12 @@ for csv_name in unique_csv_filenames:
         try:
             # Read all columns as strings to avoid dtype warnings
             df = pd.read_csv(file, dtype=str, low_memory=False)
-            df["Exported_Logs"] = os.path.basename(os.path.dirname(file))
+            df['Exported_Logs'] = os.path.basename(os.path.dirname(file))  # record export directory
+            # Rename export column to a friendly format before concatenation
+            df.rename(
+                columns={'Exported_Logs': snake_to_title('Exported_Logs')},
+                inplace=True,
+            )
             dfs.append(df)
         except Exception as e:
             print(f"Error reading {file}: {e}")
@@ -74,7 +83,8 @@ for csv_name in unique_csv_filenames:
                 f"Trimmed {csv_name} to {MAX_EXCEL_ROWS} rows to fit Excel limits",
             )
 
-        sheet_name = os.path.splitext(csv_name)[0][:31]  # Excel sheet name limit
+        sheet_name = snake_to_title(os.path.splitext(csv_name)[0])[:31]
+        # Excel sheet names have a 31-character limit
         combined.to_excel(writer, sheet_name=sheet_name, index=False, header=True)
         print(f"Added sheet: {sheet_name} ({len(dfs)} files)")
 

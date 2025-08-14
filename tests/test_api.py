@@ -11,7 +11,8 @@ sys.modules.setdefault("paramiko", types.SimpleNamespace())
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from core.api import get_json, search_results, show_runs, get_outposts, map_outpost_credentials
 import core.api as api_mod
-from core import queries
+from core import queries, tools
+import core.access as access
 
 class DummyResponse:
     def __init__(self, status_code=200, data="{}", reason="OK", url="http://x"):
@@ -145,8 +146,36 @@ def test_show_runs_excavate_routes_to_define_csv(monkeypatch):
 
     show_runs(disco, args)
 
-    assert recorded["header"] == ["run_id", "status"]
+    assert recorded["header"] == ["Run Id", "Status"]
     assert recorded["data"] == [["1", "running"]]
+
+
+def test_discovery_runs_emits_ints_and_camel_headers(monkeypatch):
+    runs = [{
+        "range_id": "r1",
+        "done": "1",
+        "pre_scanning": "2",
+        "scanning": "3",
+        "total": "4",
+    }]
+    disco = DummyDisco(DummyResponse(200, json.dumps(runs)))
+    captured = {}
+
+    def fake_define_csv(args, header, rows, path, file, target, typ):
+        captured["header"] = header
+        captured["rows"] = rows
+
+    monkeypatch.setattr(api_mod.output, "define_csv", fake_define_csv)
+
+    args = types.SimpleNamespace(target="appl", output_file=None)
+
+    api_mod.discovery_runs(disco, args, "/tmp")
+
+    assert captured["header"] == ["Discovery Instance", "Done", "Pre Scanning", "Range Id", "Scanning", "Total"]
+    assert captured["rows"] == [["appl", 1, 2, "r1", 3, 4]]
+    row = captured["rows"][0]
+    for index in [1, 2, 4, 5]:
+        assert isinstance(row[index], int)
 
 def test_get_outposts_uses_deleted_false():
     """Verify get_outposts calls the correct API path."""
@@ -303,7 +332,7 @@ def test_search_results_list_table():
     assert result == [{"A": 1, "B": 2}]
 
 
-def test_device_capture_candidates_writes_csv(monkeypatch):
+def test_capture_candidates_writes_csv(monkeypatch):
     results = [
         {
             "access_method": "SNMP v2c",
@@ -314,7 +343,7 @@ def test_device_capture_candidates_writes_csv(monkeypatch):
             "syscontact": None,
             "syslocation": None,
             "sysdescr": "HP ETHERNET MULTI-ENVIRONMENT",
-            "sysobjectid": "0.0",
+            "sysobjectid": 0.0,
         }
     ]
 
@@ -336,11 +365,9 @@ def test_device_capture_candidates_writes_csv(monkeypatch):
 
     args = types.SimpleNamespace(output_file=None, target="appl")
 
-    api_mod.device_capture_candidates(types.SimpleNamespace(), args, "/tmp")
+    api_mod.capture_candidates(types.SimpleNamespace(), args, "/tmp")
 
-    expected_header = ["Discovery Instance"] + [
-        api_mod.tools.normalize_header(k) for k in sorted(results[0].keys())
-    ]
+    expected_header = ["Discovery Instance"] + [api_mod.tools.snake_to_camel(h) for h in sorted(results[0].keys())]
     expected_row = [
         "appl"
     ] + [
@@ -350,8 +377,33 @@ def test_device_capture_candidates_writes_csv(monkeypatch):
 
     assert captured["header"] == expected_header
     assert captured["rows"][0] == expected_row
-    assert captured["path"].endswith(api_mod.defaults.device_capture_candidates_filename)
+    assert captured["path"].endswith(api_mod.defaults.capture_candidates_filename)
 
+
+def test_device_capture_candidates_defaults_sysobjectid(monkeypatch):
+    results = [{"sysobjectid": None}]
+
+    monkeypatch.setattr(api_mod, "search_results", lambda *a, **k: results)
+    monkeypatch.setattr(api_mod.tools, "completage", lambda *a, **k: 0)
+
+    captured = {}
+
+    def fake_define_csv(args, header, rows, path, *a):
+        captured["header"] = header
+        captured["rows"] = rows
+
+    monkeypatch.setattr(
+        api_mod,
+        "output",
+        types.SimpleNamespace(define_csv=fake_define_csv),
+    )
+
+    args = types.SimpleNamespace(output_file=None, target="appl")
+
+    api_mod.device_capture_candidates(types.SimpleNamespace(), args, "/tmp")
+
+    idx = captured["header"].index("sysobjectid")
+    assert captured["rows"][0][idx] == 0
 
 def test_update_schedule_timezone_applies_offset():
     runs = [{"range_id": "r1", "schedule": {"start_times": [10, 23]}}]
@@ -373,4 +425,48 @@ def test_update_schedule_timezone_reset():
     api_mod.update_schedule_timezone(disco, args)
 
     assert disco.patches[0][1]["schedule"]["start_times"] == [15]
+
+def test_host_util_converts_numeric_columns(monkeypatch):
+    sample = [
+        {
+            "hostname": "h1",
+            "hashed_hostname": "hash",
+            "os": "Linux",
+            "OS_Type": "Linux",
+            "virtual": False,
+            "cloud": False,
+            "Endpoint": "ep",
+            "Running Software Instances": "1",
+            "Candidate Software Instances": "2",
+            "Running Processes": "3",
+            "Running Services (Windows)": "4",
+        }
+    ]
+
+    monkeypatch.setattr(api_mod, "search_results", lambda *a, **k: sample)
+    monkeypatch.setattr(api_mod.tools, "completage", lambda *a, **k: 0)
+
+    recorded = {}
+
+    def fake_define_csv(args, header, rows, path, *a):
+        recorded["header"] = header
+        recorded["rows"] = rows
+
+    monkeypatch.setattr(api_mod.output, "define_csv", fake_define_csv)
+
+    args = types.SimpleNamespace(target="appl", output_file=None)
+
+    api_mod.host_util(None, args, "/tmp")
+
+    header = recorded["header"]
+    row = recorded["rows"][0]
+    index_map = {h: i for i, h in enumerate(header)}
+    for col in [
+        "Running Software Instances",
+        "Candidate Software Instances",
+        "Running Processes",
+        "Running Services (Windows)",
+    ]:
+        assert isinstance(row[index_map[col]], int)
+    assert "OS_Type" in header
 

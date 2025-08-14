@@ -372,3 +372,48 @@ def test_update_schedule_timezone_reset():
 
     assert disco.patches[0][1]["schedule"]["start_times"] == [15]
 
+
+def test_host_util_converts_numeric_columns(monkeypatch):
+    sample = [
+        {
+            "hostname": "h1",
+            "hashed_hostname": "hash",
+            "os": "Linux",
+            "OS_Type": "Linux",
+            "virtual": False,
+            "cloud": False,
+            "Endpoint": "ep",
+            "Running Software Instances": "1",
+            "Candidate Software Instances": "2",
+            "Running Processes": "3",
+            "Running Services (Windows)": "4",
+        }
+    ]
+
+    monkeypatch.setattr(api_mod, "search_results", lambda *a, **k: sample)
+    monkeypatch.setattr(api_mod.tools, "completage", lambda *a, **k: 0)
+
+    recorded = {}
+
+    def fake_define_csv(args, header, rows, path, *a):
+        recorded["header"] = header
+        recorded["rows"] = rows
+
+    monkeypatch.setattr(api_mod.output, "define_csv", fake_define_csv)
+
+    args = types.SimpleNamespace(target="appl", output_file=None)
+
+    api_mod.host_util(None, args, "/tmp")
+
+    header = recorded["header"]
+    row = recorded["rows"][0]
+    index_map = {h: i for i, h in enumerate(header)}
+    for col in [
+        "Running Software Instances",
+        "Candidate Software Instances",
+        "Running Processes",
+        "Running Services (Windows)",
+    ]:
+        assert isinstance(row[index_map[col]], int)
+    assert "OS_Type" in header
+

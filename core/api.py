@@ -389,12 +389,15 @@ def show_runs(disco, args):
             disco_run.update({key: run[key]})
             headers.append(key)
         parsed_runs.append(disco_run)
+
     headers = tools.sortlist(headers)
+    headers, lookup = tools.normalize_headers(headers)
+
     run_csvs = []
     for run in parsed_runs:
         run_csv = []
         for header in headers:
-            value = run.get(header)
+            value = run.get(lookup[header])
             run_csv.append(value)
         run_csvs.append(run_csv)
 
@@ -545,11 +548,11 @@ def missing_vms(search, args, dir):
             for row in data:
                 row.insert(0, args.target)
 
-            gf_index = header.index("Guest_Full_Name") if "Guest_Full_Name" in header else None
+            gf_index = header.index("Guest Full Name") if "Guest Full Name" in header else None
             header.append("Pingable")
 
             devices = devices_lookup(search)
-            header.extend(["last_identity", "last_scanned", "last_result"])
+            header.extend(["Last Identity", "Last Scanned", "Last Result"])
 
             timer_count = 0
             for row in data:

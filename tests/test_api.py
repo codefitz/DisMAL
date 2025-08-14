@@ -145,7 +145,7 @@ def test_show_runs_excavate_routes_to_define_csv(monkeypatch):
 
     show_runs(disco, args)
 
-    assert recorded["header"] == ["run_id", "status"]
+    assert recorded["header"] == ["Run Id", "Status"]
     assert recorded["data"] == [["1", "running"]]
 
 def test_get_outposts_uses_deleted_false():
@@ -338,7 +338,8 @@ def test_device_capture_candidates_writes_csv(monkeypatch):
 
     api_mod.device_capture_candidates(types.SimpleNamespace(), args, "/tmp")
 
-    expected_header = ["Discovery Instance"] + sorted(results[0].keys())
+    expected_header_norm, _ = api_mod.tools.normalize_headers(sorted(results[0].keys()))
+    expected_header = ["Discovery Instance"] + expected_header_norm
     expected_row = [
         "appl"
     ] + [

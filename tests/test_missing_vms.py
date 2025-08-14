@@ -75,5 +75,6 @@ def test_missing_vms_enriches_from_devices(monkeypatch):
 
     api_mod.missing_vms(DummySearch(), args, "")
 
+    assert "GuestFullName" in captured["header"]
     assert captured["header"][-3:] == ["Last Identity", "Last Scanned", "Last Result"]
     assert captured["data"][0][-3:] == ["id1", "2024-01-01 10:00:00", "OK"]

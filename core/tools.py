@@ -10,6 +10,30 @@ from cidrize import cidrize
 
 logger = logging.getLogger("_tools_")
 
+def to_camel_case(value: str) -> str:
+    """Convert a string with separators to CamelCase.
+
+    Non-alphanumeric characters are treated as delimiters. For example,
+    ``last_scanned`` becomes ``LastScanned``.
+
+    Parameters
+    ----------
+    value : str
+        The string to convert.
+
+    Returns
+    -------
+    str
+        The CamelCase version of ``value``. Non-string inputs are returned
+        unchanged.
+    """
+
+    if not isinstance(value, str):
+        return value
+
+    parts = re.split(r"[^0-9a-zA-Z]+", value)
+    return "".join(part.capitalize() for part in parts if part)
+
 def snake_to_camel(value):
     """Convert snake_case string to Camel Case with spaces.
 

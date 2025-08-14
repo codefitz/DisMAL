@@ -232,8 +232,42 @@ def test_scheduling_scan_ranges_no_results_key(monkeypatch):
     assert captured["data"]
     assert any(row[1] == "Scan Range" for row in captured["data"])
 
+def test_scheduling_counts_numeric(monkeypatch):
+    cred = [{"uuid": "u1", "label": "c1", "index": 1, "ip_range": "10.0.0.0/24"}]
+    excludes = [
+        {
+            "results": [
+                {"Scan_Range": ["10.0.0.0/24"], "ID": 1, "Label": "ex", "Date_Rules": ""}
+            ]
+        }
+    ]
+    scan_ranges = [
+        {
+            "results": [
+                {
+                    "Scan_Range": ["10.0.0.0/24"],
+                    "ID": 2,
+                    "Label": "sr",
+                    "Level": "L",
+                    "Date_Rules": "",
+                }
+            ]
+        }
+    ]
 
-def test_ip_analysis_scan_ranges_no_results_key(monkeypatch):
+    vault, search, args, captured = _setup_schedule_patches(
+        monkeypatch, cred, excludes, scan_ranges
+    )
+    args.output_csv = True
+
+    builder.scheduling(vault, search, args)
+
+    for row in captured["data"]:
+        assert isinstance(row[3], int)
+        assert isinstance(row[6], int)
+
+
+def test_overlapping_scan_ranges_no_results_key(monkeypatch):
     scan_ranges = [{"Scan_Range": ["10.0.0.0/24"], "ID": 1, "Label": "r", "Level": "L", "Date_Rules": ""}]
     excludes = [{"results": []}]
 

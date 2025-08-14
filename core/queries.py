@@ -171,6 +171,17 @@ ip_schedules = """search DiscoveryAccess
                     nodecount(traverse Member:List:List:DiscoveryRun where scan_type = 'Scheduled') as 'schedules'
                     process with unique()"""
 
+connections_unscanned = """
+                    search Host
+                    traverse InferredElement:Inference:Associate:DiscoveryAccess
+                    traverse DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:NetworkConnectionList
+                    traverse List:List:Member:DiscoveredNetworkConnection
+                    order by remote_ip_addr
+                    show
+                    remote_ip_addr as 'Unscanned Host IP Address'
+                    processwith connectionsToUnseen
+                    """
+
 dropped_endpoints = """
                     search DroppedEndpoints
                     show explode endpoints as 'Endpoint',

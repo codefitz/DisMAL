@@ -34,3 +34,15 @@ def test_dequote_removes_quotes():
 def test_dequote_no_change():
     assert tools.dequote("hello") == "hello"
     assert tools.dequote("'hello'") == "'hello'"
+
+
+def test_getr_returns_falsy_values():
+    data = {"count": 0, "name": "", "none": None}
+    assert tools.getr(data, "count", "default") == 0
+    assert tools.getr(data, "name", "default") == ""
+    assert tools.getr(data, "none", "default") is None
+
+
+def test_getr_returns_default_for_missing_key():
+    data = {"present": 1}
+    assert tools.getr(data, "missing", "default") == "default"

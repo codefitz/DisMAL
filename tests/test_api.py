@@ -341,10 +341,7 @@ def test_device_capture_candidates_writes_csv(monkeypatch):
     expected_header = ["Discovery Instance"] + sorted(results[0].keys())
     expected_row = [
         "appl"
-    ] + [
-        (results[0][k] if results[0][k] is not None else "N/A")
-        for k in sorted(results[0])
-    ]
+    ] + [results[0][k] for k in sorted(results[0])]
 
     assert captured["header"] == expected_header
     assert captured["rows"][0] == expected_row

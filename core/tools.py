@@ -17,8 +17,12 @@ def in_wsl() -> bool:
     """
     return 'Microsoft' in uname().release
 
-def getr(data,attribute,default_value=None):
-    return data.get(attribute) or default_value
+def getr(data, attribute, default_value=None):
+    """Return ``data[attribute]`` if present, else ``default_value``.
+
+    This avoids treating falsy values like ``0`` or ``""`` as missing.
+    """
+    return data[attribute] if attribute in data else default_value
 
 def range_to_ips(iprange):
     """Return a list of :class:`ipaddress.IPv4Network`/`IPv6Network` objects.

@@ -314,7 +314,7 @@ def test_device_capture_candidates_writes_csv(monkeypatch):
             "syscontact": None,
             "syslocation": None,
             "sysdescr": "HP ETHERNET MULTI-ENVIRONMENT",
-            "sysobjectid": "0.0",
+            "sysobjectid": 0.0,
         }
     ]
 
@@ -350,6 +350,31 @@ def test_device_capture_candidates_writes_csv(monkeypatch):
     assert captured["rows"][0] == expected_row
     assert captured["path"].endswith(api_mod.defaults.device_capture_candidates_filename)
 
+
+def test_device_capture_candidates_defaults_sysobjectid(monkeypatch):
+    results = [{"sysobjectid": None}]
+
+    monkeypatch.setattr(api_mod, "search_results", lambda *a, **k: results)
+    monkeypatch.setattr(api_mod.tools, "completage", lambda *a, **k: 0)
+
+    captured = {}
+
+    def fake_define_csv(args, header, rows, path, *a):
+        captured["header"] = header
+        captured["rows"] = rows
+
+    monkeypatch.setattr(
+        api_mod,
+        "output",
+        types.SimpleNamespace(define_csv=fake_define_csv),
+    )
+
+    args = types.SimpleNamespace(output_file=None, target="appl")
+
+    api_mod.device_capture_candidates(types.SimpleNamespace(), args, "/tmp")
+
+    idx = captured["header"].index("sysobjectid")
+    assert captured["rows"][0][idx] == 0
 
 def test_update_schedule_timezone_applies_offset():
     runs = [{"range_id": "r1", "schedule": {"start_times": [10, 23]}}]

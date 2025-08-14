@@ -640,7 +640,24 @@ def device_capture_candidates(search, args, dir):
     print(os.linesep, end="\r")
     header, rows = [], []
     if isinstance(results, list) and results:
+        # Cast ``sysobjectid`` to a numeric type for csv output
+        for candidate in results:
+            if isinstance(candidate, dict):
+                value = candidate.get("sysobjectid")
+                try:
+                    candidate["sysobjectid"] = 0 if value is None else float(value)
+                except (ValueError, TypeError):
+                    candidate["sysobjectid"] = 0
+
         header, rows = tools.json2csv(results)
+
+        # ``json2csv`` treats ``0`` as a missing value.  Replace the
+        # generated entry with the numeric value to ensure it is preserved.
+        if "sysobjectid" in header:
+            idx = header.index("sysobjectid")
+            for candidate, row in zip(results, rows):
+                row[idx] = candidate.get("sysobjectid", 0)
+
         header.insert(0, "Discovery Instance")
         for row in rows:
             row.insert(0, args.target)

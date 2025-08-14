@@ -303,6 +303,7 @@ orphan_vms = """
                     hostname,
                     hash(hostname) as 'hashed_hostname',
                     os,
+                    #InferredElement:Inference:Associate:DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.os_type as 'OS_Type',
                     virtual,
                     cloud,
                     #InferredElement:Inference:Associate:DiscoveryAccess.endpoint as 'endpoint',

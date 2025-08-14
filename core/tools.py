@@ -10,6 +10,17 @@ from cidrize import cidrize
 
 logger = logging.getLogger("_tools_")
 
+def snake_to_camel(value):
+    """Convert snake_case string to Camel Case with spaces.
+
+    Examples:
+        >>> snake_to_camel("pre_scanning")
+        'Pre Scanning'
+    """
+    if not isinstance(value, str):
+        return value
+    return " ".join(word.capitalize() for word in value.split("_"))
+
 def in_wsl() -> bool:
     """
         WSL is thought to be the only common Linux kernel with Microsoft in the name, per Microsoft:
@@ -128,7 +139,8 @@ def list_of_lists(ci,attr,list_to_append):
 def session_get(results):
     sessions = {}
     for result in results:
-        count = result.get('Count')
+        # Cast count values to integers to ensure arithmetic works as expected
+        count = int(result.get('Count', 0))
         uuid = result.get('UUID')
         restype = result.get('Session_Type')
         if uuid:
@@ -187,7 +199,7 @@ def json2csv(jsdata):
     header = []
     data = []
     for jsitem in jsdata:
-        headers = jsitem.keys() # get the headers, unstructured
+        headers = jsitem.keys()  # get the headers, unstructured
         for label in headers:
             # create a unique list of ALL possible headers
             header.append(label)
@@ -196,9 +208,10 @@ def json2csv(jsdata):
         values = []
         for key in header:
             # Loop through the unique set of headers and get values if exist
-            values.append(getr(jsitem,key,"N/A")) # Substitute if missing
+            values.append(getr(jsitem, key, "N/A"))  # Substitute if missing
         data.append(values)
-    return header, data
+    human_header = [snake_to_camel(h) for h in header]
+    return header, data, human_header
 
 def list_table_to_json(rows):
     """Convert a list-of-lists table to a list of dictionaries.

@@ -25,6 +25,23 @@ def run_query(client,sysuser,passwd,query):
         print(data)
     return data
 
+
+def _get_tku_version(client, user, passwd):
+    """Return the TKU version string for the target appliance.
+
+    The command ``tw_pattern_management --list-uploads`` lists installed
+    knowledge updates.  We capture the first non-empty line as the TKU level.
+    If the command fails or returns nothing, ``Unknown`` is returned.
+    """
+
+    cmd = f"{defaults.tw_knowledge_cmd} -u {user} -p {passwd}"
+    result = access.remote_cmd(cmd, client)
+    for line in result.splitlines():
+        line = line.strip()
+        if line:
+            return line
+    return "Unknown"
+
 def certificates(client,args,dir):
     cmd = "%s %s:443"%(defaults.tls_certificates_cmd,args.target)
     logger.info("Running %s"%cmd)
@@ -394,8 +411,19 @@ def software_usernames(client,args,user,passwd,dir):
     output.define_csv(args,None,result,dir+defaults.si_user_accounts_filename,args.output_file,args.target,"csv")
 
 def module_summary(client,args,user,passwd,dir):
-    result = run_query(client,user,passwd,queries.patterns)
-    output.define_csv(args,None,result,dir+defaults.pattern_modules_filename,args.output_file,args.target,"csv")
+    tku_version = _get_tku_version(client, user, passwd)
+    result = run_query(client, user, passwd, queries.patterns)
+    # Include the TKU version as the second column in the resulting CSV
+    output.define_csv(
+        args,
+        None,
+        result,
+        dir + defaults.pattern_modules_filename,
+        args.output_file,
+        args.target,
+        "csv",
+        tku_version,
+    )
 
 def user_management(client, args):
     login = args.tw_user

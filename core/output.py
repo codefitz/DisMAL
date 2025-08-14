@@ -124,34 +124,47 @@ def csv_file(data, heads, filename):
             print(msg)
             logger.info(msg)
 
-def save2csv(clidata, filename, appliance):
+def save2csv(clidata, filename, appliance, tku=None):
+    """Convert CLI output to CSV.
+
+    If ``tku`` is provided, it will be inserted as the second column for
+    every row so consumers can correlate data with the TKU level used.
+    """
+
     try:
-        header = clidata.split("\n",1)[0].strip().split(',')
-        body = clidata.split("\n",1)[1]
+        header = clidata.split("\n", 1)[0].strip().split(',')
+        body = clidata.split("\n", 1)[1]
         data = []
-        header = tools.normalize_headers(header)
-        header.insert(0,"Discovery Instance")
+        header.insert(0, "Discovery Instance")
+        if tku is not None:
+            header.insert(1, "TKU")
         for line in body.split("\r\n"):
             if line:
                 try:
                     columns = [c.strip() for c in line.split(',')]
                     columns.insert(0, appliance)
+                    if tku is not None:
+                        columns.insert(1, tku)
                     data.append([tools.dequote(c) for c in columns])
                 except Exception as e:
-                    logger.error("Problem writing line to CSV:\n%s\n%s\n%s"%(line,e.__class__,str(e)))
+                    logger.error(
+                        "Problem writing line to CSV:\n%s\n%s\n%s" % (line, e.__class__, str(e))
+                    )
                     # Try dumping it instead
-                    msg = "save2csv: Parsing CLI data failed, dumping body data to %s"%filename
+                    msg = (
+                        "save2csv: Parsing CLI data failed, dumping body data to %s" % filename
+                    )
                     logger.info(msg)
                     print(msg)
-                    txt_dump(clidata,filename)
+                    txt_dump(clidata, filename)
         csv_file(data, header, filename)
     except Exception as e:
-        logger.error("Problem parsing data:\n%s\n%s"%(e.__class__,str(e)))
+        logger.error("Problem parsing data:\n%s\n%s" % (e.__class__, str(e)))
         # Try dumping it instead
-        msg = "save2csv: Parsing CLI data failed, dumping data to %s"%filename
+        msg = "save2csv: Parsing CLI data failed, dumping data to %s" % filename
         logger.info(msg)
         print(msg)
-        txt_dump(clidata,filename)
+        txt_dump(clidata, filename)
 
 def fancy_out(data, heads):
     try:
@@ -255,8 +268,14 @@ def define_txt(args,result,path,filename):
         else:
             txt_dump(result,path)
 
-def define_csv(args,head_ep,data,path,file,target,type):
-    # Manage all Output options
+def define_csv(args, head_ep, data, path, file, target, type, tku=None):
+    """Manage CSV-based output options.
+
+    When ``tku`` is provided, it is inserted as the second column after the
+    discovery instance name for each row written via ``save2csv``.  Existing
+    behaviour is preserved when ``tku`` is ``None``.
+    """
+
     cli_out = getattr(args, "output_cli", False)
     if isinstance(head_ep, list):
         head_ep = tools.normalize_keys(head_ep)
@@ -274,7 +293,7 @@ def define_csv(args,head_ep,data,path,file,target,type):
                 cmd2csv(head_ep, data, ":", path, target)
     elif type == "csv":
         if args.output_file:
-            save2csv(data, file, target)
+            save2csv(data, file, target, tku)
         elif args.output_csv:
             print(data)
         elif args.output_null:
@@ -283,7 +302,7 @@ def define_csv(args,head_ep,data,path,file,target,type):
             if cli_out:
                 print(data)
             else:
-                save2csv(data, path, target)
+                save2csv(data, path, target, tku)
     elif type == "query":
         if args.output_file:
             query2csv(head_ep, data, file, target)

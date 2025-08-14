@@ -709,19 +709,31 @@ def tku(knowledge, args, dir):
     k = get_json(api_response)
     if k:
         result = json.loads(json.dumps(k))
-        logger.debug('Knowledge:\n%s'%k)
-        if 'latest_edp' in result:
-            latest_edp = result['latest_edp']['name']
-        else:
-            latest_edp = "Not installed"
-        if 'latest_storage' in result:
-            latest_storage = result['latest_storage']['name']
-        else:
-            latest_storage = "Not installed"
-        latest_tku = result['latest_tku']['name']
-        tkus = (latest_tku, latest_edp, latest_storage)
-        tku_level = "\n".join(map(str, tkus))
-        output.define_txt(args,tku_level,dir+defaults.pattern_modules_filename,None)
+        logger.debug('Knowledge:\n%s' % k)
+        # Safely extract the latest uploads for each module, falling back to
+        # "Not installed" when the key is missing.
+        latest_edp = result.get('latest_edp', {}).get('name', 'Not installed')
+        latest_storage = result.get('latest_storage', {}).get('name', 'Not installed')
+        latest_tku = result.get('latest_tku', {}).get('name', 'Not installed')
+
+        # Build rows for CSV output. Each row is prefixed with the Discovery
+        # target so consumers know which appliance provided the data.
+        rows = [
+            [args.target, latest_tku],
+            [args.target, latest_edp],
+            [args.target, latest_storage],
+        ]
+
+        # Write a CSV file with a Discovery Instance and TKU columns.
+        output.define_csv(
+            args,
+            ["Discovery Instance", "TKU"],
+            rows,
+            dir + defaults.tku_filename,
+            args.output_file,
+            args.target,
+            "csv_file",
+        )
 
 def cancel_run(disco, args):
     run_id = args.a_kill_run

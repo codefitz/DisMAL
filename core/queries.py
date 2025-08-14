@@ -114,6 +114,7 @@ scanrange = {
 last_disco = {
             "query":"""
                     search DiscoveryAccess where endtime
+                    ORDER BY discovery_endtime DESC
                     show
                     #id as "DA_ID",
                     #Next:Sequential:Previous:DiscoveryAccess.#id as "Previous_DA_ID",
@@ -127,6 +128,8 @@ last_disco = {
                     friendlyTime(#Member:List:List:DiscoveryRun.endtime) as 'Run_Endtime',
                     friendlyTime(discovery_starttime) as 'Scan_Starttime',
                     friendlyTime(discovery_endtime) as 'Scan_Endtime',
+                    discovery_endtime as 'Scan_Endtime_Raw',
+                    discovery_endtime as 'Discovery_Endtime',
                     whenWasThat(discovery_endtime) as 'When_Last_Scan',
                     (#DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.last_access_method in ['windows', 'rcmd']
                         and #DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.last_slave
@@ -160,6 +163,7 @@ last_disco = {
                             or #DiscoveryAccess:Metadata:Detail:SessionResult.session_type) as 'Access_Method',
                     #::InferredElement:.__all_ip_addrs as 'Inferred_All_IP_Addrs',
                     #::InferredElement:.#DeviceWithInterface:DeviceInterface:InterfaceOfDevice:NetworkInterface.ip_addr as 'NIC_IPs'
+                    process with unique(endpoint)
 """
 }
 ip_schedules = """search DiscoveryAccess
@@ -174,6 +178,7 @@ dropped_endpoints = """
                     __reason as 'End_State',
                     friendlyTime(starttime) as 'Start',
                     friendlyTime(endtime) as 'End',
+                    endtime as 'End_Raw',
                     whenWasThat(endtime) as 'When_Last_Scan',
                     #EndpointRange:EndpointRange:DiscoveryRun:DiscoveryRun.label as "Run"
                 """
@@ -279,6 +284,7 @@ host_utilisation = """
                         hostname,
                         hash(hostname) as 'hashed_hostname',
                         os,
+                        os_type as 'OS_Type',
                         virtual,
                         cloud,
                         #InferredElement:Inference:Associate:DiscoveryAccess.endpoint as 'Endpoint',
@@ -297,6 +303,7 @@ orphan_vms = """
                     hostname,
                     hash(hostname) as 'hashed_hostname',
                     os,
+                    #InferredElement:Inference:Associate:DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.os_type as 'OS_Type',
                     virtual,
                     cloud,
                     #InferredElement:Inference:Associate:DiscoveryAccess.endpoint as 'endpoint',
@@ -332,7 +339,7 @@ near_removal = """
                     (#InferredElement:Inference:Associate:DiscoveryAccess.endpoint or 'DDD Aged Out') as 'Last Successful IP',
                     whenWasThat(last_update_success) as 'Last Successful Scan',
                     last_update_success as 'Last Successful Scan Date',
-                    age_count * -1 as 'Consecutive Scan Failures',
+                    value(age_count * -1) as 'Consecutive Scan Failures',
                     (@scans > 0 and @time_to_doom > 0 and #'%d scans, %d hours'(@scans,@time_to_doom)
                     or @scans > 0 and #'%d scans'(@scans) or @time_to_doom > 0 and #'%d hours'(@time_to_doom)
                     or 'Next unsuccessful scan') as 'Removal Eligibility'
@@ -513,19 +520,19 @@ snmp_devices = """
                     process with countUnique()
                   """
 
-device_capture_candidates = """
+capture_candidates = """
                     search DiscoveryAccess where end_state = 'UnsupportedDevice' and _last_marker
                     traverse DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo where sysobjectid
                     show
-                    access_method,
-                    request_time,
-                    hostname,
-                    os,
-                    failure_reason,
-                    syscontact,
-                    syslocation,
-                    sysdescr,
-                    sysobjectid
+                    access_method as 'Access Method',
+                    request_time as 'Request Time',
+                    hostname as 'Hostname',
+                    os as 'OS',
+                    failure_reason as 'Failure Reason',
+                    syscontact as 'Syscontact',
+                    syslocation as 'Syslocation',
+                    sysdescr as 'Sysdescr',
+                    sysobjectid as 'Sysobject ID'
                 """
 
 missing_vms = """

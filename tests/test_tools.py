@@ -36,13 +36,9 @@ def test_dequote_no_change():
     assert tools.dequote("'hello'") == "'hello'"
 
 
-def test_getr_returns_falsy_values():
-    data = {"count": 0, "name": "", "none": None}
-    assert tools.getr(data, "count", "default") == 0
-    assert tools.getr(data, "name", "default") == ""
-    assert tools.getr(data, "none", "default") is None
-
-
-def test_getr_returns_default_for_missing_key():
-    data = {"present": 1}
-    assert tools.getr(data, "missing", "default") == "default"
+def test_json2csv_returns_normalized_headers_and_map():
+    data = [{"first_name": "Jane", "last_name": "Doe"}]
+    header, rows, lookup = tools.json2csv(data, return_map=True)
+    assert header == ["First Name", "Last Name"]
+    assert rows == [["Jane", "Doe"]]
+    assert lookup == {"First Name": "first_name", "Last Name": "last_name"}

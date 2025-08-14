@@ -417,6 +417,10 @@ def devices(twsearch, twcreds, args):
     )
     results = api.search_results(twsearch,queries.deviceInfo)
 
+    # Track progress across all device result iterations
+    result_timer = 0
+    total_result_iterations = len(results) * len(identities)
+
     devices = []
     msg = None
     headers = []
@@ -427,7 +431,6 @@ def devices(twsearch, twcreds, args):
     for identity in identities:
         timer_count = tools.completage("Gathering Device Results...", len(identities), timer_count)
         logger.debug("Processing identity %s"%identity)
-        result_timer = 0  # Reset result progress counter for each identity
         latest_timestamp = None
         all_credentials_used = []
         all_discovery_runs = []
@@ -437,7 +440,7 @@ def devices(twsearch, twcreds, args):
         last_scanned_ip = None
         last_kind = None
         for result in results:
-            result_timer = tools.completage("Processing device results…", len(results), result_timer)
+            result_timer = tools.completage("Processing device results…", total_result_iterations, result_timer)
             da_endpoint = tools.getr(result,'DA_Endpoint',None)
             logger.debug("Checking endpoint %s in identity %s"%(da_endpoint,identity))
 

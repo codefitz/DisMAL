@@ -578,6 +578,19 @@ def missing_vms(search, args, dir):
                     row.extend(["N/A", "N/A", "N/A"])
             print(os.linesep, end="\r")
 
+            # Convert select headers to CamelCase now that lookups are done
+            header = [
+                tools.to_camel_case(h)
+                if h in {
+                    "Guest_Full_Name",
+                    "last_identity",
+                    "last_scanned",
+                    "last_result",
+                }
+                else h
+                for h in header
+            ]
+
             output.define_csv(
                 args,
                 header,

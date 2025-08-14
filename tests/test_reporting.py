@@ -41,10 +41,6 @@ def _run_with_patches(monkeypatch, func):
     assert "ran" in called
 
 
-def test_discovery_access_handles_bad_api(monkeypatch):
-    _run_with_patches(monkeypatch, reporting.discovery_access)
-
-
 def test_discovery_analysis_handles_bad_api(monkeypatch):
     _run_with_patches(monkeypatch, reporting.discovery_analysis)
 
@@ -225,53 +221,6 @@ def test_successful_uses_token_file(monkeypatch, tmp_path):
     reporting.successful(DummyCreds(), DummySearch(), args)
 
     assert captured["token"] == "abc"
-
-
-def test_discovery_access_with_dropped_only(monkeypatch):
-    class DummyDF(dict):
-        def __init__(self, data):
-            super().__init__({k: {0: v[0] if isinstance(v, list) else v} for k, v in data.items()})
-
-        def __getitem__(self, key):
-            return self.get(key)
-
-        def __setitem__(self, key, value):
-            dict.__setitem__(self, key, {0: value})
-
-        def to_dict(self):
-            return self
-
-    monkeypatch.setattr(reporting.builder, "unique_identities", lambda s, *a, **k: [])
-
-    def fake_search_results(search, query):
-        if query is reporting.queries.last_disco:
-            return []
-        if query is reporting.queries.dropped_endpoints:
-            return [
-                {
-                    "Endpoint": "1.2.3.4",
-                    "End": "2024-01-01 00:00:00",
-                    "End_Raw": "2024-01-01T00:00:00+00:00",
-                    "Run": "r",
-                    "Start": "2024-01-01 00:00:00",
-                    "End_State": "DarkSpace",
-                }
-            ]
-        return []
-
-    monkeypatch.setattr(reporting.api, "search_results", fake_search_results)
-    monkeypatch.setattr(reporting.api, "get_json", lambda *a, **k: [])
-    monkeypatch.setattr(reporting.api, "map_outpost_credentials", lambda *a, **k: {})
-    monkeypatch.setattr(reporting.pd, "DataFrame", lambda data: DummyDF(data), raising=False)
-    monkeypatch.setattr(reporting.pd, "cut", lambda *a, **k: "recent", raising=False)
-
-    called = {}
-    monkeypatch.setattr(reporting, "output", types.SimpleNamespace(report=lambda *a, **k: called.setdefault("ran", True)))
-    args = types.SimpleNamespace(output_csv=False, output_file=None, token=None, target="http://x", include_endpoints=None, endpoint_prefix=None)
-
-    reporting.discovery_access(DummySearch(), DummyCreds(), args)
-
-    assert "ran" in called
 
 
 def test_discovery_analysis_includes_raw_timestamp(monkeypatch):

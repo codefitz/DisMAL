@@ -87,10 +87,9 @@ Only the two specified endpoints are queried and reported on.
 
 ## Reports
 
-Two related reports focus on Discovery Access history:
+One report focuses on Discovery Access history:
 
-- **discovery_access** – exports the latest access details for each endpoint, including credential information and timestamps.
-- **discovery_analysis** – adds a comparison between consecutive runs using the same data to highlight state changes.
+- **discovery_analysis** – exports the latest access details for each endpoint and compares consecutive runs to highlight state changes.
 - **ip_analysis** – Run IP analysis report.
 More reports are included.
 Run `python3 dismal.py --help` to see the complete list.

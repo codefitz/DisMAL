@@ -573,12 +573,16 @@ def scheduling(vault, search, args):
         in_exclude = tools.sortlist(in_exclude)
         logger.debug("Excludes:%s"%(in_exclude))
 
+        range_count = len(fr or [])
+        cred_count = len(in_exclude)
         if args.output_csv or args.output_file:
             msg = os.linesep
-            data.append([ sc, "Exclude Range", i, fr, None, dr, in_exclude ])
         else:
-            msg = "\nOnly showing ranges, credential counts for tables output. Output to CSV for credential list.\n"
-            data.append([ sc, "Exclude Range", i, len(fr), None, dr, len(in_exclude) ])
+            msg = (
+                "\nOnly showing ranges, credential counts for tables output. "
+                "Output to CSV for credential list.\n"
+            )
+        data.append([sc, "Exclude Range", i, range_count, None, dr, cred_count])
     if timer_count > 0:
         print(os.linesep,end="\r")
     
@@ -638,12 +642,16 @@ def scheduling(vault, search, args):
         in_run = tools.sortlist(in_run)
         logger.debug("Runs:%s"%(in_run))
         
+        range_count = len(fr or [])
+        cred_count = len(in_run)
         if args.output_csv or args.output_file:
             msg = os.linesep
-            data.append([ sc, "Scan Range", i, fr, sl, dr, in_run ])
         else:
-            msg = "\nOnly showing ranges, credential counts for tables output. Output to CSV for credential list.\n"
-            data.append([ sc, "Scan Range", i, len(fr), sl, dr, len(in_run) ])
+            msg = (
+                "\nOnly showing ranges, credential counts for tables output. "
+                "Output to CSV for credential list.\n"
+            )
+        data.append([sc, "Scan Range", i, range_count, sl, dr, cred_count])
     print(os.linesep,end="\r")
 
     # sort data by index field

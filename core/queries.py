@@ -339,7 +339,7 @@ near_removal = """
                     (#InferredElement:Inference:Associate:DiscoveryAccess.endpoint or 'DDD Aged Out') as 'Last Successful IP',
                     whenWasThat(last_update_success) as 'Last Successful Scan',
                     last_update_success as 'Last Successful Scan Date',
-                    age_count * -1 as 'Consecutive Scan Failures',
+                    value(age_count * -1) as 'Consecutive Scan Failures',
                     (@scans > 0 and @time_to_doom > 0 and #'%d scans, %d hours'(@scans,@time_to_doom)
                     or @scans > 0 and #'%d scans'(@scans) or @time_to_doom > 0 and #'%d hours'(@time_to_doom)
                     or 'Next unsuccessful scan') as 'Removal Eligibility'

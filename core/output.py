@@ -129,6 +129,7 @@ def save2csv(clidata, filename, appliance):
         header = clidata.split("\n",1)[0].strip().split(',')
         body = clidata.split("\n",1)[1]
         data = []
+        header = tools.normalize_headers(header)
         header.insert(0,"Discovery Instance")
         for line in body.split("\r\n"):
             if line:
@@ -203,6 +204,7 @@ def report(data, heads, args, name=None):
 
 def cmd2csv(header,result,seperator,filename,appliance):
     data = []
+    header = tools.normalize_headers(header)
     header.insert(0,"Discovery Instance")
     for line in result.split("\r\n"):
         lines = line.split("\n")

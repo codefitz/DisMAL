@@ -137,6 +137,22 @@ def sortdic(lst):
     logger.debug(lst)
     return lst2
 
+def normalize_header(name: str) -> str:
+    """Return *name* converted to CamelCase.
+
+    Non-alphanumeric characters are treated as word separators.
+    """
+    if not name:
+        return ""
+    parts = re.split(r"[^0-9A-Za-z]+", str(name))
+    return "".join(p.capitalize() for p in parts if p)
+
+def normalize_headers(headers):
+    """Normalize each element of *headers* to CamelCase."""
+    if not headers:
+        return []
+    return [normalize_header(h) for h in headers]
+
 def completage(message, record_count, timer_count):
     timer_count += 1
     pc = (float(timer_count) / float(record_count))

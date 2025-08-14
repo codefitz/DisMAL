@@ -1,10 +1,11 @@
 import os
+import csv
 import sys
 import types
 
 sys.modules.setdefault("tabulate", types.SimpleNamespace(tabulate=lambda *a, **k: ""))
 sys.modules.setdefault("core.api", types.SimpleNamespace())
-sys.modules.setdefault("core.tools", types.SimpleNamespace())
+sys.modules.setdefault("core.tools", types.SimpleNamespace(dequote=lambda s: s.strip('"')))
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -46,3 +47,12 @@ def test_format_duration_units():
     assert output.format_duration(45) == "45.00 seconds"
     assert output.format_duration(120) == "2.00 minutes"
     assert output.format_duration(7200) == "2.00 hours"
+
+
+def test_save2csv_numeric(tmp_path):
+    clidata = "Consecutive Scan Failures\n-5\r\n"
+    filename = tmp_path / "out.csv"
+    output.save2csv(clidata, str(filename), "appliance")
+    with open(filename, newline="") as fh:
+        row = next(csv.DictReader(fh))
+    assert int(row["Consecutive Scan Failures"]) == -5

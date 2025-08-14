@@ -102,11 +102,12 @@ def _setup_schedule_patches(monkeypatch, cred_list, excludes, scan_ranges):
     return vault, search, args, captured
 
 
-def _setup_overlap_patches(monkeypatch, scan_ranges, excludes):
+def _setup_overlap_patches(monkeypatch, scan_ranges, excludes, search_results_returns=None):
     seq = iter([scan_ranges, excludes])
 
     monkeypatch.setattr(builder.api, "get_json", lambda *a, **k: next(seq))
-    monkeypatch.setattr(builder.api, "search_results", lambda *a, **k: [])
+    results_iter = iter(search_results_returns or [])
+    monkeypatch.setattr(builder.api, "search_results", lambda *a, **k: next(results_iter, []))
     monkeypatch.setattr(
         builder.tools,
         "range_to_ips",
@@ -283,6 +284,20 @@ def test_overlapping_empty_scan_ranges(monkeypatch, capsys):
     out = capsys.readouterr().out
 
     assert "No scan ranges found" in out
+
+
+def test_overlapping_unscanned_connections(monkeypatch):
+    search_results_returns = [
+        [],
+        [{"Unscanned Host IP Address": "192.0.2.1"}],
+    ]
+    search, args, captured = _setup_overlap_patches(
+        monkeypatch, [], [], search_results_returns
+    )
+
+    builder.overlapping(search, args)
+
+    assert ["192.0.2.1", "Seen but unscanned."] in captured["data"]
 
 
 def test_unique_identities_handles_bad_api(monkeypatch):

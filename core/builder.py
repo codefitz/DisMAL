@@ -895,7 +895,12 @@ def overlapping(tw_search, args):
             logger.debug("Missing endpoint: %s", endpoint)
     missing_ips = tools.sortlist(missing_ips)
 
-    data=[]
+    # Look for connections seen on the network but not yet scanned
+    unscanned_results = api.search_results(
+        tw_search, queries.connections_unscanned
+    )
+
+    data = []
 
     for matching in matched_runs:
         if len(matching.get("runs")) > 1:
@@ -911,6 +916,13 @@ def overlapping(tw_search, args):
 
     for missing_ip in missing_ips:
         data.append([ missing_ip, "Endpoint has previous DiscoveryAccess, but not currently scheduled." ])
+
+    existing_ips = {row[0] for row in data}
+    for unscanned in unscanned_results:
+        unseen_ip = tools.getr(unscanned, 'Unscanned Host IP Address')
+        if unseen_ip and unseen_ip not in existing_ips:
+            data.append([ unseen_ip, "Seen but unscanned." ])
+            existing_ips.add(unseen_ip)
 
     if len(data) == matches:
         msg = "No missing IPs in ranges."

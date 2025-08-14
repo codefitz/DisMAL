@@ -525,6 +525,11 @@ def host_util(search, args, dir):
         header_hf.insert(0, "Discovery Instance")
         for row in rows:
             row.insert(0, args.target)
+            for idx in numeric_indexes:
+                try:
+                    row[idx] = int(row[idx])
+                except (ValueError, TypeError):
+                    row[idx] = 0
     else:
         header_hf.insert(0, "Discovery Instance")
     output.define_csv(

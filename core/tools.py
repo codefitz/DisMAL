@@ -139,7 +139,8 @@ def list_of_lists(ci,attr,list_to_append):
 def session_get(results):
     sessions = {}
     for result in results:
-        count = result.get('Count')
+        # Cast count values to integers to ensure arithmetic works as expected
+        count = int(result.get('Count', 0))
         uuid = result.get('UUID')
         restype = result.get('Session_Type')
         if uuid:

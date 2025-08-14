@@ -43,14 +43,14 @@ def api_version(tw):
 def ping(target):
     current_os = platform.system().lower()
     if current_os == "windows":
-        parameters = "-n 1 -w 2"
+        parameters = ["-n", "1", "-w", "2"]
     elif current_os == "linux":
-        parameters = "-c 1 -w2"
-    else: # Mac
-        parameters = "-c 1 -i2"
+        parameters = ["-c", "1", "-w", "2"]
+    else:  # Mac
+        parameters = ["-c", "1", "-i", "2"]
 
     result = subprocess.run(
-        ["ping", parameters, target],
+        ["ping", *parameters, target],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )

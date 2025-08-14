@@ -8,7 +8,7 @@ import sys
 import ast
 
 # Local modules
-from . import access, output, queries, defaults, reporting
+from . import access, output, queries, defaults, reporting, tools
 
 logger = logging.getLogger("_cli_")
 
@@ -277,6 +277,7 @@ def baseline(client,args,dir):
         for checks in checklist.split("\n"):
             check = checks.split(":")
             checked.append([s.strip() for s in check])
+    header = tools.normalize_headers(header)
     header.insert(0,"Discovery Instance")
     for row in checked:
         row.insert(0, args.target)
@@ -389,13 +390,13 @@ def unrecognised_snmp(client,args,user,passwd,dir):
     result = run_query(client,user,passwd,queries.snmp_devices)
     output.define_csv(args,None,result,dir+defaults.snmp_unrecognised_filename,args.output_file,args.target,"csv")
 
-def device_capture_candidates(client,args,user,passwd,dir):
-    result = run_query(client,user,passwd,queries.device_capture_candidates)
+def capture_candidates(client,args,user,passwd,dir):
+    result = run_query(client,user,passwd,queries.capture_candidates)
     output.define_csv(
         args,
         None,
         result,
-        dir+defaults.device_capture_candidates_filename,
+        dir+defaults.capture_candidates_filename,
         args.output_file,
         args.target,
         "csv",

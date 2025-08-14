@@ -279,6 +279,7 @@ host_utilisation = """
                         hostname,
                         hash(hostname) as 'hashed_hostname',
                         os,
+                        os_type as 'OS_Type',
                         virtual,
                         cloud,
                         #InferredElement:Inference:Associate:DiscoveryAccess.endpoint as 'Endpoint',
@@ -513,19 +514,19 @@ snmp_devices = """
                     process with countUnique()
                   """
 
-device_capture_candidates = """
+capture_candidates = """
                     search DiscoveryAccess where end_state = 'UnsupportedDevice' and _last_marker
                     traverse DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo where sysobjectid
                     show
-                    access_method,
-                    request_time,
-                    hostname,
-                    os,
-                    failure_reason,
-                    syscontact,
-                    syslocation,
-                    sysdescr,
-                    sysobjectid
+                    access_method as 'Access Method',
+                    request_time as 'Request Time',
+                    hostname as 'Hostname',
+                    os as 'OS',
+                    failure_reason as 'Failure Reason',
+                    syscontact as 'Syscontact',
+                    syslocation as 'Syslocation',
+                    sysdescr as 'Sysdescr',
+                    sysobjectid as 'Sysobject ID'
                 """
 
 missing_vms = """

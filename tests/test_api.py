@@ -332,7 +332,7 @@ def test_search_results_list_table():
     assert result == [{"A": 1, "B": 2}]
 
 
-def test_device_capture_candidates_writes_csv(monkeypatch):
+def test_capture_candidates_writes_csv(monkeypatch):
     results = [
         {
             "access_method": "SNMP v2c",
@@ -365,7 +365,7 @@ def test_device_capture_candidates_writes_csv(monkeypatch):
 
     args = types.SimpleNamespace(output_file=None, target="appl")
 
-    api_mod.device_capture_candidates(types.SimpleNamespace(), args, "/tmp")
+    api_mod.capture_candidates(types.SimpleNamespace(), args, "/tmp")
 
     expected_header = ["Discovery Instance"] + [api_mod.tools.snake_to_camel(h) for h in sorted(results[0].keys())]
     expected_row = [
@@ -377,7 +377,7 @@ def test_device_capture_candidates_writes_csv(monkeypatch):
 
     assert captured["header"] == expected_header
     assert captured["rows"][0] == expected_row
-    assert captured["path"].endswith(api_mod.defaults.device_capture_candidates_filename)
+    assert captured["path"].endswith(api_mod.defaults.capture_candidates_filename)
 
 
 def test_update_schedule_timezone_applies_offset():

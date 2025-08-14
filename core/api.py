@@ -646,9 +646,9 @@ def dblc(search, args, dir):
 def snmp(search, args, dir):
     output.define_csv(args,search,queries.snmp_devices,dir+defaults.snmp_unrecognised_filename,args.output_file,args.target,"query")
 
-@output._timer("Device Capture Candidates")
-def device_capture_candidates(search, args, dir):
-    results = search_results(search, queries.device_capture_candidates)
+@output._timer("Capture Candidates")
+def capture_candidates(search, args, dir):
+    results = search_results(search, queries.capture_candidates)
     count = len(results) if isinstance(results, list) else 0
     tools.completage("Processing", count or 1, (count or 1) - 1)
     print(os.linesep, end="\r")
@@ -664,7 +664,7 @@ def device_capture_candidates(search, args, dir):
         args,
         header_hf,
         rows,
-        dir + defaults.device_capture_candidates_filename,
+        dir + defaults.capture_candidates_filename,
         args.output_file,
         args.target,
         "csv_file",

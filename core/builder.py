@@ -362,7 +362,11 @@ def ordering(creds, search, args, apply):
         data.append([index, label, scope, url])
 
     if data:
-        headers = tools.normalize_headers(headers)
+        # ``normalize_headers`` returns ``(headers, lookup)`` with headers in
+        # Title Case. Convert the header names to a mutable list and then to
+        # CamelCase so we can safely insert additional labels.
+        headers = list(tools.normalize_headers(headers)[0])
+        headers = [tools.normalize_header(h) for h in headers]
         headers.insert(0, "Discovery Instance")
         for row in data:
             row.insert(0, getattr(args, "target", None))

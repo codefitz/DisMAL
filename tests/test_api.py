@@ -12,6 +12,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from core.api import get_json, search_results, show_runs, get_outposts, map_outpost_credentials
 import core.api as api_mod
 from core import queries
+import core.access as access
 
 class DummyResponse:
     def __init__(self, status_code=200, data="{}", reason="OK", url="http://x"):
@@ -371,7 +372,6 @@ def test_update_schedule_timezone_reset():
     api_mod.update_schedule_timezone(disco, args)
 
     assert disco.patches[0][1]["schedule"]["start_times"] == [15]
-
 
 def test_host_util_converts_numeric_columns(monkeypatch):
     sample = [

@@ -8,7 +8,7 @@ import sys
 import ast
 
 # Local modules
-from . import access, output, queries, defaults, reporting
+from . import access, output, queries, defaults, reporting, tools
 
 logger = logging.getLogger("_cli_")
 
@@ -260,6 +260,7 @@ def baseline(client,args,dir):
         for checks in checklist.split("\n"):
             check = checks.split(":")
             checked.append([s.strip() for s in check])
+    header = tools.normalize_headers(header)
     header.insert(0,"Discovery Instance")
     for row in checked:
         row.insert(0, args.target)

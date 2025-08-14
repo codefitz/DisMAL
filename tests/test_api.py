@@ -338,7 +338,9 @@ def test_device_capture_candidates_writes_csv(monkeypatch):
 
     api_mod.device_capture_candidates(types.SimpleNamespace(), args, "/tmp")
 
-    expected_header = ["Discovery Instance"] + sorted(results[0].keys())
+    expected_header = ["Discovery Instance"] + [
+        api_mod.tools.normalize_header(k) for k in sorted(results[0].keys())
+    ]
     expected_row = [
         "appl"
     ] + [

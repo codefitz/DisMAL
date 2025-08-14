@@ -305,6 +305,7 @@ def successful(creds, search, args):
     print(os.linesep,end="\r")
 
     if data:
+        headers = tools.normalize_headers(headers)
         headers.insert(0, "Discovery Instance")
         for row in data:
             row.insert(0, getattr(args, "target", None))
@@ -390,6 +391,7 @@ def successful_cli(client, args, sysuser, passwd, reporting_dir):
             data.append([ detail.get('label'), uuid, detail.get('username'), types, None, None, 0.0, "Credential appears to not be in use (%s)" % status, detail.get('usage'), detail.get('internal_store'), list_of_ranges, ip_exclude ])
         headers = [ "Credential", "UUID", "Login ID", "Protocol", "Successes", "Failures", "Success %", "State", "Usage", "Store", "Scan Ranges", "Exclude Ranges" ]
 
+    headers = tools.normalize_headers(headers)
     headers.insert(0,"Discovery Instance")
     for row in data:
         row.insert(0, args.target)

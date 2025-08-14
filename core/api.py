@@ -189,6 +189,7 @@ def baseline(disco, args, dir):
                 if "FAILED" in baseline['results']:
                     failures = baseline['results']['FAILED']
                     header, rows = tools.json2csv(failures)
+                header = tools.normalize_headers(header)
                 header.insert(0,"Discovery Instance")
                 for row in rows:
                     row.insert(0, args.target)
@@ -353,6 +354,7 @@ def discovery_runs(disco, args, dir):
         runs = json.loads(json.dumps(r))
         logger.debug('Runs:\n%s' % r)
         header, rows = tools.json2csv(runs)
+        header = tools.normalize_headers(header)
         header.insert(0, "Discovery Instance")
         for row in rows:
             row.insert(0, args.target)
@@ -441,11 +443,12 @@ def sensitive(search, args, dir):
     header, rows = [], []
     if isinstance(results, list) and results:
         header, rows = tools.json2csv(results)
+        header = tools.normalize_headers(header)
         header.insert(0, "Discovery Instance")
         for row in rows:
             row.insert(0, args.target)
     else:
-        header.insert(0, "Discovery Instance")
+        header = ["Discovery Instance"]
     output.define_csv(
         args,
         header,
@@ -468,11 +471,12 @@ def eca_errors(search, args, dir):
     header, rows = [], []
     if isinstance(results, list) and results:
         header, rows = tools.json2csv(results)
+        header = tools.normalize_headers(header)
         header.insert(0, "Discovery Instance")
         for row in rows:
             row.insert(0, args.target)
     else:
-        header.insert(0, "Discovery Instance")
+        header = ["Discovery Instance"]
     output.define_csv(
         args,
         header,
@@ -492,11 +496,12 @@ def open_ports(search, args, dir):
     header, rows = [], []
     if isinstance(results, list) and results:
         header, rows = tools.json2csv(results)
+        header = tools.normalize_headers(header)
         header.insert(0, "Discovery Instance")
         for row in rows:
             row.insert(0, args.target)
     else:
-        header.insert(0, "Discovery Instance")
+        header = ["Discovery Instance"]
     output.define_csv(
         args,
         header,
@@ -516,11 +521,12 @@ def host_util(search, args, dir):
     header, rows = [], []
     if isinstance(results, list) and results:
         header, rows = tools.json2csv(results)
+        header = tools.normalize_headers(header)
         header.insert(0, "Discovery Instance")
         for row in rows:
             row.insert(0, args.target)
     else:
-        header.insert(0, "Discovery Instance")
+        header = ["Discovery Instance"]
     output.define_csv(
         args,
         header,
@@ -541,15 +547,16 @@ def missing_vms(search, args, dir):
         response = search_results(search, queries.missing_vms)
         if isinstance(response, list) and len(response) > 0:
             header, data = tools.json2csv(response)
+            header.append("Pingable")
+            header.extend(["last_identity", "last_scanned", "last_result"])
+            header = tools.normalize_headers(header)
             header.insert(0, "Discovery Instance")
             for row in data:
                 row.insert(0, args.target)
 
-            gf_index = header.index("Guest_Full_Name") if "Guest_Full_Name" in header else None
-            header.append("Pingable")
+            gf_index = header.index("GuestFullName") if "GuestFullName" in header else None
 
             devices = devices_lookup(search)
-            header.extend(["last_identity", "last_scanned", "last_result"])
 
             timer_count = 0
             for row in data:
@@ -641,11 +648,12 @@ def device_capture_candidates(search, args, dir):
     header, rows = [], []
     if isinstance(results, list) and results:
         header, rows = tools.json2csv(results)
+        header = tools.normalize_headers(header)
         header.insert(0, "Discovery Instance")
         for row in rows:
             row.insert(0, args.target)
     else:
-        header.insert(0, "Discovery Instance")
+        header = ["Discovery Instance"]
     output.define_csv(
         args,
         header,

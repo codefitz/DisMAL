@@ -393,7 +393,7 @@ def show_runs(disco, args):
         parsed_runs.append(disco_run)
 
     headers = tools.sortlist(headers)
-    headers, lookup = tools.normalize_headers(headers)
+    headers, lookup = tools.normalize_headers(headers, return_lookup=True)
     header_hf = [tools.snake_to_camel(h) for h in headers]
     run_csvs = []
     for run in parsed_runs:

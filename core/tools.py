@@ -151,11 +151,36 @@ def normalize_header(name: str) -> str:
     parts = re.split(r"[^0-9A-Za-z]+", str(name))
     return "".join(p.capitalize() for p in parts if p)
 
-def normalize_headers(headers):
-    """Normalize each element of *headers* to CamelCase."""
+def normalize_key(key):
+    """Return ``key`` converted from ``snake_case`` or dotted names to Title Case."""
+    parts = re.split(r"[_\.]+", key)
+    return " ".join(p.capitalize() for p in parts if p)
+
+def normalize_headers(headers, return_lookup=False):
+    """Normalize ``headers`` and optionally return a lookup map.
+
+    Parameters
+    ----------
+    headers : Iterable[str]
+        Header labels to normalize.
+    return_lookup : bool, optional
+        When ``True`` return a tuple of ``(headers, lookup)`` where ``lookup``
+        maps the normalized labels back to their original values.  When
+        ``False`` only the list of normalized headers is returned.
+    """
     if not headers:
-        return []
-    return [normalize_header(h) for h in headers]
+        return ([], {}) if return_lookup else []
+
+    normalized = []
+    lookup = {}
+    for key in headers:
+        norm = normalize_key(key)
+        normalized.append(norm)
+        lookup[norm] = key
+
+    if return_lookup:
+        return normalized, lookup
+    return normalized
 
 def completage(message, record_count, timer_count):
     timer_count += 1
@@ -239,22 +264,6 @@ def dequote(s):
         return s[1:-1]
     return s
 
-def normalize_key(key):
-    """Return ``key`` converted from ``snake_case`` to spaced ``CamelCase``."""
-    parts = re.split(r"[_\.]+", key)
-    return " ".join(p.capitalize() for p in parts if p)
-
-
-def normalize_headers(headers):
-    """Normalize header labels and build a lookup to their original keys."""
-    normalized = []
-    lookup = {}
-    for key in headers:
-        norm = normalize_key(key)
-        normalized.append(norm)
-        lookup[norm] = key
-    return normalized, lookup
-
 
 def json2csv(jsdata, return_map=False):
     orig_header = []
@@ -266,7 +275,7 @@ def json2csv(jsdata, return_map=False):
             orig_header.append(label)
             orig_header = sortlist(orig_header)
 
-    header, lookup = normalize_headers(orig_header)
+    header, lookup = normalize_headers(orig_header, return_lookup=True)
 
     for jsitem in jsdata:
         values = []
@@ -274,6 +283,9 @@ def json2csv(jsdata, return_map=False):
             # Loop through the unique set of headers and get values if exist
             values.append(getr(jsitem, key, "N/A"))  # Substitute if missing
         data.append(values)
+
+    if return_map:
+        return header, data, lookup
 
     human_header = [snake_to_camel(h) for h in header]
     return header, data, human_header

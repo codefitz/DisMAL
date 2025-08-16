@@ -971,6 +971,7 @@ def _gather_discovery_data(twsearch, twcreds, args):
             return when.get(0)
 
         for result in records["discos"]:
+            ep_record = {"endpoint": endpoint}
             hostname = tools.getr(result, "Hostname", None)
             os_type = tools.getr(result, "OS_Type", None)
             os_class = tools.getr(result, "OS_Class", None)
@@ -1061,6 +1062,7 @@ def _gather_discovery_data(twsearch, twcreds, args):
                     "last_marker": last_marker,
                 }
             )
+            endpoint_records.append(ep_record)
             disco_data.append(ep_record)
 
         for result in records["dropped"]:
@@ -1092,6 +1094,7 @@ def _gather_discovery_data(twsearch, twcreds, args):
             run_start = tools.getr(result, "Start", None)
             end_state = tools.getr(result, "End_State", None)
             reason_not_updated = tools.getr(result, "Reason_Not_Updated", None)
+            run_end_timestamp = ep_timestamp
             ep_record = {
                 "endpoint": endpoint,
                 "list_of_names": list_of_names,
@@ -1143,6 +1146,15 @@ def _gather_discovery_data(twsearch, twcreds, args):
             )
             disco_data.append(ep_record)
 
+    return disco_data
+
+
+@output._timer("Discovery Access")
+def discovery_access(twsearch, twcreds, args):
+    """Generate basic discovery access report."""
+    logger.info("Running Discovery Access Report")
+    disco_data = _gather_discovery_data(twsearch, twcreds, args)
+    output.report([], [], args, name="discovery_access")
     return disco_data
 
 

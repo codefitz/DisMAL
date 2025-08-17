@@ -353,9 +353,8 @@ def discovery_runs(disco, args, dir):
     if r:
         runs = json.loads(json.dumps(r))
         logger.debug('Runs:\n%s' % r)
-        header, rows = tools.json2csv(runs)
-        header = tools.normalize_headers(header)
-        header.insert(0, "Discovery Instance")
+        header, rows, header_hf = tools.json2csv(runs)
+        header_hf.insert(0, "Discovery Instance")
         for row in rows:
             row.insert(0, args.target)
         output.define_csv(

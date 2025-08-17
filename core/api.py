@@ -521,8 +521,16 @@ def host_util(search, args, dir):
     print(os.linesep, end="\r")
     header, rows, header_hf = [], [], []
     if isinstance(results, list) and results:
-        header, rows, header_hf = tools.json2csv(results)
+        header, rows, lookup = tools.json2csv(results, return_map=True)
+        header_hf = [lookup.get(h, h) for h in header]
         header_hf.insert(0, "Discovery Instance")
+        numeric_cols = [
+            "Running Software Instances",
+            "Candidate Software Instances",
+            "Running Processes",
+            "Running Services (Windows)",
+        ]
+        numeric_indexes = [header_hf.index(c) for c in numeric_cols if c in header_hf]
         for row in rows:
             row.insert(0, args.target)
             for idx in numeric_indexes:

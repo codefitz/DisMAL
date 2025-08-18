@@ -4,7 +4,7 @@
 #
 # For use with BMC Discovery
 #
-vers = "0.1.3"
+vers = "0.1.7"
 
 import argparse
 import datetime

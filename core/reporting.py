@@ -4,7 +4,7 @@ import datetime
 import logging
 from platform import uname
 import os
-from collections import Counter
+from collections import Counter, defaultdict
 import json
 import re
 from concurrent.futures import ThreadPoolExecutor
@@ -124,7 +124,8 @@ def successful(creds, search, args):
         detail = builder.get_credentials(cred)
 
         uuid = detail.get('uuid')
-        index = tools.getr(detail,'index',0)
+        # Ensure index is numeric for downstream calculations
+        index = int(tools.getr(detail, 'index', 0) or 0)
         
         ip_range = tools.getr(detail,'iprange',None)
         list_of_ranges = tools.range_to_ips(ip_range)
@@ -173,14 +174,14 @@ def successful(creds, search, args):
             msg = "Sessions and DevInfos: %s" % success
             logger.debug(msg)
         elif sessions[0]:
-            #print (sessions)
-            success = sessions[1]
+            # Successful sessions without device info results
+            success = int(sessions[1])
             session = sessions[0]
             msg = "Sessions only: %s" % success
             logger.debug(msg)
         elif devinfos[0]:
-            #print (devinfos)
-            success = devinfos[1]
+            # Device info successes only
+            success = int(devinfos[1])
             session = devinfos[0]
             msg = "DevInfos only: %s" % success
             logger.debug(msg)
@@ -194,9 +195,12 @@ def successful(creds, search, args):
         logger.debug(msg)
 
         if failure[1]:
-            fails = failure[1]
+            fails = int(failure[1])
             logger.debug("Failures:%s"%fails)
-            
+
+        # Coerce success/fail counts to ints and compute percentage as float
+        success = int(success)
+        fails = int(fails)
         total = success + fails
         percent = 0.0
         if total > 0:
@@ -305,6 +309,7 @@ def successful(creds, search, args):
     print(os.linesep,end="\r")
 
     if data:
+        headers = tools.normalize_headers(headers)
         headers.insert(0, "Discovery Instance")
         for row in data:
             row.insert(0, getattr(args, "target", None))
@@ -390,6 +395,7 @@ def successful_cli(client, args, sysuser, passwd, reporting_dir):
             data.append([ detail.get('label'), uuid, detail.get('username'), types, None, None, 0.0, "Credential appears to not be in use (%s)" % status, detail.get('usage'), detail.get('internal_store'), list_of_ranges, ip_exclude ])
         headers = [ "Credential", "UUID", "Login ID", "Protocol", "Successes", "Failures", "Success %", "State", "Usage", "Store", "Scan Ranges", "Exclude Ranges" ]
 
+    headers = tools.normalize_headers(headers)
     headers.insert(0,"Discovery Instance")
     for row in data:
         row.insert(0, args.target)
@@ -406,8 +412,14 @@ def devices(twsearch, twcreds, args):
     vaultcreds = api.get_json(twcreds.get_vault_credentials)
 
     ### list of unique identities
-    identities = builder.unique_identities(twsearch)
+    identities = builder.unique_identities(
+        twsearch, args.include_endpoints, args.endpoint_prefix
+    )
     results = api.search_results(twsearch,queries.deviceInfo)
+
+    # Track progress across all device result iterations
+    result_timer = 0
+    total_result_iterations = len(results) * len(identities)
 
     devices = []
     msg = None
@@ -428,7 +440,7 @@ def devices(twsearch, twcreds, args):
         last_scanned_ip = None
         last_kind = None
         for result in results:
-
+            result_timer = tools.completage("Processing device results…", total_result_iterations, result_timer)
             da_endpoint = tools.getr(result,'DA_Endpoint',None)
             logger.debug("Checking endpoint %s in identity %s"%(da_endpoint,identity))
 
@@ -772,7 +784,9 @@ def ipaddr(search, credentials, args):
     logger.debug("Unique List: %s,%s"%(msg,devices_found))
 
     id_list = []
-    unique_ids = builder.unique_identities(search)
+    unique_ids = builder.unique_identities(
+        search, args.include_endpoints, args.endpoint_prefix
+    )
     for identity in unique_ids:
         logger.debug("Checking IP address %s in Identity %s"%(ipaddr,identity))
         if ipaddr in identity.get('list_of_ips'):
@@ -860,31 +874,47 @@ def ipaddr(search, credentials, args):
     )
 
 
-def _gather_discovery_data(twsearch, twcreds):
+
+def _gather_discovery_data(twsearch, twcreds, args):
     """Return discovery access records without change analysis."""
 
     vaultcreds = api.get_json(twcreds.get_vault_credentials)
-    identities = builder.unique_identities(twsearch)
+    identities = builder.unique_identities(
+        twsearch, args.include_endpoints, args.endpoint_prefix
+    )
     discos = api.search_results(twsearch, queries.last_disco)
     dropped = api.search_results(twsearch, queries.dropped_endpoints)
 
     disco_data = []
-    unique_endpoints = []
+    disco_by_endpoint = defaultdict(lambda: {"discos": [], "dropped": []})
 
     for result in discos:
         if not isinstance(result, dict):
             logger.warning("Unexpected discovery access entry: %r", result)
             continue
         endpoint = result.get("Endpoint")
-        unique_endpoints.append(endpoint)
+        if endpoint is None:
+            continue
+        disco_by_endpoint[endpoint]["discos"].append(result)
     for result in dropped:
         if not isinstance(result, dict):
             logger.warning("Unexpected dropped entry: %r", result)
             continue
         endpoint = result.get("Endpoint")
-        unique_endpoints.append(endpoint)
+        if endpoint is None:
+            continue
+        disco_by_endpoint[endpoint]["dropped"].append(result)
 
-    unique_endpoints = tools.sortlist(unique_endpoints)
+    sorted_endpoints = tools.sortlist(list(disco_by_endpoint.keys()))
+
+    # Build a lookup map so each endpoint can retrieve its identity without
+    # repeatedly scanning the entire identity list.
+    identity_map = {
+        ip: identity
+        for identity in identities
+        for ip in identity.get("list_of_ips", [])
+        if ip is not None
+    }
 
     bins = [0, 59, 1440, 10080, 43830, 131487, 262974, 525949, 525950]
     labels = [
@@ -899,311 +929,246 @@ def _gather_discovery_data(twsearch, twcreds):
     ]
 
     timer_count = 0
-    for endpoint in unique_endpoints:
+    for endpoint in sorted_endpoints:
         timer_count = tools.completage(
             "Gathering Discovery Access Results...",
-            len(unique_endpoints),
+            len(sorted_endpoints),
             timer_count,
         )
 
-        list_of_end_states = []
+        records = disco_by_endpoint[endpoint]
 
-        for result in discos:
-            if not isinstance(result, dict):
-                logger.warning("Unexpected discovery access entry: %r", result)
-                continue
-            if tools.getr(result, "Endpoint") == endpoint:
-                ep_record = {"endpoint": endpoint}
-                hostname = tools.getr(result, "Hostname", None)
-                os_type = tools.getr(result, "OS_Type", None)
-                os_class = tools.getr(result, "OS_Class", None)
-                disco_run = tools.getr(result, "Discovery_Run", None)
-                run_start = tools.getr(result, "Run_Starttime", None)
-                run_end = tools.getr(result, "Run_Endtime", None)
-                scan_start = tools.getr(result, "Scan_Starttime", None)
-                scan_end = tools.getr(result, "Scan_Endtime")
+        end_states = [
+            tools.getr(r, "End_State", None)
+            for r in records["discos"] + records["dropped"]
+        ]
+        consistency = None
+        if end_states:
+            total = len(end_states)
+            counter = dict(Counter(end_states))
+            largest = max(counter, key=counter.get)
+            if counter[largest] == total:
+                consistency = f"Always {largest}"
+            elif counter[largest] >= total - 2:
+                consistency = f"Usually {largest}"
+            else:
+                consistency = f"Most Often {largest}"
+
+        identity = identity_map.get(endpoint, {})
+        list_of_endpoints = identity.get("list_of_ips")
+        list_of_names = identity.get("list_of_names")
+
+        endpoint_records = []
+
+        def _calc_when(ts):
+            delta = datetime.datetime.now() - ts
+            overall_mins = delta.days * 24 * 60 + (delta.seconds) / 60
+            whenData = pd.DataFrame({"in_minutes": [overall_mins]})
+            whenData["when"] = pd.cut(
+                whenData["in_minutes"], bins=bins, labels=labels, right=False
+            )
+            when = whenData.to_dict().get("when")
+            return when.get(0)
+
+        for result in records["discos"]:
+            ep_record = {"endpoint": endpoint}
+            hostname = tools.getr(result, "Hostname", None)
+            os_type = tools.getr(result, "OS_Type", None)
+            os_class = tools.getr(result, "OS_Class", None)
+            disco_run = tools.getr(result, "Discovery_Run", None)
+            run_start = tools.getr(result, "Run_Starttime", None)
+            run_end = tools.getr(result, "Run_Endtime", None)
+            scan_start = tools.getr(result, "Scan_Starttime", None)
+            scan_end = tools.getr(result, "Scan_Endtime")
+            scan_end_raw = tools.getr(result, "Scan_Endtime_Raw", None)
+            ep_timestamp = None
+            if scan_end_raw:
+                try:
+                    ep_timestamp = datetime.datetime.fromisoformat(
+                        scan_end_raw.replace("Z", "+00:00")
+                    )
+                except ValueError:
+                    logger.debug(
+                        "Failed to parse Scan_Endtime_Raw %r", scan_end_raw
+                    )
+            if ep_timestamp is None and scan_end:
                 scan_end_str = " ".join(scan_end.split(" ")[:2])
                 ep_timestamp = datetime.datetime.strptime(
                     scan_end_str, "%Y-%m-%d %H:%M:%S"
                 )
-                time_now = datetime.datetime.now()
-                delta = time_now - ep_timestamp
-                overall_mins = delta.days * 24 * 60 + (delta.seconds) / 60
-                whenData = pd.DataFrame({"in_minutes": [overall_mins]})
-                whenData["when"] = pd.cut(
-                    whenData["in_minutes"], bins=bins, labels=labels, right=False
-                )
-                when = whenData.to_dict().get("when")
-                whenWasThat = when.get(0)
-                current_access = tools.getr(result, "Current_Access", None)
-                os_version = tools.getr(result, "OS_Version", None)
-                node_updated = tools.getr(result, "Host_Node_Updated", None)
-                end_state = tools.getr(result, "End_State", None)
-                prev_end_state = tools.getr(result, "Previous_End_State", None)
-                list_of_end_states.append(end_state)
-                reason_not_updated = tools.getr(result, "Reason_Not_Updated", None)
-                session_results_logged = tools.getr(
-                    result, "Session_Results_Logged", None
-                )
-                node_kind = result.get("Node_Kind")
-                if isinstance(node_kind, list):
-                    node_kind = tools.sortlist(node_kind)
-                last_credential = tools.getr(result, "Last_Credential", None)
-                credential_name = None
-                credential_login = None
-                list_of_names = None
-                list_of_endpoints = None
-                node_id = result.get("DA_ID")
-                prev_node_id = result.get("Previous_DA_ID")
-                next_node_id = result.get("Next_DA_ID")
-                for identity in identities:
-                    if endpoint in identity.get("list_of_ips"):
-                        list_of_endpoints = identity.get("list_of_ips")
-                        list_of_names = identity.get("list_of_names")
+            time_now = datetime.datetime.now(ep_timestamp.tzinfo) if ep_timestamp else datetime.datetime.now()
+            delta = time_now - ep_timestamp if ep_timestamp else datetime.timedelta()
+            overall_mins = delta.days * 24 * 60 + (delta.seconds) / 60
+            whenData = pd.DataFrame({"in_minutes": [overall_mins]})
+            whenData["when"] = pd.cut(
+                whenData["in_minutes"], bins=bins, labels=labels, right=False
+            )
+            when = whenData.to_dict().get("when")
+            whenWasThat = when.get(0)
+            current_access = tools.getr(result, "Current_Access", None)
+            os_version = tools.getr(result, "OS_Version", None)
+            node_updated = tools.getr(result, "Host_Node_Updated", None)
+            end_state = tools.getr(result, "End_State", None)
+            prev_end_state = tools.getr(result, "Previous_End_State", None)
+            reason_not_updated = tools.getr(result, "Reason_Not_Updated", None)
+            session_results_logged = tools.getr(
+                result, "Session_Results_Logged", None
+            )
+            node_kind = result.get("Node_Kind")
+            if isinstance(node_kind, list):
+                node_kind = tools.sortlist(node_kind)
+            last_credential = tools.getr(result, "Last_Credential", None)
+            credential_name = None
+            credential_login = None
+            if last_credential:
+                cred_det = tools.get_credential(vaultcreds, last_credential)
+                credential_name = tools.getr(cred_det, "label", "Not Found")
+                credential_login = tools.getr(cred_det, "username", "Not Found")
+            node_id = result.get("DA_ID")
+            prev_node_id = result.get("Previous_DA_ID")
+            next_node_id = result.get("Next_DA_ID")
+            last_marker = result.get("Last_Marker")
 
-                if last_credential:
-                    credential_details = tools.get_credential(vaultcreds, last_credential)
-                    credential_name = tools.getr(credential_details, "label", "Not Found")
-                    credential_login = tools.getr(
-                        credential_details, "username", "Not Found"
+            ep_record.update(
+                {
+                    "hostname": hostname,
+                    "list_of_names": list_of_names,
+                    "list_of_endpoints": list_of_endpoints,
+                    "node_kind": node_kind,
+                    "os_type": os_type,
+                    "os_version": os_version,
+                    "os_class": os_class,
+                    "disco_run": disco_run,
+                    "run_start": run_start,
+                    "run_end": run_end,
+                    "scan_start": scan_start,
+                    "scan_end": scan_end,
+                    "scan_end_raw": scan_end_raw,
+                    "when_was_that": whenWasThat,
+                    "consistency": consistency,
+                    "current_access": current_access,
+                    "node_updated": node_updated,
+                    "reason_not_updated": reason_not_updated,
+                    "end_state": end_state,
+                    "previous_end_state": prev_end_state,
+                    "session_results_logged": session_results_logged,
+                    "last_credential": last_credential,
+                    "credential_name": credential_name,
+                    "credential_login": credential_login,
+                    "timestamp": ep_timestamp,
+                    "da_id": node_id,
+                    "prev_da_id": prev_node_id,
+                    "next_node_id": next_node_id,
+                    "last_marker": last_marker,
+                }
+            )
+            endpoint_records.append(ep_record)
+            disco_data.append(ep_record)
+
+        for result in records["dropped"]:
+            run_end = tools.getr(result, "End")
+            scan_end_raw = tools.getr(result, "End_Raw", None)
+            ep_timestamp = None
+            if scan_end_raw:
+                try:
+                    ep_timestamp = datetime.datetime.fromisoformat(
+                        scan_end_raw.replace("Z", "+00:00")
                     )
-
-                end_states_total = len(list_of_end_states)
-                end_states_counter = dict(Counter(list_of_end_states))
-                largest = max(end_states_counter, key=end_states_counter.get)
-                if end_states_counter[largest] == end_states_total:
-                    consistency = f"Always {largest}"
-                elif end_states_counter[largest] >= end_states_total - 2:
-                    consistency = f"Usually {largest}"
-                else:
-                    consistency = f"Most Often {largest}"
-
-                last_marker = result.get("Last_Marker")
-
-                ep_record.update(
-                    {
-                        "hostname": hostname,
-                        "list_of_names": list_of_names,
-                        "list_of_endpoints": list_of_endpoints,
-                        "node_kind": node_kind,
-                        "os_type": os_type,
-                        "os_version": os_version,
-                        "os_class": os_class,
-                        "disco_run": disco_run,
-                        "run_start": run_start,
-                        "run_end": run_end,
-                        "scan_start": scan_start,
-                        "scan_end": scan_end,
-                        "when_was_that": whenWasThat,
-                        "consistency": consistency,
-                        "current_access": current_access,
-                        "node_updated": node_updated,
-                        "reason_not_updated": reason_not_updated,
-                        "end_state": end_state,
-                        "previous_end_state": prev_end_state,
-                        "session_results_logged": session_results_logged,
-                        "last_credential": last_credential,
-                        "credential_name": credential_name,
-                        "credential_login": credential_login,
-                        "timestamp": ep_timestamp,
-                        "da_id": node_id,
-                        "prev_da_id": prev_node_id,
-                        "next_node_id": next_node_id,
-                        "last_marker": last_marker,
-                    }
-                )
-                disco_data.append(ep_record)
-
-        for result in dropped:
-            if not isinstance(result, dict):
-                logger.warning("Unexpected dropped entry: %r", result)
-                continue
-            if result.get("Endpoint") == endpoint:
-                ep_record = {"endpoint": endpoint}
-                run_end = tools.getr(result, "End")
+                except ValueError:
+                    logger.debug("Failed to parse End_Raw %r", scan_end_raw)
+            if ep_timestamp is None and run_end:
                 run_end_str = " ".join(run_end.split(" ")[:2])
-                run_end_timestamp = datetime.datetime.strptime(
+                ep_timestamp = datetime.datetime.strptime(
                     run_end_str, "%Y-%m-%d %H:%M:%S"
                 )
-                time_now = datetime.datetime.now()
-                delta = time_now - run_end_timestamp
-                overall_mins = delta.days * 24 * 60 + (delta.seconds) / 60
-                whenData = pd.DataFrame({"in_minutes": [overall_mins]})
-                whenData["when"] = pd.cut(
-                    whenData["in_minutes"], bins=bins, labels=labels, right=False
-                )
-                when = whenData.to_dict().get("when")
-                whenWasThat = when.get(0)
-                disco_run = tools.getr(result, "Run", None)
-                run_start = tools.getr(result, "Start", None)
-                run_end = tools.getr(result, "End", None)
-                end_state = tools.getr(result, "End_State", None)
-                list_of_end_states.append(end_state)
+            time_now = datetime.datetime.now(ep_timestamp.tzinfo) if ep_timestamp else datetime.datetime.now()
+            delta = time_now - ep_timestamp if ep_timestamp else datetime.timedelta()
+            overall_mins = delta.days * 24 * 60 + (delta.seconds) / 60
+            whenData = pd.DataFrame({"in_minutes": [overall_mins]})
+            whenData["when"] = pd.cut(
+                whenData["in_minutes"], bins=bins, labels=labels, right=False
+            )
+            when = whenData.to_dict().get("when")
+            whenWasThat = when.get(0)
+            disco_run = tools.getr(result, "Run", None)
+            run_start = tools.getr(result, "Start", None)
+            end_state = tools.getr(result, "End_State", None)
+            reason_not_updated = tools.getr(result, "Reason_Not_Updated", None)
+            run_end_timestamp = ep_timestamp
+            ep_record = {
+                "endpoint": endpoint,
+                "list_of_names": list_of_names,
+                "list_of_endpoints": list_of_endpoints,
+                "disco_run": disco_run,
+                "run_start": run_start,
+                "run_end": run_end,
+                "when_was_that": whenWasThat,
+                "reason_not_updated": reason_not_updated,
+                "end_state": end_state,
+                "timestamp": run_end_timestamp,
+            }
+            endpoint_records.append(ep_record)
 
-                end_states_total = len(list_of_end_states)
-                end_states_counter = dict(Counter(list_of_end_states))
-                largest = max(end_states_counter, key=end_states_counter.get)
-                if end_states_counter[largest] == end_states_total:
-                    consistency = f"Always {largest}"
-                elif end_states_counter[largest] >= end_states_total - 2:
-                    consistency = f"Usually {largest}"
-                else:
-                    consistency = f"Most Often {largest}"
+        if not endpoint_records:
+            continue
 
-                reason_not_updated = tools.getr(result, "Reason_Not_Updated", None)
-                list_of_names = None
-                list_of_endpoints = None
-                for identity in identities:
-                    if endpoint in identity.get("list_of_ips"):
-                        list_of_endpoints = identity.get("list_of_ips")
-                        list_of_names = identity.get("list_of_names")
+        named_records = [
+            r for r in endpoint_records if r.get("hostname") or r.get("credential_name")
+        ]
+        if named_records:
+            chosen = max(named_records, key=lambda r: r["timestamp"])
+        else:
+            chosen = max(endpoint_records, key=lambda r: r["timestamp"])
 
-                ep_timestamp = run_end_timestamp
+            reason_not_updated = tools.getr(result, "Reason_Not_Updated", None)
+            list_of_names = None
+            list_of_endpoints = None
+            for identity in identities:
+                if endpoint in identity.get("list_of_ips"):
+                    list_of_endpoints = identity.get("list_of_ips")
+                    list_of_names = identity.get("list_of_names")
 
-                ep_record.update(
-                    {
-                        "list_of_names": list_of_names,
-                        "list_of_endpoints": list_of_endpoints,
-                        "disco_run": disco_run,
-                        "run_start": run_start,
-                        "run_end": run_end,
-                        "when_was_that": whenWasThat,
-                        "consistency": consistency,
-                        "reason_not_updated": reason_not_updated,
-                        "end_state": end_state,
-                        "timestamp": ep_timestamp,
-                        "dropped": 1,
-                    }
-                )
-                disco_data.append(ep_record)
+            ep_record.update(
+                {
+                    "list_of_names": list_of_names,
+                    "list_of_endpoints": list_of_endpoints,
+                    "disco_run": disco_run,
+                    "run_start": run_start,
+                    "run_end": run_end,
+                    "scan_end_raw": scan_end_raw,
+                    "when_was_that": whenWasThat,
+                    "consistency": consistency,
+                    "reason_not_updated": reason_not_updated,
+                    "end_state": end_state,
+                    "timestamp": ep_timestamp,
+                    "dropped": 1,
+                }
+            )
+            disco_data.append(ep_record)
 
     return disco_data
 
 
-@output._timer("Discovery Access Export")
+@output._timer("Discovery Access")
 def discovery_access(twsearch, twcreds, args):
-    print("\nDiscovery Access Export")
-    print("-----------------------")
-    logger.info("Running DA Report")
-
-    disco_data = _gather_discovery_data(twsearch, twcreds)
-
-    msg = os.linesep
-    data = []
-    headers = []
-
-    for ddata in disco_data:
-        if args.output_csv or args.output_file:
-            data.append([
-                ddata.get("endpoint"),
-                ddata.get("hostname"),
-                ddata.get("list_of_names"),
-                ddata.get("list_of_endpoints"),
-                ddata.get("node_kind"),
-                ddata.get("os_type"),
-                ddata.get("os_version"),
-                ddata.get("os_class"),
-                ddata.get("disco_run"),
-                ddata.get("run_start"),
-                ddata.get("run_end"),
-                ddata.get("scan_start"),
-                ddata.get("scan_end"),
-                ddata.get("when_was_that"),
-                ddata.get("consistency"),
-                ddata.get("current_access"),
-                ddata.get("node_updated"),
-                ddata.get("reason_not_updated"),
-                ddata.get("end_state"),
-                ddata.get("previous_end_state"),
-                ddata.get("session_results_logged"),
-                ddata.get("last_credential"),
-                ddata.get("credential_name"),
-                ddata.get("credential_login"),
-                ddata.get("timestamp"),
-                ddata.get("last_marker"),
-                ddata.get("da_id"),
-                ddata.get("prev_da_id"),
-                ddata.get("next_node_id"),
-                ddata.get("dropped"),
-            ])
-            headers = [
-                "endpoint",
-                "device_name",
-                "list_of_device_names",
-                "list_of_endpoints",
-                "node_kind",
-                "os_type",
-                "os_version",
-                "os_class",
-                "discovery_run",
-                "discovery_run_start",
-                "discovery_run_end",
-                "scan_start",
-                "scan_end",
-                "when_was_that",
-                "consistency",
-                "current_access",
-                "inferred_node_updated",
-                "reason_not_updated",
-                "end_state",
-                "previous_end_state",
-                "session_results_logged",
-                "last_credential",
-                "credential_name",
-                "credential_login",
-                "timestamp",
-                "last_marker",
-                "da_id",
-                "prev_da_id",
-                "next_node_id",
-                "dropped",
-            ]
-        else:
-            msg = (
-                "\nOnly showing limited details for table output. Output to CSV for full results.\n"
-            )
-            data.append([
-                ddata.get("endpoint"),
-                ddata.get("hostname"),
-                ddata.get("when_was_that"),
-                ddata.get("node_updated"),
-                ddata.get("consistency"),
-                ddata.get("credential_name"),
-            ])
-            headers = [
-                "endpoint",
-                "device_name",
-                "when_was_that",
-                "inferred_node_updated",
-                "consistency",
-                "credential_name",
-            ]
-
-    print(msg)
-
-    try:
-        data.sort(
-            key=lambda k: (
-                isinstance(tools.ip_or_string(k[0]), str),
-                tools.ip_or_string(k[0]),
-            )
-        )
-    except TypeError as e:
-        msg = "TypeError: Data output can't be hashed (cannot be sorted)\nError: %s" % str(e)
-        print(msg)
-        logger.error(msg)
-
-    output.report(data, headers, args, name="discovery_access")
+    """Generate basic discovery access report."""
+    logger.info("Running Discovery Access Report")
+    disco_data = _gather_discovery_data(twsearch, twcreds, args)
+    output.report([], [], args, name="discovery_access")
+    return disco_data
 
 
 @output._timer("Discovery Access Analysis")
-def discovery_analysis(twsearch, twcreds, args):
+def discovery_analysis(twsearch, twcreds, args, disco_data=None):
     print("\nDiscovery Access Analysis")
     print("-------------------------")
     logger.info("Running DA Analysis Report")
     print("Running DA Analysis Report")
 
-    disco_data = _gather_discovery_data(twsearch, twcreds)
+    # Reuse provided discovery data if available; otherwise gather it
+    # independently so the function can be executed stand-alone.
+    if disco_data is None:
+        disco_data = _gather_discovery_data(twsearch, twcreds, args)
 
     for record in disco_data:
         current = record.get("end_state")
@@ -1236,6 +1201,7 @@ def discovery_analysis(twsearch, twcreds, args):
                 ddata.get("run_end"),
                 ddata.get("scan_start"),
                 ddata.get("scan_end"),
+                ddata.get("scan_end_raw"),
                 ddata.get("when_was_that"),
                 ddata.get("consistency"),
                 ddata.get("current_access"),
@@ -1269,6 +1235,7 @@ def discovery_analysis(twsearch, twcreds, args):
                 "discovery_run_end",
                 "scan_start",
                 "scan_end",
+                "scan_end_raw",
                 "when_was_that",
                 "consistency",
                 "current_access",
@@ -1337,7 +1304,7 @@ def tpl_export(search, query, dir, method, client, sysuser, syspass):
     if method == "api":
         response = api.search_results(search, query)
         if type(response) == list and len(response) > 0:
-            header, data = tools.json2csv(response)
+            header, data, header_hf = tools.json2csv(response)
             for row in data:
                 filename = "%s/%s.tpl"%(tpldir,row[1])
                 files+=1

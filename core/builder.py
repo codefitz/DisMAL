@@ -362,6 +362,11 @@ def ordering(creds, search, args, apply):
         data.append([index, label, scope, url])
 
     if data:
+        # ``normalize_headers`` returns ``(headers, lookup)`` with headers in
+        # Title Case. Convert the header names to a mutable list and then to
+        # CamelCase so we can safely insert additional labels.
+        headers = list(tools.normalize_headers(headers, return_lookup=True)[0])
+        headers = [tools.normalize_header(h) for h in headers]
         headers.insert(0, "Discovery Instance")
         for row in data:
             row.insert(0, getattr(args, "target", None))
@@ -573,12 +578,16 @@ def scheduling(vault, search, args):
         in_exclude = tools.sortlist(in_exclude)
         logger.debug("Excludes:%s"%(in_exclude))
 
+        range_count = len(fr or [])
+        cred_count = len(in_exclude)
         if args.output_csv or args.output_file:
             msg = os.linesep
-            data.append([ sc, "Exclude Range", i, fr, None, dr, in_exclude ])
         else:
-            msg = "\nOnly showing ranges, credential counts for tables output. Output to CSV for credential list.\n"
-            data.append([ sc, "Exclude Range", i, len(fr), None, dr, len(in_exclude) ])
+            msg = (
+                "\nOnly showing ranges, credential counts for tables output. "
+                "Output to CSV for credential list.\n"
+            )
+        data.append([sc, "Exclude Range", i, range_count, None, dr, cred_count])
     if timer_count > 0:
         print(os.linesep,end="\r")
     
@@ -638,12 +647,16 @@ def scheduling(vault, search, args):
         in_run = tools.sortlist(in_run)
         logger.debug("Runs:%s"%(in_run))
         
+        range_count = len(fr or [])
+        cred_count = len(in_run)
         if args.output_csv or args.output_file:
             msg = os.linesep
-            data.append([ sc, "Scan Range", i, fr, sl, dr, in_run ])
         else:
-            msg = "\nOnly showing ranges, credential counts for tables output. Output to CSV for credential list.\n"
-            data.append([ sc, "Scan Range", i, len(fr), sl, dr, len(in_run) ])
+            msg = (
+                "\nOnly showing ranges, credential counts for tables output. "
+                "Output to CSV for credential list.\n"
+            )
+        data.append([sc, "Scan Range", i, range_count, sl, dr, cred_count])
     print(os.linesep,end="\r")
 
     # sort data by index field
@@ -654,128 +667,157 @@ def scheduling(vault, search, args):
 
     output.report(data, heads, args, name="schedules")
 
-def unique_identities(search):
+def unique_identities(search, include_endpoints=None, endpoint_prefix=None):
+    """Return a list of unique device identities.
+
+    Parameters
+    ----------
+    search: object
+        API search handle.
+    include_endpoints: list[str] | None
+        Explicit list of endpoint IPs to include.  If provided, only these
+        endpoints are processed.
+    endpoint_prefix: str | None
+        Optional prefix that endpoints must start with.  Ignored when
+        ``include_endpoints`` is supplied.
+    """
 
     logger.info("Running: Unique Identities report...")
     print("Running: Unique Identities report...")
 
-    devices = api.search_results(search, queries.deviceInfo)
-    da_results = api.search_results(search, queries.da_ip_lookup)
+    # Optionally constrain the API queries to specific endpoints.  This helps
+    # reduce the amount of data returned and therefore overall execution time.
+    device_query = queries.deviceInfo.copy()
+    da_query = queries.da_ip_lookup.copy()
+
+    endpoint_filter = None
+    if include_endpoints:
+        endpoint_filter = ",".join(f"'{ep}'" for ep in include_endpoints)
+        device_query["query"] = device_query["query"].replace(
+            "search DeviceInfo",
+            "search DeviceInfo where #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.endpoint in (%s)" % endpoint_filter,
+        )
+        da_query["query"] = da_query["query"].replace(
+            "search DiscoveryAccess",
+            "search DiscoveryAccess where endpoint in (%s)" % endpoint_filter,
+        )
+    elif endpoint_prefix:
+        device_query["query"] = device_query["query"].replace(
+            "search DeviceInfo",
+            "search DeviceInfo where #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.endpoint beginswith '%s'" % endpoint_prefix,
+        )
+        da_query["query"] = da_query["query"].replace(
+            "search DiscoveryAccess",
+            "search DiscoveryAccess where endpoint beginswith '%s'" % endpoint_prefix,
+        )
+
+    devices = api.search_results(search, device_query)
+    da_results = api.search_results(search, da_query)
 
     if not isinstance(devices, list) or not isinstance(da_results, list):
         logger.error("Failed to retrieve unique identity data")
         return []
+      
+    def _endpoint_in_scope(endpoint: str) -> bool:
+        if not endpoint:
+            return False
+        if include_endpoints:
+            return endpoint in include_endpoints
+        if endpoint_prefix:
+            return endpoint.startswith(endpoint_prefix)
+        return True
 
-    ### list of unique endpoints
-    unique_endpoints = []
+    # Build initial map of endpoints to sets for IPs and names
+    endpoint_map = {}
+
     timer_count = 0
     for da in da_results:
         timer_count = tools.completage("Getting Unique IPs", len(da_results), timer_count)
         if not isinstance(da, dict):
             logger.warning("Unexpected discovery access entry: %r", da)
             continue
-        endpoint = da.get('ip')
-        if endpoint and endpoint not in unique_endpoints:
-            logger.debug("Unique Endpoint: %s" % endpoint)
-            unique_endpoints.append(endpoint)
+            
+        endpoint = da.get("ip")
+        if endpoint and endpoint not in endpoint_map:
+            logger.debug("Unique Endpoint: %s", endpoint)
+            endpoint_map[endpoint] = {"ips": set(), "names": set()}
 
-    # Generate combined record of hostnames and endpoints
-    identities = []
-    unique_identities = []
+    print(os.linesep, end="\r")
 
-    print(os.linesep,end="\r")
+    # Total endpoints for coverage calculation
+    total_endpoints = len(endpoint_map)
+
+    # Fields to expand for IPs and hostnames
+    ip_fields = [
+        "Chosen_Endpoint",
+        "Discovered_IP_Addrs",
+        "Inferred_All_IP_Addrs",
+        "NIC_IPs",
+    ]
+    name_fields = [
+        "Device_Sysname",
+        "Device_Hostname",
+        "Device_FQDN",
+        "Inferred_Name",
+        "Inferred_Hostname",
+        "Inferred_FQDN",
+        "Inferred_Sysname",
+        "NIC_FQDNs",
+    ]
+
+    # Populate endpoint map while iterating over devices once
     timer_count = 0
-    for endpoint in unique_endpoints:
-        timer_count = tools.completage("Processing", len(unique_endpoints), timer_count)
-        logger.debug("Processing Unique Endpoint: %s"%endpoint)
-        for device in devices:
-            if not isinstance(device, dict):
-                logger.warning("Unexpected device record: %r", device)
-                continue
-            if endpoint == device.get('DA_Endpoint'):
-                logger.debug("Found DA for %s"%endpoint)
-                list_of_ips = []
-                list_of_names = []
-                list_of_ips.append(endpoint)
-                list_of_ips = tools.list_of_lists(device,'Chosen_Endpoint',list_of_ips)
-                list_of_ips = tools.list_of_lists(device,'Discovered_IP_Addrs',list_of_ips)
-                list_of_ips = tools.list_of_lists(device,'Inferred_All_IP_Addrs',list_of_ips)
-                list_of_ips = tools.list_of_lists(device,'NIC_IPs',list_of_ips)
-                list_of_names = tools.list_of_lists(device,'Device_Sysname',list_of_names)
-                list_of_names = tools.list_of_lists(device,'Device_Hostname',list_of_names)
-                list_of_names = tools.list_of_lists(device,'Device_FQDN',list_of_names)
-                list_of_names = tools.list_of_lists(device,'Inferred_Name',list_of_names)
-                list_of_names = tools.list_of_lists(device,'Inferred_Hostname',list_of_names)
-                list_of_names = tools.list_of_lists(device,'Inferred_FQDN',list_of_names)
-                list_of_names = tools.list_of_lists(device,'Inferred_Sysname',list_of_names)
-                list_of_names = tools.list_of_lists(device,'NIC_FQDNs',list_of_names)
-                msg = "endpoint %s, list_of_names: %s, list_of_ips: %s"%(endpoint,list_of_names,list_of_ips)
-                logger.debug(msg)
 
-                if type(list_of_ips) is list:
-                    try:
-                        if len(list_of_ips) > 0:
-                            list_of_ips = tools.sortlist(list_of_ips)
-                        if len(list_of_names) > 0:
-                            list_of_names = tools.sortlist(list_of_names)
+    for device in devices:
+        timer_count = tools.completage("Processing", len(devices), timer_count)
+        if not isinstance(device, dict):
+            logger.warning("Unexpected device record: %r", device)
+            continue
 
-                        identities.append({
-                                        "list_of_names":list_of_names,
-                                        "list_of_ips":list_of_ips
-                                        })
-                        logger.debug("Appended identity for %s"%endpoint)
-                    except TypeError as e:
-                        msg = "TypeError: list_of_ips can't be hashed\n%s" % str(e)
-                        print("__endpoint__",endpoint)
-                        print("list_of_ips",list_of_ips)
-                        print(msg)
-                        logger.error(msg)
-                    except Exception as e:
-                        msg = "Error: list_of_ips could not be processed\n%s" % str(e)
-                        print("__endpoint__",endpoint)
-                        print("list_of_ips",list_of_ips)
-                        print(msg)
-                        logger.error(msg)
-                else:
-                    msg = "Warning: list_of_ips is not a list type - can't be hashed\n%s" % list_of_ips
-                    print(msg)
-                    logger.warning(msg)
+        ips = []
+        names = []
+        endpoint = device.get("DA_Endpoint")
+        if endpoint:
+            ips.append(endpoint)
 
-        # 2nd loop
-        new_ip_list = []
-        new_name_list = []
-        count=0
-        for identity in identities:
-            count+=1
-            if endpoint in identity.get('list_of_ips'):
-                logger.debug("ipcheck %s, list_of_names: %s, list_of_ips: %s"%(endpoint,list_of_names,list_of_ips))
-                for ips in identity.get('list_of_ips'):
-                    new_ip_list.append(ips)
-                    logger.debug("Appending IP: %s to new list: %s"%(ips,new_ip_list))
-                for names in identity.get('list_of_names'):
-                    new_name_list.append(names)
-                    logger.debug("Appending Name: %s to new list: %s"%(names,new_name_list))
-        if len(new_ip_list) > 0:
-            new_ip_list = tools.sortlist(new_ip_list,"None")
-            logger.debug("Sorted IP List: %s"%new_ip_list)
-        if len(new_name_list) > 0:
-            new_name_list = tools.sortlist(new_name_list,"None")
-            logger.debug("Sorted Name List: %s"%new_name_list)
+        for field in ip_fields:
+            ips = tools.list_of_lists(device, field, ips)
+        for field in name_fields:
+            names = tools.list_of_lists(device, field, names)
 
-        unique_identities.append({
-                                "originating_endpoint":endpoint,
-                                "list_of_ips":new_ip_list,
-                                "list_of_names":new_name_list
-                                })
+        ips_set = {ip for ip in ips if ip is not None}
+        names_set = {name for name in names if name is not None}
+
+        for ip in ips_set:
+            data = endpoint_map.get(ip)
+            if data is not None:
+                data["ips"].update(ips_set)
+                data["names"].update(names_set)
+
     print(os.linesep)
+
+    unique_identities = []
+    for endpoint, data in endpoint_map.items():
+        ip_list = tools.sortlist(list(data["ips"]), "None") if data["ips"] else []
+        name_list = tools.sortlist(list(data["names"]), "None") if data["names"] else []
+        pct = (len(data["ips"]) / total_endpoints * 100) if total_endpoints else 0
+        unique_identities.append(
+            {
+                "originating_endpoint": endpoint,
+                "list_of_ips": ip_list,
+                "list_of_names": name_list,
+                "coverage_pct": pct,
+            }
+        )
+
     return unique_identities
 
-def overlapping(tw_search, args):
+def ip_analysis(tw_search, args):
 
-    print("\nScheduled Scans Overlapping")
-    print("---------------------------")
-    logger.info("Running: Overlapping Report...")
-    print("Running: Overlapping Report...")
+    print("\nIP Analysis")
+    print("-----------")
+    logger.info("Running: IP analysis report...")
+    print("Running: IP analysis report...")
     heads = ["IP Address", "Scan Schedules"]
 
     logger.debug("Executing scan range query: %s", queries.scanrange.get("query", queries.scanrange))
@@ -785,7 +827,7 @@ def overlapping(tw_search, args):
     logger.debug("Raw scan range results: %s", scan_ranges)
     if scan_ranges is None or not isinstance(scan_ranges, list):
         logger.error("Failed to retrieve scan ranges")
-        output.report([], heads, args, name="overlapping_ips")
+        output.report([], heads, args, name="ip_analysis")
         return
     if len(scan_ranges) == 0:
         msg = "No scan ranges found"
@@ -834,7 +876,7 @@ def overlapping(tw_search, args):
     logger.debug("Raw exclude results: %s", excludes)
     if excludes is None or not isinstance(excludes, list):
         logger.error("Failed to retrieve excludes")
-        output.report([], heads, args, name="overlapping_ips")
+        output.report([], heads, args, name="ip_analysis")
         return
     if len(excludes) == 0:
         msg = "No exclude ranges found"
@@ -845,7 +887,7 @@ def overlapping(tw_search, args):
         e = excludes[0]
         if not isinstance(e, dict) or 'results' not in e:
             logger.error("Invalid excludes result structure")
-            output.report([], heads, args, name="overlapping_ips")
+            output.report([], heads, args, name="ip_analysis")
             return
 
     logger.debug("Parsed %d exclude results", len(e.get("results", [])))
@@ -871,7 +913,12 @@ def overlapping(tw_search, args):
             logger.debug("Missing endpoint: %s", endpoint)
     missing_ips = tools.sortlist(missing_ips)
 
-    data=[]
+    # Look for connections seen on the network but not yet scanned
+    unscanned_results = api.search_results(
+        tw_search, queries.connections_unscanned
+    )
+
+    data = []
 
     for matching in matched_runs:
         if len(matching.get("runs")) > 1:
@@ -888,12 +935,19 @@ def overlapping(tw_search, args):
     for missing_ip in missing_ips:
         data.append([ missing_ip, "Endpoint has previous DiscoveryAccess, but not currently scheduled." ])
 
+    existing_ips = {row[0] for row in data}
+    for unscanned in unscanned_results:
+        unseen_ip = tools.getr(unscanned, 'Unscanned Host IP Address')
+        if unseen_ip and unseen_ip not in existing_ips:
+            data.append([ unseen_ip, "Seen but unscanned." ])
+            existing_ips.add(unseen_ip)
+
     if len(data) == matches:
         msg = "No missing IPs in ranges."
         logger.info(msg)
         print(msg)
 
-    output.report(data, heads, args, name="overlapping_ips")
+    output.report(data, heads, args, name="ip_analysis")
 
 def get_scans(results, list_of_ranges):
     """Return labels of scans that include any of ``list_of_ranges``.

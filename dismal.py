@@ -4,7 +4,7 @@
 #
 # For use with BMC Discovery
 #
-vers = "0.1.3"
+vers = "0.1.7"
 
 import argparse
 import datetime
@@ -126,10 +126,9 @@ Providing no <report> or using "default" will run all options that do not requir
 "credential_success"        - Report on credential success with total number of accesses, success %% and ranges
 "db_lifecycle"              - Export Database lifecycle report
 "device" <name>             - Report on a specific device node by name (Host, NetworkDevice, Printer, SNMPManagedDevice, StorageDevice, ManagementController)
-"device_ids"                - Export list of unique device identities
+"device_ids"                - Export list of unique device identities with coverage percentage per endpoint
 "devices"                   - Report of unique device profiles - includes last DiscoveryAccess and last _successful_ DiscoveryAccess results with credential details
 "devices_with_cred" <UUID>  - Run devices report for a specific credential
-"discovery_access"          - Report of all DiscoveryAccesses and dropped endpoints with credential details, consistency if available
 "discovery_analysis"        - Report of unique DiscoveryAccesses and dropped endpoints with credential details, consistency analysis and end state change
 "eca_errors"                - Export list of ECA Errors
 "excludes"                  - Export of exclude schedules
@@ -143,7 +142,7 @@ Providing no <report> or using "default" will run all options that do not requir
 "open_ports"                - Export of open ports analysis
 "orphan_vms"                - Report of Virtual Machines that are not related to a container Host
 "os_lifecycle"              - Export OS lifecycle report
-"overlapping_ips"           - Run overlapping range analysis report
+"ip_analysis"               - Run IP analysis report
 "pattern_modules"           - Summary of installed pattern modules
 "removed"                   - Export list of devices removed in the last 7 days (aged out)
 "schedules"                 - Export of schedules with additional list of which credentials will be used with scan/exclude
@@ -153,12 +152,30 @@ Providing no <report> or using "default" will run all options that do not requir
 "suggest_cred_opt"          - Display suggested order of credentials based on restricted ips, excluded ips, success/failure, privilege, type
 "tku"                       - TKU version summary
 "unrecognised_snmp"         - Report of unrecognised SNMP devices (Model > Device)
+"capture_candidates" - Report of capture candidates
 "vault"                     - Vault details
 "default"                   - Run all options that do not require a value
 \n
 ''',metavar='<report> [value]',nargs='*')
 excavation.add_argument('--resolve-hostnames', dest='resolve_hostnames', action='store_true', required=False,
                         help='Ping guest full names and record the resolved IP address in results.')
+
+excavation.add_argument(
+    '--include-endpoints',
+    dest='include_endpoints',
+    nargs='*',
+    required=False,
+    help='Only include the specified endpoints in device related reports. '
+         'Multiple IPs may be supplied separated by spaces.',
+    metavar='<ip>',
+)
+excavation.add_argument(
+    '--endpoint-prefix',
+    dest='endpoint_prefix',
+    required=False,
+    help='Limit device related reports to endpoints beginning with this prefix.',
+    metavar='<prefix>',
+)
 
 global args
 args = parser.parse_args()
@@ -294,6 +311,7 @@ if args.access_method == "all":
         cli.software_lifecycle(cli_target, args, system_user, system_passwd, reporting_dir)
         cli.db_lifecycle(cli_target, args, system_user, system_passwd, reporting_dir)
         cli.unrecognised_snmp(cli_target, args, system_user, system_passwd, reporting_dir)
+        cli.capture_candidates(cli_target, args, system_user, system_passwd, reporting_dir)
         cli.installed_agents(cli_target, args, system_user, system_passwd, reporting_dir)
         cli.software_usernames(cli_target, args, system_user, system_passwd, reporting_dir)
         cli.module_summary(cli_target, args, system_user, system_passwd, reporting_dir)
@@ -313,8 +331,7 @@ if args.access_method == "all":
         api.success(creds, search, args, reporting_dir)
         builder.scheduling(creds, search, args)
         api.excludes(search, args, reporting_dir)
-        builder.overlapping(search, args)
-        reporting.discovery_access(search, creds, args)
+        builder.ip_analysis(search, args)
         reporting.discovery_analysis(search, creds, args)
         api.show_runs(disco, args)
         api.discovery_runs(disco, args, reporting_dir)
@@ -327,6 +344,7 @@ if args.access_method == "all":
         api.near_removal(search, args, reporting_dir)
         api.removed(search, args, reporting_dir)
         api.snmp(search, args, reporting_dir)
+        api.capture_candidates(search, args, reporting_dir)
         api.oslc(search, args, reporting_dir)
         api.slc(search, args, reporting_dir)
         api.dblc(search, args, reporting_dir)
@@ -481,6 +499,9 @@ if args.access_method=="cli":
     if excavate_default or (args.excavate and args.excavate[0] == "unrecogised_snmp"):
         cli.unrecognised_snmp(cli_target, args, system_user, system_passwd, reporting_dir)
 
+    if excavate_default or (args.excavate and args.excavate[0] == "capture_candidates"):
+        cli.capture_candidates(cli_target, args, system_user, system_passwd, reporting_dir)
+
     if excavate_default or (args.excavate and args.excavate[0] == "installed_agents"):
         cli.installed_agents(cli_target, args, system_user, system_passwd, reporting_dir)
 
@@ -583,11 +604,21 @@ if args.access_method=="api":
         reporting.devices(search, creds, args)
 
     if excavate_default or (args.excavate and args.excavate[0] == "device_ids"):
-        identities = builder.unique_identities(search)
+        identities = builder.unique_identities(search, args.include_endpoints, args.endpoint_prefix)
         data = []
         for identity in identities:
-            data.append([identity['originating_endpoint'],identity['list_of_ips'],identity['list_of_names']])
-        output.report(data, [ "Origating Endpoint", "List of IPs", "List of Names" ], args, name="device_ids")
+            data.append([
+                identity['originating_endpoint'],
+                identity['list_of_ips'],
+                identity['list_of_names'],
+                identity.get('coverage_pct'),
+            ])
+        output.report(
+            data,
+            ["Origating Endpoint", "List of IPs", "List of Names", "Coverage %"],
+            args,
+            name="device_ids",
+        )
 
     if args.excavate and args.excavate[0] == "ipaddr":
         reporting.ipaddr(search, creds, args)
@@ -610,14 +641,13 @@ if args.access_method=="api":
     if excavate_default or (args.excavate and args.excavate[0] == "excludes"):
         api.excludes(search, args, reporting_dir)
 
-    if excavate_default or (args.excavate and args.excavate[0] == "overlapping_ips"):
-        builder.overlapping(search, args)
+    if excavate_default or (args.excavate and args.excavate[0] == "ip_analysis"):
+        builder.ip_analysis(search, args)
 
-    if excavate_default or (args.excavate and args.excavate[0] == "discovery_access"):
-        reporting.discovery_access(search, creds, args)
-
+    # Gather discovery data and run analysis when requested.
     if excavate_default or (args.excavate and args.excavate[0] == "discovery_analysis"):
-        reporting.discovery_analysis(search, creds, args)
+        disco_data = reporting._gather_discovery_data(search, creds, args)
+        reporting.discovery_analysis(search, creds, args, disco_data)
 
     if excavate_default or (args.excavate and args.excavate[0] == "active_runs"):
         api.show_runs(disco, args)
@@ -658,10 +688,13 @@ if args.access_method=="api":
     
     if excavate_default or (args.excavate and args.excavate[0] == "db_lifecycle"):
         api.dblc(search, args, reporting_dir)
-    
+
     if excavate_default or (args.excavate and args.excavate[0] == "unrecogised_snmp"):
         api.snmp(search, args, reporting_dir)
-        
+
+    if excavate_default or (args.excavate and args.excavate[0] == "capture_candidates"):
+        api.capture_candidates(search, args, reporting_dir)
+
     if excavate_default or (args.excavate and args.excavate[0] == "installed_agents"):
         api.agents(search, args, reporting_dir)
     
@@ -685,7 +718,8 @@ if cli_target:
     cli_target.close()
 
 elapsed = time.time() - start_time
-msg = f"Completed in {elapsed:.2f} seconds"
+formatted = output.format_duration(elapsed)
+msg = f"Completed in {formatted}"
 print(msg)
 logger.info(msg)
 

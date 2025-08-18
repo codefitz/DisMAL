@@ -10,6 +10,41 @@ from cidrize import cidrize
 
 logger = logging.getLogger("_tools_")
 
+def to_camel_case(value: str) -> str:
+    """Convert a string with separators to CamelCase.
+
+    Non-alphanumeric characters are treated as delimiters. For example,
+    ``last_scanned`` becomes ``LastScanned``.
+
+    Parameters
+    ----------
+    value : str
+        The string to convert.
+
+    Returns
+    -------
+    str
+        The CamelCase version of ``value``. Non-string inputs are returned
+        unchanged.
+    """
+
+    if not isinstance(value, str):
+        return value
+
+    parts = re.split(r"[^0-9a-zA-Z]+", value)
+    return "".join(part.capitalize() for part in parts if part)
+
+def snake_to_camel(value):
+    """Convert snake_case string to Camel Case with spaces.
+
+    Examples:
+        >>> snake_to_camel("pre_scanning")
+        'Pre Scanning'
+    """
+    if not isinstance(value, str):
+        return value
+    return " ".join(word.capitalize() for word in value.split("_"))
+
 def in_wsl() -> bool:
     """
         WSL is thought to be the only common Linux kernel with Microsoft in the name, per Microsoft:
@@ -17,8 +52,12 @@ def in_wsl() -> bool:
     """
     return 'Microsoft' in uname().release
 
-def getr(data,attribute,default_value=None):
-    return data.get(attribute) or default_value
+def getr(data, attribute, default_value=None):
+    """Return ``data[attribute]`` if present, else ``default_value``.
+
+    This avoids treating falsy values like ``0`` or ``""`` as missing.
+    """
+    return data[attribute] if attribute in data else default_value
 
 def range_to_ips(iprange):
     """Return a list of :class:`ipaddress.IPv4Network`/`IPv6Network` objects.
@@ -102,6 +141,47 @@ def sortdic(lst):
     logger.debug(lst)
     return lst2
 
+def normalize_header(name: str) -> str:
+    """Return *name* converted to CamelCase.
+
+    Non-alphanumeric characters are treated as word separators.
+    """
+    if not name:
+        return ""
+    parts = re.split(r"[^0-9A-Za-z]+", str(name))
+    return "".join(p.capitalize() for p in parts if p)
+
+def normalize_key(key):
+    """Return ``key`` converted from ``snake_case`` or dotted names to Title Case."""
+    parts = re.split(r"[_\.]+", key)
+    return " ".join(p.capitalize() for p in parts if p)
+
+def normalize_headers(headers, return_lookup=False):
+    """Normalize ``headers`` and optionally return a lookup map.
+
+    Parameters
+    ----------
+    headers : Iterable[str]
+        Header labels to normalize.
+    return_lookup : bool, optional
+        When ``True`` return a tuple of ``(headers, lookup)`` where ``lookup``
+        maps the normalized labels back to their original values.  When
+        ``False`` only the list of normalized headers is returned.
+    """
+    if not headers:
+        return ([], {}) if return_lookup else []
+
+    normalized = []
+    lookup = {}
+    for key in headers:
+        norm = normalize_key(key)
+        normalized.append(norm)
+        lookup[norm] = key
+
+    if return_lookup:
+        return normalized, lookup
+    return normalized
+
 def completage(message, record_count, timer_count):
     timer_count += 1
     pc = (float(timer_count) / float(record_count))
@@ -128,7 +208,8 @@ def list_of_lists(ci,attr,list_to_append):
 def session_get(results):
     sessions = {}
     for result in results:
-        count = result.get('Count')
+        # Cast count values to integers to ensure arithmetic works as expected
+        count = int(result.get('Count', 0))
         uuid = result.get('UUID')
         restype = result.get('Session_Type')
         if uuid:
@@ -183,22 +264,61 @@ def dequote(s):
         return s[1:-1]
     return s
 
-def json2csv(jsdata):
-    header = []
+
+def json2csv(jsdata, return_map=False):
+    orig_header = []
     data = []
     for jsitem in jsdata:
-        headers = jsitem.keys() # get the headers, unstructured
+        headers = jsitem.keys()  # get the headers, unstructured
         for label in headers:
             # create a unique list of ALL possible headers
-            header.append(label)
-            header = sortlist(header)
+            orig_header.append(label)
+            orig_header = sortlist(orig_header)
+
+    header, lookup = normalize_headers(orig_header, return_lookup=True)
+
     for jsitem in jsdata:
         values = []
-        for key in header:
+        for key in orig_header:
             # Loop through the unique set of headers and get values if exist
-            values.append(getr(jsitem,key,"N/A")) # Substitute if missing
+            values.append(getr(jsitem, key, "N/A"))  # Substitute if missing
         data.append(values)
-    return header, data
+
+    if return_map:
+        return header, data, lookup
+
+    human_header = [snake_to_camel(h) for h in header]
+    return header, data, human_header
+
+def snake_to_title(value):
+    """Convert ``snake_case`` strings to Title Case with spaces.
+
+    Common abbreviations such as ``os`` and ``id`` are preserved in uppercase.
+    Non-string values or already formatted labels are returned unchanged.
+    """
+    if not isinstance(value, str):
+        return value
+
+    if not value.islower():
+        return value
+
+    abbreviations = {"os": "OS", "id": "ID"}
+    parts = value.split("_")
+    words = []
+    for part in parts:
+        if part in abbreviations:
+            words.append(abbreviations[part])
+            continue
+        for abbr, repl in abbreviations.items():
+            if part.endswith(abbr) and part != abbr:
+                prefix = part[:-len(abbr)]
+                if prefix:
+                    words.append(prefix.capitalize())
+                words.append(repl)
+                break
+        else:
+            words.append(part.capitalize())
+    return " ".join(words)
 
 def list_table_to_json(rows):
     """Convert a list-of-lists table to a list of dictionaries.
@@ -210,3 +330,20 @@ def list_table_to_json(rows):
         headers = rows[0]
         return [dict(zip(headers, r)) for r in rows[1:]]
     return rows
+
+def normalize_keys(keys):
+    """Return header names in Title Case with spaces.
+
+    Any key containing underscores or entirely lowercase characters is
+    converted to a human-friendly form. Keys that already contain
+    capital letters or spaces are returned unchanged.
+    """
+
+    normalized = []
+    for key in keys:
+        if "_" in key or key.islower():
+            normalized.append(key.replace("_", " ").title())
+        else:
+            normalized.append(key)
+    return normalized
+

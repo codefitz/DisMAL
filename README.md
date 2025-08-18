@@ -16,6 +16,15 @@ Use at your own risk.
    pip install -r requirements.txt
    ```
 
+   This project requires the following packages:
+
+   - pandas
+   - paramiko
+   - tideway *(obtain from a BMC Discovery appliance)*
+   - pyautogui
+   - tabulate
+   - cidrize
+
    The `tideway` module is distributed with BMC Discovery and must be obtained from a BMC Discovery appliance because it is not available on PyPI.
 
 4. *(Optional)* Install additional development requirements for running the test suite:
@@ -23,6 +32,10 @@ Use at your own risk.
    ```bash
    pip install -r requirements-dev.txt
    ```
+
+   Development dependencies:
+
+   - pytest
 
 ## Running the test suite
 
@@ -58,12 +71,29 @@ The options `-P`, `-T` and `-W` can be used to read the UI password, API token a
 By default, reports are saved to an `output_<appliance>` directory in the current working directory.
 Use the `--stdout` option to suppress file output and print results directly to the terminal.
 
+### Endpoint filtering
+
+Device-centric reports can now be limited to a subset of endpoints.  Supplying
+`--include-endpoints` with one or more IP addresses, or `--endpoint-prefix`
+with a partial address, will restrict searches and speed up processing.  For
+example:
+
+```bash
+python3 dismal.py --access_method api -i <appliance_host> -u <username> -p <password> \
+    --excavate device_ids --include-endpoints 10.0.0.1 10.0.0.2
+```
+
+Only the two specified endpoints are queried and reported on.
+
+The resulting device-IDs report includes a **Coverage %** column indicating
+the proportion of unique IP addresses seen for each originating endpoint
+compared to the total endpoints examined.
+
 ## Reports
 
-Two related reports focus on Discovery Access history:
+One report focuses on Discovery Access history:
 
-- **discovery_access** – exports the latest access details for each endpoint, including credential information and timestamps.
-- **discovery_analysis** – adds a comparison between consecutive runs using the same data to highlight state changes.
-- **overlapping_ips** – analyze overlapping discovery ranges and report unscheduled endpoints. Uses the same data sources as the schedules report.
+- **discovery_analysis** – exports the latest access details for each endpoint and compares consecutive runs to highlight state changes.
+- **ip_analysis** – Run IP analysis report.
 More reports are included.
 Run `python3 dismal.py --help` to see the complete list.

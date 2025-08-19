@@ -417,9 +417,22 @@ def devices(twsearch, twcreds, args):
     )
     results = api.search_results(twsearch,queries.deviceInfo)
 
-    # Track progress across all device result iterations
-    result_timer = 0
+    # Track progress for identities and device results separately to avoid
+    # nested progress collisions.  ``identity_timer`` counts completed
+    # identities while ``result_timer`` tracks processed device results.
     total_result_iterations = len(results) * len(identities)
+    identity_timer = 0
+    result_timer = 0
+
+    def _progress(id_done, id_total, res_done, res_total):
+        """Display progress for identities and device results."""
+        id_pct = (id_done / id_total) * 100 if id_total else 100
+        res_pct = (res_done / res_total) * 100 if res_total else 100
+        msg = (
+            f"Gathering Device Results...: {id_pct:.0f}% | "
+            f"Processing device results…: {res_pct:.0f}%"
+        )
+        print(f"\r{msg}", end="")
 
     devices = []
     msg = None
@@ -427,9 +440,9 @@ def devices(twsearch, twcreds, args):
 
     # Build the results
 
-    timer_count = 0
     for identity in identities:
-        timer_count = tools.completage("Gathering Device Results...", len(identities), timer_count)
+        identity_timer += 1
+        _progress(identity_timer, len(identities), result_timer, total_result_iterations)
         logger.debug("Processing identity %s"%identity)
         latest_timestamp = None
         all_credentials_used = []
@@ -440,7 +453,8 @@ def devices(twsearch, twcreds, args):
         last_scanned_ip = None
         last_kind = None
         for result in results:
-            result_timer = tools.completage("Processing device results…", total_result_iterations, result_timer)
+            result_timer += 1
+            _progress(identity_timer, len(identities), result_timer, total_result_iterations)
             da_endpoint = tools.getr(result,'DA_Endpoint',None)
             logger.debug("Checking endpoint %s in identity %s"%(da_endpoint,identity))
 
@@ -594,7 +608,10 @@ def devices(twsearch, twcreds, args):
 
                 devices.append(device)
                 logger.debug("Device added to list of devices:%s"%(device))
-    
+
+    # Move to the next line after the progress output
+    print()
+
     # Make sure we only report each device once - there is probably a more efficient way to do this in the loop.
     devices = list({v['last_identity']:v for v in devices}.values())
     logger.debug("Unique List of devices:%s"%(devices))

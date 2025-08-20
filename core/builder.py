@@ -826,32 +826,38 @@ def ip_analysis(tw_search, args):
     logger.debug("Scan range search HTTP status: %s", getattr(scan_resp, "status_code", "n/a"))
     scan_ranges = api.get_json(scan_resp)
     logger.debug("Raw scan range results: %s", scan_ranges)
-    if scan_ranges is None or not isinstance(scan_ranges, list):
+    if isinstance(scan_ranges, dict):
+        results = scan_ranges.get("results", [])
+    elif isinstance(scan_ranges, list):
+        if scan_ranges and isinstance(scan_ranges[0], dict) and "results" in scan_ranges[0]:
+            results = scan_ranges[0].get("results", [])
+        else:
+            results = scan_ranges
+    else:
         logger.error("Failed to retrieve scan ranges")
         output.report([], heads, args, name="ip_analysis")
         return
-    if len(scan_ranges) == 0:
+
+    if not isinstance(results, list):
+        logger.error("Invalid scan range structure")
+        output.report([], heads, args, name="ip_analysis")
+        return
+
+    if len(results) == 0:
         msg = "No scan ranges found"
         logger.info(msg)
         print(msg)
-        results = {"results": []}
-    else:
-        first = scan_ranges[0]
-        if isinstance(first, dict) and 'results' in first:
-            results = first
-        else:
-            results = {"results": scan_ranges}
 
-    logger.debug("Parsed %d scan range results", len(results.get("results", [])))
+    logger.debug("Parsed %d scan range results", len(results))
 
     ip_to_ranges = defaultdict(set)
     scheduled_ip_set = set()
 
     timer_count = 0
-    for result in results.get('results'):
+    for result in results:
         timer_count = tools.completage(
             "Gathering Results...",
-            len(results.get('results')),
+            len(results),
             timer_count,
         )
         logger.debug("Scan Result:\n%s", result)
@@ -875,25 +881,31 @@ def ip_analysis(tw_search, args):
     logger.debug("Excludes search HTTP status: %s", getattr(excludes_resp, "status_code", "n/a"))
     excludes = api.get_json(excludes_resp)
     logger.debug("Raw exclude results: %s", excludes)
-    if excludes is None or not isinstance(excludes, list):
+    if isinstance(excludes, dict):
+        e_results = excludes.get("results", [])
+    elif isinstance(excludes, list):
+        if excludes and isinstance(excludes[0], dict) and "results" in excludes[0]:
+            e_results = excludes[0].get("results", [])
+        else:
+            e_results = excludes
+    else:
         logger.error("Failed to retrieve excludes")
         output.report([], heads, args, name="ip_analysis")
         return
-    if len(excludes) == 0:
+
+    if not isinstance(e_results, list):
+        logger.error("Invalid excludes result structure")
+        output.report([], heads, args, name="ip_analysis")
+        return
+
+    if len(e_results) == 0:
         msg = "No exclude ranges found"
         logger.info(msg)
         print(msg)
-        e = {"results": []}
-    else:
-        e = excludes[0]
-        if not isinstance(e, dict) or 'results' not in e:
-            logger.error("Invalid excludes result structure")
-            output.report([], heads, args, name="ip_analysis")
-            return
 
-    logger.debug("Parsed %d exclude results", len(e.get("results", [])))
+    logger.debug("Parsed %d exclude results", len(e_results))
 
-    for result in e.get('results'):
+    for result in e_results:
         r = result['Scan_Range'][0]
         list_of_ips = tools.range_to_ips(r)
         logger.debug(

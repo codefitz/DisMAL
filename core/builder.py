@@ -351,15 +351,13 @@ def ordering(creds, search, args, apply):
     print(msg)
     logger.info(msg)
     for cred in credlist:
-        label = cred.get('label')
-        index = cred.get('index')
-        msg = '%s) %s' % (index, label)
+        label = cred.get("label")
+        index = cred.get("index")
+        msg = "%s) %s" % (index, label)
         logger.info(msg)
-        scope = cred.get("scopes") or []
-        if isinstance(scope, list):
-            scope = ", ".join(scope)
-        url = outpost_map.get(cred.get("uuid"))
-        data.append([index, label, scope, url])
+        # Previously, refresh data was appended to ``data`` here which resulted
+        # in the report containing rows without weighting or new index values.
+        # Only log the new order to avoid mixing datasets.
 
     if data:
         # ``normalize_headers`` returns ``(headers, lookup)`` with headers in

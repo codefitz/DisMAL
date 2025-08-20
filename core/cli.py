@@ -8,7 +8,7 @@ import sys
 import ast
 
 # Local modules
-from . import access, output, queries, defaults, reporting, tools
+from . import access, output, queries, defaults, reporting, tools, common_agents
 
 logger = logging.getLogger("_cli_")
 
@@ -405,6 +405,20 @@ def capture_candidates(client,args,user,passwd,dir):
 def installed_agents(client,args,user,passwd,dir):
     result = run_query(client,user,passwd,queries.agents)
     output.define_csv(args,None,result,dir+defaults.installed_agents_filename,args.output_file,args.target,"csv")
+
+@output._timer("Expected Agents")
+def expected_agents(client, args, user, passwd, dir):
+    """Report hosts missing common agents."""
+
+    result = run_query(client, user, passwd, queries.agents)
+    records = common_agents.parse_agent_csv(result)
+    expected = common_agents.get_expected_agents(records)
+    if expected:
+        print("Expected agents: %s" % ", ".join(sorted(expected)))
+    missing = common_agents.find_missing_agents(records, expected)
+    rows = [[rec["Host_Name"], ";".join(rec["Missing_Agents"])] for rec in missing]
+    headers = ["Host Name", "Missing Agents"]
+    output.report(rows, headers, args, name="expected_agents")
 
 def software_usernames(client,args,user,passwd,dir):
     result = run_query(client,user,passwd,queries.user_accounts)

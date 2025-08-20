@@ -6,12 +6,12 @@ import pandas as pd
 
 # Expected reports mapping in insertion order
 EXPECTED_REPORTS = OrderedDict([
-    ("credential_success", "Credential success and failure summary"),
-    ("device_ids", "List of unique device identities"),
-    ("devices", "Device details"),
-    ("discovery_analysis", "Discovery analysis summary"),
+    ("credential_success", "Summary of credential successes and failures"),
+    ("device_ids", "List of unique device identifiers"),
+    ("devices", "Detailed device information"),
+    ("discovery_analysis", "Summary of discovery analysis results"),
     ("devices_with_cred", "Devices with associated credentials"),
-    ("device", "Individual device information"),
+    ("device", "Information for individual devices"),
     ("suggested_cred_opt", "Suggested credential optimization"),
     ("schedules", "Discovery schedules"),
     ("overlapping_ips", "Overlapping IP ranges"),

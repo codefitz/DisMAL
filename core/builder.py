@@ -371,7 +371,10 @@ def ordering(creds, search, args, apply):
         for row in data:
             row.insert(0, getattr(args, "target", None))
 
-    output.report(data, headers, args, name="suggest_cred_opt")
+    # Export the suggested credential optimisation report using the new
+    # ``suggested_cred_opt`` key so downstream consumers and the CLI can
+    # reference a consistent name.
+    output.report(data, headers, args, name="suggested_cred_opt")
 
 def get_device(search, credentials, args):
     dev = args.excavate[1]

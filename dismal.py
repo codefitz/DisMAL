@@ -149,7 +149,7 @@ Providing no <report> or using "default" will run all options that do not requir
 "sensitive_data"            - Export Sensitive Data anaylsis
 "si_lifecycle"              - Export SoftwareInstance lifecycle report
 "si_user_accounts"          - Software with running process usernames
-"suggest_cred_opt"          - Display suggested order of credentials based on restricted ips, excluded ips, success/failure, privilege, type
+"suggested_cred_opt"        - Display suggested order of credentials based on restricted ips, excluded ips, success/failure, privilege, type
 "tku"                       - TKU version summary
 "unrecognised_snmp"         - Report of unrecognised SNMP devices (Model > Device)
 "capture_candidates" - Report of capture candidates
@@ -626,7 +626,7 @@ if args.access_method=="api":
     if args.excavate and args.excavate[0] == "devices_with_cred":
         builder.get_credential(search, creds, args)
 
-    if excavate_default or (args.excavate and args.excavate[0] == "suggest_cred_opt"):
+    if excavate_default or (args.excavate and args.excavate[0] == "suggested_cred_opt"):
         builder.ordering(creds, search, args, False)
 
     if args.a_query:

@@ -351,6 +351,38 @@ def test_ip_analysis_empty_scan_ranges(monkeypatch, capsys):
     assert "No scan ranges found" in out
 
 
+def test_ip_analysis_dict_responses(monkeypatch):
+    scan_ranges = {
+        "results": [
+            {"Scan_Range": ["10.0.0.0/24"], "Label": "r1"},
+            {"Scan_Range": ["10.0.0.0/24"], "Label": "r2"},
+        ]
+    }
+    excludes = {
+        "results": [{"Scan_Range": ["10.0.1.0/24"], "Label": "ex"}] 
+    }
+    search, args, captured = _setup_ip_analysis_patches(monkeypatch, scan_ranges, excludes)
+
+    builder.ip_analysis(search, args)
+
+    assert captured["data"] == [["10.0.0.0/24", ["r1", "r2"]]]
+
+
+def test_ip_analysis_list_responses(monkeypatch):
+    scan_ranges = [
+        {"Scan_Range": ["10.0.0.0/24"], "Label": "r1"},
+        {"Scan_Range": ["10.0.0.0/24"], "Label": "r2"},
+    ]
+    excludes = [
+        {"Scan_Range": ["10.0.1.0/24"], "Label": "ex"}
+    ]
+    search, args, captured = _setup_ip_analysis_patches(monkeypatch, scan_ranges, excludes)
+
+    builder.ip_analysis(search, args)
+
+    assert captured["data"] == [["10.0.0.0/24", ["r1", "r2"]]]
+
+
 def test_overlapping_unscanned_connections(monkeypatch):
     search_results_returns = [
         [],

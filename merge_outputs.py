@@ -91,6 +91,7 @@ for csv_name in unique_csv_filenames:
                 f"Trimmed {csv_name} to {MAX_EXCEL_ROWS} rows to fit Excel limits",
             )
 
+        report_key = os.path.splitext(csv_name)[0]
         sheet_name = snake_to_title(report_key)[:31]
         # Excel sheet names have a 31-character limit
         combined.to_excel(writer, sheet_name=sheet_name, index=False, header=True)

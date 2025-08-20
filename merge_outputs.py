@@ -12,9 +12,16 @@ EXPECTED_REPORTS = OrderedDict([
     ("discovery_analysis", "Discovery analysis summary"),
     ("devices_with_cred", "Devices with associated credentials"),
     ("device", "Individual device information"),
-    ("suggest_cred_opt", "Suggested credential optimization"),
     ("schedules", "Discovery schedules"),
     ("overlapping_ips", "Overlapping IP ranges"),
+    ("eca_errors", "List of ECA errors"),
+    ("excludes", "Exclude schedules"),
+    ("installed_agents", "Analysis of installed agents"),
+    ("missing_vms", "Hypervisor hosts with undiscovered VMs"),
+    ("open_ports", "Open ports analysis"),
+    ("orphan_vms", "Virtual machines lacking a container host"),
+    ("removed", "Devices removed in the last 7 days"),
+    ("suggested_cred_opt", "Suggested credential optimization"),
 ])
 
 def snake_to_title(value: str) -> str:
@@ -40,6 +47,7 @@ MAX_EXCEL_ROWS = 1_048_576  # Excel worksheet row limit
 merged_reports = set()
 
 for csv_name in unique_csv_filenames:
+    report_key = os.path.splitext(csv_name)[0]
     matching_files = [
         os.path.join(odir, csv_name)
         for odir in output_dirs
@@ -82,31 +90,31 @@ for csv_name in unique_csv_filenames:
                 f"Trimmed {csv_name} to {MAX_EXCEL_ROWS} rows to fit Excel limits",
             )
 
-        sheet_name = snake_to_title(os.path.splitext(csv_name)[0])[:31]
+        sheet_name = snake_to_title(report_key)[:31]
         # Excel sheet names have a 31-character limit
         combined.to_excel(writer, sheet_name=sheet_name, index=False, header=True)
         print(f"Added sheet: {sheet_name} ({len(dfs)} files)")
 
-        if sheet_name in EXPECTED_REPORTS:
-            merged_reports.add(sheet_name)
+        if report_key in EXPECTED_REPORTS:
+            merged_reports.add(report_key)
     else:
         print(f"No data found for {csv_name}")
 
-# Build cover sheet summarizing expected reports
-records = []
+# Build guide sheet summarizing expected reports
+guide_records = []
 for report, description in EXPECTED_REPORTS.items():
     row = {"report": report, "description": description}
     if report not in merged_reports:
         row["status"] = "missing—no corresponding CSV"
-    records.append(row)
+    guide_records.append(row)
 
-cover_df = pd.DataFrame(records, columns=["report", "description", "status"])
-cover_df.to_excel(writer, sheet_name="Cover", index=False)
+guide_df = pd.DataFrame(guide_records, columns=["report", "description", "status"])
+guide_df.to_excel(writer, sheet_name="Guide", index=False)
 
-# Move cover sheet to the beginning
-cover_sheet = writer.book["Cover"]
-index = writer.book.worksheets.index(cover_sheet)
-writer.book.move_sheet(cover_sheet, -index)
+# Move guide sheet to the beginning
+guide_sheet = writer.book["Guide"]
+index = writer.book.worksheets.index(guide_sheet)
+writer.book.move_sheet(guide_sheet, -index)
 
 writer.close()
 print(f"Workbook saved: {output_file}")

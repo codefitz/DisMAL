@@ -1217,7 +1217,7 @@ def _gather_discovery_data(twsearch, twcreds, args):
 def outpost_creds(creds_ep, search_ep, appliance, args):
     """Report mapping of outpost credentials to their outposts."""
 
-    outpost_map = api.get_outpost_credential_map(appliance) or {}
+    outpost_map = api.get_outpost_credential_map(search_ep, appliance) or {}
 
     vault = api.get_json(creds_ep.get_vault_credentials)
     label_map = {

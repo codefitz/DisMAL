@@ -420,7 +420,7 @@ def test_outpost_creds_builds_rows(monkeypatch):
     op_map = {"op1": {"url": "http://op1", "credentials": ["c1", "c2"]}}
 
     monkeypatch.setattr(
-        reporting.api, "get_outpost_credential_map", lambda app: op_map
+        reporting.api, "get_outpost_credential_map", lambda search, app: op_map
     )
     monkeypatch.setattr(
         reporting.api,

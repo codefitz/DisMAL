@@ -6,15 +6,23 @@ import pandas as pd
 
 # Expected reports mapping in insertion order
 EXPECTED_REPORTS = OrderedDict([
-    ("credential_success", "Credential success and failure summary"),
-    ("device_ids", "List of unique device identities"),
-    ("devices", "Device details"),
-    ("discovery_analysis", "Discovery analysis summary"),
+    ("credential_success", "Summary of credential successes and failures"),
+    ("device_ids", "List of unique device identifiers"),
+    ("devices", "Detailed device information"),
+    ("discovery_analysis", "Summary of discovery analysis results"),
     ("devices_with_cred", "Devices with associated credentials"),
-    ("device", "Individual device information"),
-    ("suggest_cred_opt", "Suggested credential optimization"),
+    ("device", "Information for individual devices"),
+    ("suggested_cred_opt", "Suggested credential optimization"),
     ("schedules", "Discovery schedules"),
     ("overlapping_ips", "Overlapping IP ranges"),
+    ("eca_errors", "List of ECA errors"),
+    ("excludes", "Exclude schedules"),
+    ("installed_agents", "Analysis of installed agents"),
+    ("missing_vms", "Hypervisor hosts with undiscovered VMs"),
+    ("open_ports", "Open ports analysis"),
+    ("orphan_vms", "Virtual machines lacking a container host"),
+    ("removed", "Devices removed in the last 7 days"),
+    ("suggested_cred_opt", "Suggested credential optimization"),
 ])
 
 def snake_to_title(value: str) -> str:
@@ -40,6 +48,7 @@ MAX_EXCEL_ROWS = 1_048_576  # Excel worksheet row limit
 merged_reports = set()
 
 for csv_name in unique_csv_filenames:
+    report_key = os.path.splitext(csv_name)[0]
     matching_files = [
         os.path.join(odir, csv_name)
         for odir in output_dirs
@@ -93,22 +102,21 @@ for csv_name in unique_csv_filenames:
     else:
         print(f"No data found for {csv_name}")
 
-# Build cover sheet summarizing expected reports
-records = []
-for report_key, description in EXPECTED_REPORTS.items():
-    row = {"report": report_key, "description": description}
-    # Compare using the base report key to avoid mismatches with sheet names
-    if report_key not in merged_reports:
+# Build guide sheet summarizing expected reports
+guide_records = []
+for report, description in EXPECTED_REPORTS.items():
+    row = {"report": report, "description": description}
+    if report not in merged_reports:
         row["status"] = "missing—no corresponding CSV"
-    records.append(row)
+    guide_records.append(row)
 
-cover_df = pd.DataFrame(records, columns=["report", "description", "status"])
-cover_df.to_excel(writer, sheet_name="Cover", index=False)
+guide_df = pd.DataFrame(guide_records, columns=["report", "description", "status"])
+guide_df.to_excel(writer, sheet_name="Guide", index=False)
 
-# Move cover sheet to the beginning
-cover_sheet = writer.book["Cover"]
-index = writer.book.worksheets.index(cover_sheet)
-writer.book.move_sheet(cover_sheet, -index)
+# Move guide sheet to the beginning
+guide_sheet = writer.book["Guide"]
+index = writer.book.worksheets.index(guide_sheet)
+writer.book.move_sheet(guide_sheet, -index)
 
 writer.close()
 print(f"Workbook saved: {output_file}")

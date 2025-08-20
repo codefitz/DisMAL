@@ -35,7 +35,7 @@ def _run_with_patches(monkeypatch, func):
     monkeypatch.setattr(reporting.builder, "unique_identities", lambda s, *a, **k: [])
     monkeypatch.setattr(reporting.api, "search_results", lambda *a, **k: [])
     monkeypatch.setattr(reporting.api, "get_json", lambda *a, **k: [])
-    monkeypatch.setattr(reporting.api, "map_outpost_credentials", lambda *a, **k: ({}, []))
+    monkeypatch.setattr(reporting.api, "get_outpost_credential_map", lambda *a, **k: {})
     called = {}
     monkeypatch.setattr(reporting, "output", types.SimpleNamespace(report=lambda *a, **k: called.setdefault("ran", True)))
     args = types.SimpleNamespace(output_csv=False, output_file=None, token=None, target="http://x", include_endpoints=None, endpoint_prefix=None)
@@ -110,6 +110,7 @@ def test_successful_runs_without_scan_data(monkeypatch):
 
     monkeypatch.setattr(reporting.api, "get_json", fake_get_json)
     monkeypatch.setattr(reporting.api, "search_results", lambda *a, **k: [])
+    monkeypatch.setattr(reporting.api, "get_outpost_credential_map", lambda *a, **k: {})
     monkeypatch.setattr(reporting.builder, "get_credentials", lambda entry: entry)
     monkeypatch.setattr(reporting.builder, "get_scans", lambda *a, **k: [])
     called = {}
@@ -159,6 +160,7 @@ def test_successful_combines_query_results(monkeypatch):
 
     monkeypatch.setattr(reporting.api, "get_json", fake_get_json)
     monkeypatch.setattr(reporting.api, "search_results", fake_search_results)
+    monkeypatch.setattr(reporting.api, "get_outpost_credential_map", lambda *a, **k: {})
     monkeypatch.setattr(reporting.builder, "get_credentials", lambda entry: entry)
     monkeypatch.setattr(reporting.builder, "get_scans", lambda *a, **k: [])
 
@@ -229,6 +231,7 @@ def test_successful_coerces_string_counts(monkeypatch):
 
     monkeypatch.setattr(reporting.api, "get_json", fake_get_json)
     monkeypatch.setattr(reporting.api, "search_results", fake_search_results)
+    monkeypatch.setattr(reporting.api, "get_outpost_credential_map", lambda *a, **k: {})
     monkeypatch.setattr(reporting.builder, "get_credentials", lambda entry: entry)
     monkeypatch.setattr(reporting.builder, "get_scans", lambda *a, **k: [])
 
@@ -273,10 +276,10 @@ def test_successful_includes_outpost_credentials(monkeypatch):
 
     monkeypatch.setattr(
         reporting.api,
-        "map_outpost_credentials",
-        lambda app, include_details=False: ({"u1": "http://op"}, [out_cred]),
+        "get_outpost_credential_map",
+        lambda *a, **k: {"u1": "http://op"},
     )
-    monkeypatch.setattr(reporting.api, "get_json", lambda *a, **k: [])
+    monkeypatch.setattr(reporting.api, "get_json", lambda *a, **k: [out_cred])
     monkeypatch.setattr(reporting.api, "search_results", lambda *a, **k: [])
     monkeypatch.setattr(reporting.builder, "get_credentials", lambda entry: entry)
     monkeypatch.setattr(reporting.builder, "get_scans", lambda *a, **k: [])
@@ -320,7 +323,7 @@ def test_successful_uses_token_file(monkeypatch, tmp_path):
         return DummyApp(token)
 
     monkeypatch.setattr(reporting.tideway, "appliance", fake_appliance, raising=False)
-    monkeypatch.setattr(reporting.api, "map_outpost_credentials", lambda app: ({}, []))
+    monkeypatch.setattr(reporting.api, "get_outpost_credential_map", lambda *a, **k: {})
     monkeypatch.setattr(reporting.api, "search_results", lambda *a, **k: [])
     monkeypatch.setattr(reporting.api, "get_json", lambda *a, **k: [])
     monkeypatch.setattr(reporting.builder, "unique_identities", lambda s, *a, **k: [])
@@ -382,7 +385,7 @@ def test_discovery_analysis_includes_raw_timestamp(monkeypatch):
 
     monkeypatch.setattr(reporting.api, "search_results", fake_search_results)
     monkeypatch.setattr(reporting.api, "get_json", lambda *a, **k: [])
-    monkeypatch.setattr(reporting.api, "map_outpost_credentials", lambda *a, **k: ({}, []))
+    monkeypatch.setattr(reporting.api, "get_outpost_credential_map", lambda *a, **k: {})
     monkeypatch.setattr(reporting.pd, "DataFrame", lambda data: DummyDF(data), raising=False)
     monkeypatch.setattr(reporting.pd, "cut", lambda *a, **k: "recent", raising=False)
 

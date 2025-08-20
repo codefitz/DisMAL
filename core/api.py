@@ -335,40 +335,56 @@ def map_outpost_credentials(appliance, include_details=False):
     return (mapping, credentials) if include_details else mapping
 
 
-def get_outpost_credential_map(appliance):
-    """Return mapping of outpost IDs to their credentials.
+def get_outpost_credential_map(search, appliance):
+    """Return mapping of credential UUIDs to outpost URLs.
 
-    The result is a dictionary keyed by the outpost ``id`` where each value
-    contains the outpost URL or name and a list of credential UUIDs associated
-    with that outpost.  Outposts that are unreachable are skipped.
+    The mapping is built using a search query to link credentials with
+    outpost identifiers and a single call to :func:`get_outposts` to resolve
+    those identifiers to URLs.
     """
 
-    result = {}
+    mapping = {}
+
+    results = search_results(search, queries.outpost_credentials)
+    if isinstance(results, dict):
+        results = results.get("results", [])
+    if not isinstance(results, list):
+        results = []
+
+    cred_to_outpost = {}
+    for entry in results:
+        if not isinstance(entry, dict):
+            continue
+        uuid = entry.get("credential")
+        outpost_id = entry.get("outpost")
+        if uuid and outpost_id:
+            cred_to_outpost[str(uuid)] = str(outpost_id)
+
+    if not cred_to_outpost:
+        return mapping
 
     outposts = get_outposts(appliance)
-    if not isinstance(outposts, list):
-        return result
+    id_to_url = {}
+    if isinstance(outposts, list):
+        for op in outposts:
+            if not isinstance(op, dict):
+                continue
+            op_id = (
+                op.get("id")
+                or op.get("outpost")
+                or op.get("outpost_id")
+                or op.get("uuid")
+            )
+            url = op.get("url")
+            if op_id and url:
+                id_to_url[str(op_id)] = url
 
-    # Build quick lookup of URL to (id, name)
-    url_map = {}
-    for outpost in outposts:
-        url = outpost.get("url")
-        op_id = outpost.get("id")
-        name = outpost.get("name") or url
-        if url and op_id:
-            url_map[url] = (op_id, name)
+    for uuid, op_id in cred_to_outpost.items():
+        url = id_to_url.get(str(op_id))
+        if url:
+            mapping[uuid] = url
 
-    cred_map = map_outpost_credentials(appliance)
-
-    for uuid, url in cred_map.items():
-        op_info = url_map.get(url)
-        if not op_info:
-            continue
-        op_id, name = op_info
-        entry = result.setdefault(op_id, {"url": name, "credentials": []})
-        entry["credentials"].append(uuid)
-
-    return result
+    return mapping
 
 def success(twcreds, twsearch, args, dir):
     reporting.successful(twcreds, twsearch, args)

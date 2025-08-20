@@ -9,7 +9,14 @@ sys.modules.setdefault("tabulate", types.SimpleNamespace(tabulate=lambda *a, **k
 sys.modules.setdefault("tideway", types.SimpleNamespace())
 sys.modules.setdefault("paramiko", types.SimpleNamespace())
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from core.api import get_json, search_results, show_runs, get_outposts, map_outpost_credentials
+from core.api import (
+    get_json,
+    search_results,
+    show_runs,
+    get_outposts,
+    map_outpost_credentials,
+    get_outpost_credential_map,
+)
 import core.api as api_mod
 from core.tools import normalize_keys
 from core import queries, tools
@@ -250,7 +257,6 @@ def test_map_outpost_credentials_skips_unreachable(monkeypatch, capsys, caplog):
     assert msg in captured.out
     assert msg in caplog.text
 
-
 def test_cli_dispatch_outpost_creds(monkeypatch):
     import importlib
     monkeypatch.setattr(sys, "argv", ["dismal"])
@@ -315,7 +321,6 @@ def test_cli_dispatch_outpost_creds(monkeypatch):
     dismal.run_for_args(args)
 
     assert called.get("ran")
-
 
 def test_search_results_cleans_query(monkeypatch):
     """Ensure newlines removed and single quotes preserved."""

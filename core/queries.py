@@ -41,6 +41,11 @@ deviceinfo_success_7d = """
                           access_method as 'Session_Type'
                           process with countUnique(1,0)
                        """
+outpost_credentials = """
+                            search SessionResult
+                            show credential, outpost
+                            process with unique(0)
+                        """
 deviceInfo = {"query":
                         """
                             search DeviceInfo

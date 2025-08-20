@@ -28,7 +28,6 @@ def successful(creds, search, args):
         logger.debug('List Credentials: %s', json.dumps(vaultcreds))
 
     outpost_map = {}
-    outpost_creds = []
     if getattr(args, "target", None) and hasattr(tideway, "appliance"):
         try:
             token = getattr(args, "token", None)
@@ -37,19 +36,10 @@ def successful(creds, search, args):
                     with open(args.f_token, "r") as f:
                         token = f.read().strip()
             app = tideway.appliance(args.target, token)
-            outpost_map, outpost_creds = api.map_outpost_credentials(app, include_details=True)
+            outpost_map = api.get_outpost_credential_map(search, app)
             logger.debug("Outpost credential map: %s", outpost_map)
         except Exception as e:  # pragma: no cover - network errors
             logger.error("Failed to retrieve outpost credentials: %s", e)
-
-    # Merge outpost credentials into the main vault list without duplicates
-    if isinstance(vaultcreds, list) and outpost_creds:
-        seen = {c.get("uuid") for c in vaultcreds if isinstance(c, dict)}
-        for cred in outpost_creds:
-            uuid = cred.get("uuid")
-            if uuid and uuid not in seen:
-                vaultcreds.append(cred)
-                seen.add(uuid)
 
     credsux_results = {}
     devinfosux = {}

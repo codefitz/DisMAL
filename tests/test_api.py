@@ -543,3 +543,15 @@ def test_host_util_converts_numeric_columns(monkeypatch):
         assert isinstance(row[index_map[col]], int)
     assert "OS_Type" in header
 
+
+def test_outpost_creds_passes_endpoint_as_appliance(monkeypatch):
+    """Ensure outpost_creds uses the creds endpoint when no appliance attribute."""
+    dummy_creds = types.SimpleNamespace(get=lambda *a, **k: None)
+    dummy_search = object()
+    args = types.SimpleNamespace()
+    recorded = {}
+    def fake_outpost(creds_ep, search_ep, appliance, args_ep):
+        recorded['appliance'] = appliance
+    monkeypatch.setattr(api_mod.reporting, 'outpost_creds', fake_outpost)
+    api_mod.outpost_creds(dummy_creds, dummy_search, args, '/tmp')
+    assert recorded['appliance'] is dummy_creds

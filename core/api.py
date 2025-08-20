@@ -530,7 +530,9 @@ def sensitive(search, args, dir):
 
 def outpost_creds(creds, search, args, dir):
     """Wrapper for the outpost credential report."""
-    appliance = getattr(creds, "appliance", None)
+    # Some endpoints do not expose an `appliance` attribute; use the endpoint
+    # itself when it provides the `get` method.
+    appliance = getattr(creds, "appliance", None) or (creds if hasattr(creds, "get") else None)
     reporting.outpost_creds(creds, search, appliance, args)
 
 def tpl_export(search, args, dir):

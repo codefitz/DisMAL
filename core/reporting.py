@@ -44,6 +44,9 @@ def successful(creds, search, args):
     credsux_results = {}
     devinfosux = {}
     credfail_results = {}
+    credsux7_results = {}
+    devinfosux7 = {}
+    credfail7_results = {}
 
     with ThreadPoolExecutor() as executor:
         futures = {
@@ -55,6 +58,15 @@ def successful(creds, search, args):
             ),
             "credfail_results": executor.submit(
                 api.search_results, search, queries.credential_failure
+            ),
+            "credsux7_results": executor.submit(
+                api.search_results, search, queries.credential_success_7d
+            ),
+            "devinfosux7": executor.submit(
+                api.search_results, search, queries.deviceinfo_success_7d
+            ),
+            "credfail7_results": executor.submit(
+                api.search_results, search, queries.credential_failure_7d
             ),
         }
 
@@ -69,6 +81,9 @@ def successful(creds, search, args):
     credsux_results = results.get("credsux_results", [])
     devinfosux = results.get("devinfosux", [])
     credfail_results = results.get("credfail_results", [])
+    credsux7_results = results.get("credsux7_results", [])
+    devinfosux7 = results.get("devinfosux7", [])
+    credfail7_results = results.get("credfail7_results", [])
 
     data = []
     headers = []
@@ -81,6 +96,9 @@ def successful(creds, search, args):
     suxCreds = tools.session_get(credsux_results)
     suxDev = tools.session_get(devinfosux)
     failCreds = tools.session_get(credfail_results)
+    suxCreds7 = tools.session_get(credsux7_results)
+    suxDev7 = tools.session_get(devinfosux7)
+    failCreds7 = tools.session_get(credfail7_results)
 
     # Include Scan Ranges and Excludes
     scan_resp = search.search(queries.scanrange, format="object", limit=500)
@@ -137,13 +155,19 @@ def successful(creds, search, args):
             status = "Disabled"
 
         active = False
-        success = 0
-        fails = 0
+        success_all = 0
+        fails_all = 0
+        success7 = 0
+        fails7 = 0
         session = None
-        percent = 0.0
-        failure = [ None, 0 ]
-        sessions = [ None, 0 ]
-        devinfos = [ None, 0 ]
+        percent_all = 0.0
+        percent7 = 0.0
+        failure = [None, 0]
+        sessions = [None, 0]
+        devinfos = [None, 0]
+        failure7 = [None, 0]
+        sessions7 = [None, 0]
+        devinfos7 = [None, 0]
         try:
             sessions = suxCreds[uuid]
             active = True
@@ -165,26 +189,56 @@ def successful(creds, search, args):
             logger.debug(msg)
         except KeyError:
             pass
+        try:
+            sessions7 = suxCreds7[uuid]
+            active = True
+            msg = "Sessions 7d found, Active: %s" % sessions7
+            logger.debug(msg)
+        except KeyError:
+            pass
+        try:
+            devinfos7 = suxDev7[uuid]
+            active = True
+            msg = "DeviceInfos 7d found, Active: %s" % devinfos7
+            logger.debug(msg)
+        except KeyError:
+            pass
+        try:
+            failure7 = failCreds7[uuid]
+            active = True
+            msg = "Failures 7d found, Active: %s" % failure7
+            logger.debug(msg)
+        except KeyError:
+            pass
 
         if sessions[0] and devinfos[0]:
             seshcount = int(sessions[1])
             devcount = int(devinfos[1])
-            success = seshcount + devcount
+            success_all = seshcount + devcount
             session = sessions[0] or devinfos[0]
-            msg = "Sessions and DevInfos: %s" % success
+            msg = "Sessions and DevInfos: %s" % success_all
             logger.debug(msg)
         elif sessions[0]:
             # Successful sessions without device info results
-            success = int(sessions[1])
+            success_all = int(sessions[1])
             session = sessions[0]
-            msg = "Sessions only: %s" % success
+            msg = "Sessions only: %s" % success_all
             logger.debug(msg)
         elif devinfos[0]:
             # Device info successes only
-            success = int(devinfos[1])
+            success_all = int(devinfos[1])
             session = devinfos[0]
-            msg = "DevInfos only: %s" % success
+            msg = "DevInfos only: %s" % success_all
             logger.debug(msg)
+
+        if sessions7[0] and devinfos7[0]:
+            seshcount7 = int(sessions7[1])
+            devcount7 = int(devinfos7[1])
+            success7 = seshcount7 + devcount7
+        elif sessions7[0]:
+            success7 = int(sessions7[1])
+        elif devinfos7[0]:
+            success7 = int(devinfos7[1])
 
         scheduled_scans = builder.get_scans(scan_ranges_results, list_of_ranges)
         msg = "Scheduled Scans List" % scheduled_scans
@@ -195,17 +249,24 @@ def successful(creds, search, args):
         logger.debug(msg)
 
         if failure[1]:
-            fails = int(failure[1])
-            logger.debug("Failures:%s"%fails)
+            fails_all = int(failure[1])
+            logger.debug("Failures:%s" % fails_all)
+        if failure7[1]:
+            fails7 = int(failure7[1])
 
         # Coerce success/fail counts to ints and compute percentage as float
-        success = int(success)
-        fails = int(fails)
-        total = success + fails
-        percent = 0.0
+        success_all = int(success_all)
+        fails_all = int(fails_all)
+        total = success_all + fails_all
         if total > 0:
-            logger.debug("Success:%s\nTotal:%s" % (success, total))
-            percent = success / total
+            logger.debug("Success:%s\nTotal:%s" % (success_all, total))
+            percent_all = success_all / total
+
+        success7 = int(success7)
+        fails7 = int(fails7)
+        total7 = success7 + fails7
+        if total7 > 0:
+            percent7 = success7 / total7
 
         msg = None
         outpost_url = outpost_map.get(uuid)
@@ -218,9 +279,10 @@ def successful(creds, search, args):
                     uuid,
                     detail.get('username'),
                     session or failure[0],
-                    success,
-                    failure[1],
-                    percent,
+                    success_all,
+                    fails_all,
+                    percent_all,
+                    percent7,
                     status,
                     usage,
                     ip_range,
@@ -239,6 +301,7 @@ def successful(creds, search, args):
                     None,
                     None,
                     0.0,
+                    0.0,
                     "Credential appears to not be in use (%s)" % status,
                     usage,
                     ip_range,
@@ -255,7 +318,8 @@ def successful(creds, search, args):
                 "Protocol",
                 "Successes",
                 "Failures",
-                "Success %",
+                "Success % All Time",
+                "Success % 7 Days",
                 "State",
                 "Usage",
                 "Ranges",
@@ -272,9 +336,10 @@ def successful(creds, search, args):
                     uuid,
                     detail.get('username'),
                     session or failure[0],
-                    success,
-                    failure[1],
-                    percent,
+                    success_all,
+                    fails_all,
+                    percent_all,
+                    percent7,
                     status,
                     usage,
                     outpost_url,
@@ -289,6 +354,7 @@ def successful(creds, search, args):
                     None,
                     None,
                     0.0,
+                    0.0,
                     "Credential appears to not be in use (%s)" % status,
                     usage,
                     outpost_url,
@@ -301,7 +367,8 @@ def successful(creds, search, args):
                 "Protocol",
                 "Successes",
                 "Failures",
-                "Success %",
+                "Success % All Time",
+                "Success % 7 Days",
                 "State",
                 "Usage",
                 "Outpost URL",

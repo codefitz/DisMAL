@@ -1271,7 +1271,16 @@ def discovery_access(twsearch, twcreds, args):
     """Generate basic discovery access report."""
     logger.info("Running Discovery Access Report")
     disco_data = _gather_discovery_data(twsearch, twcreds, args)
-    output.report([], [], args, name="discovery_access")
+
+    if disco_data:
+        headers, lookup = tools.normalize_headers(
+            disco_data[0].keys(), return_lookup=True
+        )
+        rows = [[record.get(lookup[h]) for h in headers] for record in disco_data]
+    else:
+        headers, rows = [], []
+
+    output.report(rows, headers, args, name="discovery_access")
     return disco_data
 
 

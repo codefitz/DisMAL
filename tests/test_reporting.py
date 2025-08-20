@@ -99,6 +99,38 @@ def test_discovery_analysis_handles_bad_api(monkeypatch):
     _run_with_patches(monkeypatch, reporting.discovery_analysis)
 
 
+def test_discovery_access_outputs_records(monkeypatch):
+    sample = [
+        {"endpoint": "1.1.1.1", "hostname": "h1"},
+        {"endpoint": "2.2.2.2", "hostname": "h2"},
+    ]
+
+    monkeypatch.setattr(reporting, "_gather_discovery_data", lambda *a, **k: sample)
+
+    captured = {}
+
+    def fake_report(data, headers, args, name=None):
+        captured["data"] = data
+        captured["headers"] = headers
+        captured["name"] = name
+
+    monkeypatch.setattr(reporting, "output", types.SimpleNamespace(report=fake_report))
+
+    args = types.SimpleNamespace(
+        output_csv=False,
+        output_file=None,
+        include_endpoints=None,
+        endpoint_prefix=None,
+    )
+
+    result = reporting.discovery_access(DummySearch(), DummyCreds(), args)
+
+    assert result == sample
+    assert captured["name"] == "discovery_access"
+    assert captured["headers"] == ["Endpoint", "Hostname"]
+    assert captured["data"] == [["1.1.1.1", "h1"], ["2.2.2.2", "h2"]]
+
+
 def test_successful_runs_without_scan_data(monkeypatch):
     call = {"n": 0}
 

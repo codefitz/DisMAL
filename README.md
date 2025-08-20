@@ -71,6 +71,41 @@ The options `-P`, `-T` and `-W` can be used to read the UI password, API token a
 By default, reports are saved to an `output_<appliance>` directory in the current working directory.
 Use the `--stdout` option to suppress file output and print results directly to the terminal.
 
+### YAML configuration
+
+Default arguments can be supplied in a YAML file.  By default `dismal.py`
+looks for `config.yaml` in the current working directory.  A different file
+may be provided with `--config <file>`.  Values from the YAML are used as the
+defaults for command-line options, but any flags supplied on the CLI take
+precedence.
+
+The file may also contain an `appliances` list to run the same command against
+multiple Discovery targets with individual credentials.
+
+Example `config.yaml`:
+
+```yaml
+access_method: api
+username: admin
+password: secret
+noping: true
+appliances:
+  - target: appliance1.example.com
+    username: alice
+    password: alicepass
+  - target: appliance2.example.com
+    token: ABCDEF123456
+```
+
+Run the tool using the configuration:
+
+```bash
+python3 dismal.py --config config.yaml --sysadmin audit
+```
+
+CLI flags override YAML values, so `--access_method cli` on the command line
+would replace any `access_method` defined in the file.
+
 ### Endpoint filtering
 
 Device-centric reports can now be limited to a subset of endpoints.  Supplying

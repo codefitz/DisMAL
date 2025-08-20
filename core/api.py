@@ -662,14 +662,14 @@ def capture_candidates(search, args, dir):
     count = len(results) if isinstance(results, list) else 0
     tools.completage("Processing", count or 1, (count or 1) - 1)
     print(os.linesep, end="\r")
-    header, rows, header_hf = [], [], []
+    header, rows = [], []
     if isinstance(results, list) and results:
-        header, rows, header_hf = tools.json2csv(results)
-        header_hf.insert(0, "Discovery Instance")
+        header, rows, _ = tools.json2csv(results)
         for row in rows:
             row.insert(0, args.target)
-    else:
-        header.insert(0, "Discovery Instance")
+            # Replace ``None`` values with "N/A" for readability
+            row[1:] = [value if value is not None else "N/A" for value in row[1:]]
+    header.insert(0, "Discovery Instance")
     csv_header = tools.normalize_keys(header)
     output.define_csv(
         args,

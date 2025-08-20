@@ -754,13 +754,27 @@ def run_for_args(args):
 
     print(os.linesep)
 
-appliance_list = config.get("appliances")
-if appliance_list and not args.target:
-    for appliance in appliance_list:
-        app_args = argparse.Namespace(**vars(args))
-        for key in ("target", "username", "password", "token"):
-            if key in appliance:
-                setattr(app_args, key, appliance[key])
-        run_for_args(app_args)
-else:
-    run_for_args(args)
+
+def main():
+    appliance_list = config.get("appliances")
+    if appliance_list and not args.target:
+        for appliance in appliance_list:
+            app_args = argparse.Namespace(**vars(args))
+            for src, dest in (
+                ("target", "target"),
+                ("username", "username"),
+                ("password", "password"),
+                ("token", "token"),
+                ("token_file", "f_token"),
+                ("f_token", "f_token"),
+                ("password_file", "f_passwd"),
+            ):
+                if src in appliance:
+                    setattr(app_args, dest, appliance[src])
+            run_for_args(app_args)
+    else:
+        run_for_args(args)
+
+
+if __name__ == "__main__":
+    main()

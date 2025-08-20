@@ -414,3 +414,45 @@ def test_discovery_analysis_includes_raw_timestamp(monkeypatch):
 
     assert disco_row[idx] == "2024-01-01T00:00:00+00:00"
     assert dropped_row[idx] == "2024-01-02T00:00:00+00:00"
+
+
+def test_outpost_creds_builds_rows(monkeypatch):
+    op_map = {"op1": {"url": "http://op1", "credentials": ["c1", "c2"]}}
+
+    monkeypatch.setattr(
+        reporting.api, "get_outpost_credential_map", lambda app: op_map
+    )
+    monkeypatch.setattr(
+        reporting.api,
+        "get_json",
+        lambda *a, **k: [
+            {"uuid": "c1", "label": "Cred1"},
+            {"uuid": "c2", "label": "Cred2"},
+        ],
+    )
+
+    captured = {}
+
+    def fake_report(data, headers, args, name=None):
+        captured["data"] = data
+        captured["headers"] = headers
+        captured["name"] = name
+
+    monkeypatch.setattr(reporting, "output", types.SimpleNamespace(report=fake_report))
+
+    creds = types.SimpleNamespace(get_vault_credentials=None)
+    args = types.SimpleNamespace(output_csv=False, output_file=None)
+
+    reporting.outpost_creds(creds, None, object(), args)
+
+    assert captured["name"] == "outpost_creds"
+    assert captured["headers"] == [
+        "Outpost",
+        "Outpost Id",
+        "Credential UUID",
+        "Credential Label",
+    ]
+    assert captured["data"] == [
+        ["http://op1", "op1", "c1", "Cred1"],
+        ["http://op1", "op1", "c2", "Cred2"],
+    ]

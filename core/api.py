@@ -527,6 +527,12 @@ def sensitive(search, args, dir):
         "csv_file",
     )
 
+
+def outpost_creds(creds, search, args, dir):
+    """Wrapper for the outpost credential report."""
+    appliance = getattr(creds, "appliance", None)
+    reporting.outpost_creds(creds, search, appliance, args)
+
 def tpl_export(search, args, dir):
     reporting.tpl_export(search, queries.tpl_export, dir, "api", None, None, None)
 
@@ -640,7 +646,17 @@ def host_util(search, args, dir):
 
 @output._timer("Orphan VMs")
 def orphan_vms(search, args, dir):
-    output.define_csv(args,search,queries.orphan_vms,dir+defaults.orphan_vms_filename,args.output_file,args.target,"query")
+    results = search_results(search, queries.orphan_vms)
+    headers = []
+    rows = []
+    for r in results or []:
+        if not headers:
+            headers = list(r.keys())
+        rows.append([r.get(h) for h in headers])
+    headers.insert(0, "Discovery Instance")
+    for row in rows:
+        row.insert(0, args.target)
+    output.csv_file(rows, headers, dir + defaults.orphan_vms_filename)
 
 @output._timer("Missing VMs")
 def missing_vms(search, args, dir):

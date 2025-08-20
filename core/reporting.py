@@ -1235,8 +1235,28 @@ def _gather_discovery_data(twsearch, twcreds, args):
         for field in merge_fields:
             if chosen.get(field) in (None, "") and latest.get(field) not in (None, ""):
                 chosen[field] = latest.get(field)
+        # Sort so the newest record is first; older records follow
+        sorted_records = sorted(
+            endpoint_records,
+            key=lambda r: r.get("timestamp") or datetime.datetime.min,
+            reverse=True,
+        )
 
-        disco_data.append(chosen)
+        # Start with the most recent record and fill in any missing details
+        merged_record = sorted_records[0].copy()
+        timestamp_fields = {"timestamp", "when_was_that", "scan_end_raw"}
+
+        for record in sorted_records[1:]:
+            for key, value in record.items():
+                if key in timestamp_fields:
+                    # Preserve timestamp-related fields from the latest record
+                    continue
+                if merged_record.get(key) in (None, "") and value not in (None, ""):
+                    # Fill missing data from older records without overwriting
+                    # existing non-empty values with None
+                    merged_record[key] = value
+
+        disco_data.append(merged_record)
 
     return disco_data
 

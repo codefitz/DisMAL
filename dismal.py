@@ -366,7 +366,8 @@ def run_for_args(args):
             builder.scheduling(creds, search, args)
             api.excludes(search, args, reporting_dir)
             builder.ip_analysis(search, args)
-            reporting.discovery_analysis(search, creds, args)
+            if args.excavate and args.excavate[0] == "discovery_analysis":
+                reporting.discovery_analysis(search, creds, args)
             api.show_runs(disco, args)
             api.discovery_runs(disco, args, reporting_dir)
             api.tpl_export(search, args, reporting_dir)
@@ -684,7 +685,7 @@ def run_for_args(args):
             builder.ip_analysis(search, args)
 
         # Gather discovery data and run analysis when requested.
-        if excavate_default or (args.excavate and args.excavate[0] == "discovery_analysis"):
+        if args.excavate and args.excavate[0] == "discovery_analysis":
             disco_data = reporting._gather_discovery_data(search, creds, args)
             reporting.discovery_analysis(search, creds, args, disco_data)
 

@@ -200,6 +200,8 @@ parser.set_defaults(
     username=config.get('username'),
     password=config.get('password'),
     token=config.get('token'),
+    f_token=config.get('token_file'),
+    f_passwd=config.get('password_file'),
     noping=config.get('noping', False),
     debugging=config.get('debugging', False),
 )
@@ -754,27 +756,40 @@ def run_for_args(args):
 
     print(os.linesep)
 
+def run_appliance_list(appliance_list, args):
+    """Run the tool for each appliance entry in a config list.
 
-def main():
-    appliance_list = config.get("appliances")
+    Each entry may be either a simple string representing the target host or
+    a dictionary providing credential overrides such as username/password,
+    token, or paths to token/password files.
+    """
+
     if appliance_list and not args.target:
         for appliance in appliance_list:
             app_args = argparse.Namespace(**vars(args))
-            for src, dest in (
-                ("target", "target"),
-                ("username", "username"),
-                ("password", "password"),
-                ("token", "token"),
-                ("token_file", "f_token"),
-                ("f_token", "f_token"),
-                ("password_file", "f_passwd"),
-            ):
-                if src in appliance:
-                    setattr(app_args, dest, appliance[src])
+
+            if isinstance(appliance, dict):
+                # Map config keys to CLI attribute names
+                key_map = {
+                    "target": "target",
+                    "username": "username",
+                    "password": "password",
+                    "token": "token",
+                    "token_file": "f_token",
+                    "password_file": "f_passwd",
+                }
+                for key, attr in key_map.items():
+                    if key in appliance:
+                        setattr(app_args, attr, appliance[key])
+            else:
+                # Treat string entries as target hostnames
+                app_args.target = appliance
+
             run_for_args(app_args)
     else:
         run_for_args(args)
 
 
 if __name__ == "__main__":
-    main()
+    appliance_list = config.get("appliances")
+    run_appliance_list(appliance_list, args)

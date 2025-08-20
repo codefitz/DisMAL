@@ -336,11 +336,26 @@ def map_outpost_credentials(appliance, include_details=False):
 
 
 def get_outpost_credential_map(search, appliance):
-    """Return mapping of credential UUIDs to outpost URLs.
+    """Return mapping of outpost IDs to credential information.
 
-    The mapping is built using a search query to link credentials with
-    outpost identifiers and a single call to :func:`get_outposts` to resolve
-    those identifiers to URLs.
+    The mapping is built using a search query to associate credential UUIDs
+    with outpost identifiers and a single call to :func:`get_outposts` to
+    resolve those identifiers to URLs.  The returned structure is a
+    dictionary in the form::
+
+        {
+            "<outpost_id>": {
+                "url": "http://outpost",
+                "credentials": ["<uuid>", ...],
+            },
+            ...
+        }
+
+    Previously this function returned a mapping of credential UUIDs to
+    outpost URLs which did not provide a reverse lookup for credentials and
+    caused ``reporting.outpost_creds`` to fail when iterating over the
+    mapping.  The new structure groups credentials by outpost and exposes
+    the outpost URL alongside the list of credential UUIDs.
     """
 
     mapping = {}
@@ -381,8 +396,10 @@ def get_outpost_credential_map(search, appliance):
 
     for uuid, op_id in cred_to_outpost.items():
         url = id_to_url.get(str(op_id))
-        if url:
-            mapping[uuid] = url
+        if not url:
+            continue
+        op_entry = mapping.setdefault(op_id, {"url": url, "credentials": []})
+        op_entry["credentials"].append(uuid)
 
     return mapping
 

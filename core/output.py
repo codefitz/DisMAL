@@ -203,16 +203,20 @@ def report(data, heads, args, name=None):
                 csv_file(data, heads, os.path.join(out_dir, f"{name}.csv"))
                 logger.info("Output to CSV file")
     else:
-        msg = "No results found!\n"
-        if cli_out:
-            print(msg)
+        msg = "No results found!"
+        # Always provide visible feedback when no data is returned
+        print(msg)
         logger.warning(msg)
 
+        # When writing to a file, still generate a CSV with a note so
+        # consumers know the report executed but returned nothing.
+        note_row = ["No data returned"] + [""] * (len(heads) - 1 if heads else 0)
+
         if args.output_file:
-            csv_file(data, heads, args.output_file)
+            csv_file([note_row], heads, args.output_file)
             logger.info("Output to CSV file")
         elif excavate is not None and name and out_dir:
-            csv_file(data, heads, os.path.join(out_dir, f"{name}.csv"))
+            csv_file([note_row], heads, os.path.join(out_dir, f"{name}.csv"))
             logger.info("Output to CSV file")
 
 def cmd2csv(header,result,seperator,filename,appliance):

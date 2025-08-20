@@ -56,3 +56,56 @@ def test_save2csv_numeric(tmp_path):
     with open(filename, newline="") as fh:
         row = next(csv.DictReader(fh))
     assert int(row["Consecutive Scan Failures"]) == -5
+
+
+def test_report_empty_prints_message(capsys):
+    args = types.SimpleNamespace(
+        output_cli=True,
+        output_null=False,
+        output_csv=False,
+        output_file=None,
+        excavate=None,
+        reporting_dir=None,
+    )
+    output.report([], ["Col"], args)
+    out = capsys.readouterr().out
+    assert "No results found!" in out
+
+
+def test_report_empty_file_output(tmp_path, capsys):
+    outfile = tmp_path / "empty.csv"
+    args = types.SimpleNamespace(
+        output_cli=False,
+        output_null=False,
+        output_csv=False,
+        output_file=str(outfile),
+        excavate=None,
+        reporting_dir=None,
+    )
+    output.report([], ["Col1", "Col2"], args)
+    out = capsys.readouterr().out
+    # message should still be printed even without output_cli
+    assert "No results found!" in out
+    with open(outfile, newline="") as fh:
+        rows = list(csv.reader(fh))
+    assert rows[0] == ["Col1", "Col2"]
+    assert rows[1][0] == "No data returned"
+
+
+def test_report_empty_excavate_output(tmp_path, capsys):
+    args = types.SimpleNamespace(
+        output_cli=False,
+        output_null=False,
+        output_csv=False,
+        output_file=None,
+        excavate=True,
+        reporting_dir=str(tmp_path),
+    )
+    output.report([], ["A"], args, name="sample")
+    out = capsys.readouterr().out
+    assert "No results found!" in out
+    csv_path = tmp_path / "sample.csv"
+    with open(csv_path, newline="") as fh:
+        rows = list(csv.reader(fh))
+    assert rows[0] == ["A"]
+    assert rows[1][0] == "No data returned"

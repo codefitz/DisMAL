@@ -257,6 +257,36 @@ def test_map_outpost_credentials_skips_unreachable(monkeypatch, capsys, caplog):
     assert msg in captured.out
     assert msg in caplog.text
 
+
+def test_get_outpost_credential_map_groups_by_outpost(monkeypatch):
+    """Credentials should be grouped under their outposts."""
+
+    search_data = {
+        "results": [
+            {"credential": "c1", "outpost": "op1"},
+            {"credential": "c2", "outpost": "op1"},
+            {"credential": "c3", "outpost": "op2"},
+        ]
+    }
+
+    monkeypatch.setattr(api_mod, "search_results", lambda *a, **k: search_data)
+    monkeypatch.setattr(
+        api_mod,
+        "get_outposts",
+        lambda app: [
+            {"id": "op1", "url": "http://op1"},
+            {"id": "op2", "url": "http://op2"},
+        ],
+    )
+
+    mapping = get_outpost_credential_map(None, None)
+
+    assert mapping == {
+        "op1": {"url": "http://op1", "credentials": ["c1", "c2"]},
+        "op2": {"url": "http://op2", "credentials": ["c3"]},
+    }
+
+
 def test_cli_dispatch_outpost_creds(monkeypatch):
     import importlib
     monkeypatch.setattr(sys, "argv", ["dismal"])

@@ -200,6 +200,8 @@ parser.set_defaults(
     username=config.get('username'),
     password=config.get('password'),
     token=config.get('token'),
+    f_token=config.get('token_file'),
+    f_passwd=config.get('password_file'),
     noping=config.get('noping', False),
     debugging=config.get('debugging', False),
 )

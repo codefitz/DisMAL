@@ -251,6 +251,72 @@ def test_map_outpost_credentials_skips_unreachable(monkeypatch, capsys, caplog):
     assert msg in caplog.text
 
 
+def test_cli_dispatch_outpost_creds(monkeypatch):
+    import importlib
+    monkeypatch.setattr(sys, "argv", ["dismal"])
+    dismal = importlib.reload(importlib.import_module("dismal"))
+
+    monkeypatch.setattr(dismal.access, "api_target", lambda args: types.SimpleNamespace())
+    dummy_creds = types.SimpleNamespace(appliance=None)
+    dummy_search = types.SimpleNamespace()
+    monkeypatch.setattr(
+        dismal.api,
+        "init_endpoints",
+        lambda ap, args: (None, dummy_search, dummy_creds, None, None),
+    )
+    monkeypatch.setattr(dismal.access, "login_target", lambda *a, **k: (None, None))
+    monkeypatch.setattr(dismal.access, "ping", lambda host: 0)
+    monkeypatch.setattr(dismal.os.path, "exists", lambda p: True)
+    monkeypatch.setattr(dismal.os, "makedirs", lambda p: None)
+    monkeypatch.setattr(dismal.output, "format_duration", lambda s: "0s")
+    monkeypatch.setattr(dismal.logging, "basicConfig", lambda *a, **k: None)
+
+    called = {}
+    monkeypatch.setattr(
+        dismal.api, "outpost_creds", lambda *a, **k: called.setdefault("ran", True)
+    )
+
+    args = types.SimpleNamespace(
+        version=False,
+        wakey=False,
+        target="appl",
+        access_method="api",
+        username=None,
+        password=None,
+        f_passwd=None,
+        token=None,
+        f_token=None,
+        noping=True,
+        output_path=None,
+        excavate=["outpost_creds"],
+        output_csv=False,
+        output_file=None,
+        include_endpoints=None,
+        endpoint_prefix=None,
+        a_query=None,
+        a_kill_run=None,
+        schedule_timezone=None,
+        reset_schedule_timezone=False,
+        sysadmin=None,
+        tideway=None,
+        clear_queue=False,
+        tw_user=None,
+        servicecctl=None,
+        debugging=False,
+        output_cli=False,
+        output_null=False,
+        a_enable=None,
+        f_enablelist=None,
+        a_opt=None,
+        a_removal=None,
+        f_remlist=None,
+    )
+
+    dismal.run_for_args(args)
+
+    assert called.get("ran")
+
+
 def test_search_results_cleans_query(monkeypatch):
     """Ensure newlines removed and single quotes preserved."""
 

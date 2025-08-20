@@ -1157,7 +1157,6 @@ def _gather_discovery_data(twsearch, twcreds, args):
                 }
             )
             endpoint_records.append(ep_record)
-            disco_data.append(ep_record)
 
         for result in records["dropped"]:
             run_end = tools.getr(result, "End")
@@ -1200,6 +1199,7 @@ def _gather_discovery_data(twsearch, twcreds, args):
                 "reason_not_updated": reason_not_updated,
                 "end_state": end_state,
                 "timestamp": run_end_timestamp,
+                "scan_end_raw": scan_end_raw,
             }
             endpoint_records.append(ep_record)
 
@@ -1209,38 +1209,45 @@ def _gather_discovery_data(twsearch, twcreds, args):
         named_records = [
             r for r in endpoint_records if r.get("hostname") or r.get("credential_name")
         ]
+        latest = max(endpoint_records, key=lambda r: r["timestamp"])
         if named_records:
             chosen = max(named_records, key=lambda r: r["timestamp"])
         else:
-            chosen = max(endpoint_records, key=lambda r: r["timestamp"])
-
-            reason_not_updated = tools.getr(result, "Reason_Not_Updated", None)
-            list_of_names = None
-            list_of_endpoints = None
-            for identity in identities:
-                if endpoint in identity.get("list_of_ips"):
-                    list_of_endpoints = identity.get("list_of_ips")
-                    list_of_names = identity.get("list_of_names")
-
-            ep_record.update(
-                {
-                    "list_of_names": list_of_names,
-                    "list_of_endpoints": list_of_endpoints,
-                    "disco_run": disco_run,
-                    "run_start": run_start,
-                    "run_end": run_end,
-                    "scan_end_raw": scan_end_raw,
-                    "when_was_that": whenWasThat,
-                    "consistency": consistency,
-                    "reason_not_updated": reason_not_updated,
-                    "end_state": end_state,
-                    "timestamp": ep_timestamp,
-                    "dropped": 1,
-                }
-            )
-            disco_data.append(ep_record)
+            chosen = latest
+        chosen["timestamp"] = latest.get("timestamp")
+        chosen["when_was_that"] = latest.get("when_was_that")
+        if latest.get("scan_end_raw"):
+            chosen["scan_end_raw"] = latest.get("scan_end_raw")
+        disco_data.append(chosen)
 
     return disco_data
+
+
+@output._timer("Outpost Credentials")
+def outpost_creds(creds_ep, search_ep, appliance, args):
+    """Report mapping of outpost credentials to their outposts."""
+
+    outpost_map = api.get_outpost_credential_map(appliance) or {}
+
+    vault = api.get_json(creds_ep.get_vault_credentials)
+    label_map = {
+        c.get("uuid"): c.get("label")
+        for c in (vault or [])
+        if isinstance(c, dict)
+    }
+
+    rows = []
+    for op_id, info in outpost_map.items():
+        url = info.get("url")
+        for uuid in info.get("credentials", []):
+            rows.append([url, op_id, uuid, label_map.get(uuid)])
+
+    output.report(
+        rows,
+        ["Outpost", "Outpost Id", "Credential UUID", "Credential Label"],
+        args,
+        name="outpost_creds",
+    )
 
 
 @output._timer("Discovery Access")

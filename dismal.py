@@ -169,6 +169,7 @@ Providing no <report> or using "default" will run all options that do not requir
 "tku"                       - TKU version summary
 "unrecognised_snmp"         - Report of unrecognised SNMP devices (Model > Device)
 "capture_candidates" - Report of capture candidates
+"outpost_creds"            - Mapping of credentials to Outposts
 "vault"                     - Vault details
 "default"                   - Run all options that do not require a value
 \n
@@ -382,6 +383,7 @@ def run_for_args(args):
             api.agents(search, args, reporting_dir)
             api.software_users(search, args, reporting_dir)
             api.tku(knowledge, args, reporting_dir)
+            api.outpost_creds(creds, search, args, reporting_dir)
 
     if args.access_method=="cli":
 
@@ -728,13 +730,16 @@ def run_for_args(args):
 
         if excavate_default or (args.excavate and args.excavate[0] == "installed_agents"):
             api.agents(search, args, reporting_dir)
-    
+
         if excavate_default or (args.excavate and args.excavate[0] == "si_user_accounts"):
             api.software_users(search, args, reporting_dir)
-    
+
         if excavate_default or (args.excavate and args.excavate[0] == "pattern_modules"):
             #TODO: This report has been overlooked
             api.tku(knowledge,args, reporting_dir)
+
+        if excavate_default or (args.excavate and args.excavate[0] == "outpost_creds"):
+            api.outpost_creds(creds, search, args, reporting_dir)
 
         if excavate_default or (args.excavate and args.excavate[0] == "tku"):
             api.tku(knowledge, args, reporting_dir)
@@ -790,6 +795,10 @@ def run_appliance_list(appliance_list, args):
         run_for_args(args)
 
 
-if __name__ == "__main__":
+def main():
     appliance_list = config.get("appliances")
     run_appliance_list(appliance_list, args)
+
+
+if __name__ == "__main__":
+    main()

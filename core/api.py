@@ -334,6 +334,42 @@ def map_outpost_credentials(appliance, include_details=False):
             logger.error("Error processing outpost %s: %s", url, e)
     return (mapping, credentials) if include_details else mapping
 
+
+def get_outpost_credential_map(appliance):
+    """Return mapping of outpost IDs to their credentials.
+
+    The result is a dictionary keyed by the outpost ``id`` where each value
+    contains the outpost URL or name and a list of credential UUIDs associated
+    with that outpost.  Outposts that are unreachable are skipped.
+    """
+
+    result = {}
+
+    outposts = get_outposts(appliance)
+    if not isinstance(outposts, list):
+        return result
+
+    # Build quick lookup of URL to (id, name)
+    url_map = {}
+    for outpost in outposts:
+        url = outpost.get("url")
+        op_id = outpost.get("id")
+        name = outpost.get("name") or url
+        if url and op_id:
+            url_map[url] = (op_id, name)
+
+    cred_map = map_outpost_credentials(appliance)
+
+    for uuid, url in cred_map.items():
+        op_info = url_map.get(url)
+        if not op_info:
+            continue
+        op_id, name = op_info
+        entry = result.setdefault(op_id, {"url": name, "credentials": []})
+        entry["credentials"].append(uuid)
+
+    return result
+
 def success(twcreds, twsearch, args, dir):
     reporting.successful(twcreds, twsearch, args)
     #if args.output_file:
@@ -475,6 +511,12 @@ def sensitive(search, args, dir):
         "csv_file",
     )
 
+
+def outpost_creds(creds, search, args, dir):
+    """Wrapper for the outpost credential report."""
+    appliance = getattr(creds, "appliance", None)
+    reporting.outpost_creds(creds, search, appliance, args)
+
 def tpl_export(search, args, dir):
     reporting.tpl_export(search, queries.tpl_export, dir, "api", None, None, None)
 
@@ -588,7 +630,17 @@ def host_util(search, args, dir):
 
 @output._timer("Orphan VMs")
 def orphan_vms(search, args, dir):
-    output.define_csv(args,search,queries.orphan_vms,dir+defaults.orphan_vms_filename,args.output_file,args.target,"query")
+    results = search_results(search, queries.orphan_vms)
+    headers = []
+    rows = []
+    for r in results or []:
+        if not headers:
+            headers = list(r.keys())
+        rows.append([r.get(h) for h in headers])
+    headers.insert(0, "Discovery Instance")
+    for row in rows:
+        row.insert(0, args.target)
+    output.csv_file(rows, headers, dir + defaults.orphan_vms_filename)
 
 @output._timer("Missing VMs")
 def missing_vms(search, args, dir):

@@ -360,7 +360,7 @@ def host_util(client,args,user,passwd,dir):
 
 def orphan_vms(client,args,user,passwd,dir):
     result = run_query(client,user,passwd,queries.orphan_vms)
-    output.define_csv(args,None,result,dir+defaults.orphan_vms_filename,args.output_file,args.target,"csv")
+    output.save2csv(result, dir+defaults.orphan_vms_filename, args.target)
 
 def missing_vms(client,args,user,passwd,dir):
     result = run_query(client,user,passwd,queries.missing_vms)

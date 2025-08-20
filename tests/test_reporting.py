@@ -416,6 +416,92 @@ def test_discovery_analysis_includes_raw_timestamp(monkeypatch):
     assert dropped_row[idx] == "2024-01-02T00:00:00+00:00"
 
 
+def test_discovery_analysis_merges_latest_fields(monkeypatch):
+    """Fields missing from the chosen record are populated from the latest."""
+
+    class DummyDF(dict):
+        def __init__(self, data):
+            super().__init__({k: {0: v[0] if isinstance(v, list) else v} for k, v in data.items()})
+
+        def __getitem__(self, key):
+            return self.get(key)
+
+        def __setitem__(self, key, value):
+            dict.__setitem__(self, key, {0: value})
+
+        def to_dict(self):
+            return self
+
+    monkeypatch.setattr(reporting.builder, "unique_identities", lambda s, *a, **k: [])
+
+    def fake_search_results(search, query):
+        if query is reporting.queries.last_disco:
+            return [
+                {
+                    "Endpoint": "1.1.1.1",
+                    "Hostname": "oldhost",
+                    "Scan_Endtime": "2024-01-01 00:00:00",
+                    "Scan_Endtime_Raw": "2024-01-01T00:00:00+00:00",
+                    "End_State": "OK",
+                },
+                {
+                    "Endpoint": "1.1.1.1",
+                    "Scan_Endtime": "2024-01-02 00:00:00",
+                    "Scan_Endtime_Raw": "2024-01-02T00:00:00+00:00",
+                    "End_State": "Failed",
+                    "Host_Node_Updated": "2024-01-02 00:00:00",
+                },
+                {
+                    "Endpoint": "3.3.3.3",
+                    "Scan_Endtime": "2024-01-03 00:00:00",
+                    "Scan_Endtime_Raw": "2024-01-03T00:00:00+00:00",
+                    "End_State": "OK",
+                    "Last_Credential": "cred1",
+                },
+            ]
+        if query is reporting.queries.dropped_endpoints:
+            return []
+        return []
+
+    monkeypatch.setattr(reporting.api, "search_results", fake_search_results)
+    monkeypatch.setattr(
+        reporting.api,
+        "get_json",
+        lambda *a, **k: [{"uuid": "cred1", "label": "CRED", "username": "user"}],
+    )
+    monkeypatch.setattr(reporting.api, "get_outpost_credential_map", lambda *a, **k: {})
+    monkeypatch.setattr(reporting.pd, "DataFrame", lambda data: DummyDF(data), raising=False)
+    monkeypatch.setattr(reporting.pd, "cut", lambda *a, **k: "recent", raising=False)
+
+    captured = {}
+
+    def fake_report(data, headers, args, name=""):
+        captured["data"] = data
+        captured["headers"] = headers
+
+    monkeypatch.setattr(reporting, "output", types.SimpleNamespace(report=fake_report))
+
+    args = types.SimpleNamespace(
+        output_csv=True,
+        output_file=None,
+        token=None,
+        target="http://x",
+        include_endpoints=None,
+        endpoint_prefix=None,
+    )
+
+    reporting.discovery_analysis(DummySearch(), DummyCreds(), args)
+
+    headers = captured["headers"]
+    rows = {row[0]: row for row in captured["data"]}
+    first = rows["1.1.1.1"]
+    second = rows["3.3.3.3"]
+
+    assert first[headers.index("device_name")] == "oldhost"
+    assert first[headers.index("inferred_node_updated")] == "2024-01-02 00:00:00"
+    assert second[headers.index("credential_name")] == "CRED"
+
+
 def test_outpost_creds_builds_rows(monkeypatch):
     op_map = {"op1": {"url": "http://op1", "credentials": ["c1", "c2"]}}
 

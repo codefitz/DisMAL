@@ -1208,6 +1208,32 @@ def _gather_discovery_data(twsearch, twcreds, args):
         chosen["when_was_that"] = latest.get("when_was_that")
         if latest.get("scan_end_raw"):
             chosen["scan_end_raw"] = latest.get("scan_end_raw")
+
+        # Merge selected fields from the latest record when missing in the chosen
+        # record. This ensures the most recent information (such as node update
+        # times or credential details) is available even if the "best" record is
+        # older because it contains identifying information like hostname.
+        merge_fields = [
+            "hostname",
+            "node_updated",
+            "credential_name",
+            "credential_login",
+            "last_credential",
+            "current_access",
+            "end_state",
+            "previous_end_state",
+            "reason_not_updated",
+            "session_results_logged",
+            "da_id",
+            "prev_da_id",
+            "next_node_id",
+            "last_marker",
+        ]
+
+        for field in merge_fields:
+            if chosen.get(field) in (None, "") and latest.get(field) not in (None, ""):
+                chosen[field] = latest.get(field)
+
         disco_data.append(chosen)
 
     return disco_data

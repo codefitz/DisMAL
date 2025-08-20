@@ -1186,6 +1186,7 @@ def _gather_discovery_data(twsearch, twcreds, args):
                 "run_start": run_start,
                 "run_end": run_end,
                 "when_was_that": whenWasThat,
+                "consistency": consistency,
                 "reason_not_updated": reason_not_updated,
                 "end_state": end_state,
                 "timestamp": run_end_timestamp,
@@ -1196,6 +1197,44 @@ def _gather_discovery_data(twsearch, twcreds, args):
         if not endpoint_records:
             continue
 
+        named_records = [
+            r for r in endpoint_records if r.get("hostname") or r.get("credential_name")
+        ]
+        latest = max(endpoint_records, key=lambda r: r["timestamp"])
+        if named_records:
+            chosen = max(named_records, key=lambda r: r["timestamp"])
+        else:
+            chosen = latest
+        chosen["timestamp"] = latest.get("timestamp")
+        chosen["when_was_that"] = latest.get("when_was_that")
+        if latest.get("scan_end_raw"):
+            chosen["scan_end_raw"] = latest.get("scan_end_raw")
+
+        # Merge selected fields from the latest record when missing in the chosen
+        # record. This ensures the most recent information (such as node update
+        # times or credential details) is available even if the "best" record is
+        # older because it contains identifying information like hostname.
+        merge_fields = [
+            "hostname",
+            "node_updated",
+            "credential_name",
+            "credential_login",
+            "last_credential",
+            "current_access",
+            "end_state",
+            "previous_end_state",
+            "reason_not_updated",
+            "consistency",
+            "session_results_logged",
+            "da_id",
+            "prev_da_id",
+            "next_node_id",
+            "last_marker",
+        ]
+
+        for field in merge_fields:
+            if chosen.get(field) in (None, "") and latest.get(field) not in (None, ""):
+                chosen[field] = latest.get(field)
         # Sort so the newest record is first; older records follow
         sorted_records = sorted(
             endpoint_records,

@@ -107,3 +107,18 @@ def test_picks_latest_when_no_names(monkeypatch):
     assert record.get("hostname") is None
     assert record.get("credential_name") is None
     assert record["when_was_that"] == "new"
+
+
+def test_dropped_record_includes_consistency(monkeypatch):
+    dropped = {
+        "Endpoint": "1.2.3.4",
+        "Run": "r1",
+        "Start": "2024-02-01 00:00:00 +0000",
+        "End": "2024-02-01 00:05:00 +0000",
+        "End_State": "DarkSpace",
+        "Reason_Not_Updated": None,
+    }
+    result = _run(monkeypatch, [], [dropped], ["recent"])
+    assert len(result) == 1
+    record = result[0]
+    assert record["consistency"] == "Always DarkSpace"

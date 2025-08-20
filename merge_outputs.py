@@ -82,21 +82,23 @@ for csv_name in unique_csv_filenames:
                 f"Trimmed {csv_name} to {MAX_EXCEL_ROWS} rows to fit Excel limits",
             )
 
-        sheet_name = snake_to_title(os.path.splitext(csv_name)[0])[:31]
+        report_key = os.path.splitext(csv_name)[0]
+        sheet_name = snake_to_title(report_key)[:31]
         # Excel sheet names have a 31-character limit
         combined.to_excel(writer, sheet_name=sheet_name, index=False, header=True)
         print(f"Added sheet: {sheet_name} ({len(dfs)} files)")
 
-        if sheet_name in EXPECTED_REPORTS:
-            merged_reports.add(sheet_name)
+        if report_key in EXPECTED_REPORTS:
+            merged_reports.add(report_key)
     else:
         print(f"No data found for {csv_name}")
 
 # Build cover sheet summarizing expected reports
 records = []
-for report, description in EXPECTED_REPORTS.items():
-    row = {"report": report, "description": description}
-    if report not in merged_reports:
+for report_key, description in EXPECTED_REPORTS.items():
+    row = {"report": report_key, "description": description}
+    # Compare using the base report key to avoid mismatches with sheet names
+    if report_key not in merged_reports:
         row["status"] = "missing—no corresponding CSV"
     records.append(row)
 

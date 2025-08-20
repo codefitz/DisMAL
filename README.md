@@ -85,15 +85,20 @@ python3 dismal.py --access_method api -i <appliance_host> -u <username> -p <pass
 
 Only the two specified endpoints are queried and reported on.
 
-The resulting device-IDs report includes a **Coverage %** column indicating
+The resulting device-IDs report includes a **Guide %** column indicating
 the proportion of unique IP addresses seen for each originating endpoint
 compared to the total endpoints examined.
 
 ## Reports
 
-One report focuses on Discovery Access history:
+The toolkit now offers a broad range of reports. Selected examples include:
 
-- **discovery_analysis** – exports the latest access details for each endpoint and compares consecutive runs to highlight state changes.
-- **ip_analysis** – Run IP analysis report.
-More reports are included.
-Run `python3 dismal.py --help` to see the complete list.
+- **credential_success** – report on credential success with totals and success percentages.
+- **device_ids** – list unique device identities with a Guide % for each originating endpoint.
+- **devices** – summarize unique device profiles with last access and credential details.
+- **discovery_analysis** – export latest access details for each endpoint and compare consecutive runs to highlight state changes.
+- **ip_analysis** – run IP analysis report.
+- **schedules** – export discovery schedules along with the credentials that will be used.
+- **suggested_cred_opt** – display suggested order of credentials based on restricted IPs, exclusions, success/failure, privilege and type.
+
+Run `python3 dismal.py --help` to see the complete list as new reports continue to be added.

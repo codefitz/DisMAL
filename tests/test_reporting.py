@@ -130,6 +130,12 @@ def test_successful_combines_query_results(monkeypatch):
             return [{"UUID": "u1", "Session_Type": "ssh", "Count": 3}]
         if query is reporting.queries.credential_failure:
             return [{"UUID": "u1", "Session_Type": "ssh", "Count": 4}]
+        if query is reporting.queries.credential_success_7d:
+            return [{"UUID": "u1", "Session_Type": "ssh", "Count": 1}]
+        if query is reporting.queries.deviceinfo_success_7d:
+            return [{"UUID": "u1", "Session_Type": "ssh", "Count": 1}]
+        if query is reporting.queries.credential_failure_7d:
+            return [{"UUID": "u1", "Session_Type": "ssh", "Count": 1}]
         return []
 
     call = {"n": 0}
@@ -172,11 +178,16 @@ def test_successful_combines_query_results(monkeypatch):
         reporting.queries.credential_success,
         reporting.queries.deviceinfo_success,
         reporting.queries.credential_failure,
+        reporting.queries.credential_success_7d,
+        reporting.queries.deviceinfo_success_7d,
+        reporting.queries.credential_failure_7d,
     }
+    assert "Success % 7 days" in captured["headers"]
     row = captured["data"][0]
     assert row[6] == 5
     assert row[7] == 4
     assert row[8] == pytest.approx(5 / 9)
+    assert row[9] == pytest.approx(2 / 3)
 
 
 def test_successful_coerces_string_counts(monkeypatch):
@@ -189,6 +200,12 @@ def test_successful_coerces_string_counts(monkeypatch):
             return [{"UUID": "u1", "Session_Type": "ssh", "Count": "3"}]
         if query is reporting.queries.credential_failure:
             return [{"UUID": "u1", "Session_Type": "ssh", "Count": "4"}]
+        if query is reporting.queries.credential_success_7d:
+            return [{"UUID": "u1", "Session_Type": "ssh", "Count": "1"}]
+        if query is reporting.queries.deviceinfo_success_7d:
+            return [{"UUID": "u1", "Session_Type": "ssh", "Count": "1"}]
+        if query is reporting.queries.credential_failure_7d:
+            return [{"UUID": "u1", "Session_Type": "ssh", "Count": "1"}]
         return []
 
     call = {"n": 0}
@@ -239,6 +256,7 @@ def test_successful_coerces_string_counts(monkeypatch):
     assert isinstance(row[6], int)
     assert isinstance(row[7], int)
     assert isinstance(row[8], float)
+    assert isinstance(row[9], float)
 
 
 def test_successful_uses_token_file(monkeypatch, tmp_path):

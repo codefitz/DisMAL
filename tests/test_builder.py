@@ -64,11 +64,12 @@ def test_ordering_inserts_instance_and_outpost(monkeypatch):
     )
 
     creds = types.SimpleNamespace(update_cred=lambda *a, **k: None, get_vault_credentials=None)
-    args = types.SimpleNamespace(output_csv=False, output_file=None, target="appl", token=None, f_token=None, excavate=["suggest_cred_opt"])
+    args = types.SimpleNamespace(output_csv=False, output_file=None, target="appl", token=None, f_token=None, excavate=["suggested_cred_opt"])
 
     builder.ordering(creds, DummySearch(), args, False)
 
-    assert captured["name"] == "suggest_cred_opt"
+    # Verify the new key is propagated through the report
+    assert captured["name"] == "suggested_cred_opt"
     assert captured["headers"][0] == "Discovery Instance"
     assert "Scope" in captured["headers"]
     assert "OutpostUrl" in captured["headers"]

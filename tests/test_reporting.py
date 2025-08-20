@@ -35,7 +35,7 @@ def _run_with_patches(monkeypatch, func):
     monkeypatch.setattr(reporting.builder, "unique_identities", lambda s, *a, **k: [])
     monkeypatch.setattr(reporting.api, "search_results", lambda *a, **k: [])
     monkeypatch.setattr(reporting.api, "get_json", lambda *a, **k: [])
-    monkeypatch.setattr(reporting.api, "map_outpost_credentials", lambda *a, **k: {})
+    monkeypatch.setattr(reporting.api, "map_outpost_credentials", lambda *a, **k: ({}, []))
     called = {}
     monkeypatch.setattr(reporting, "output", types.SimpleNamespace(report=lambda *a, **k: called.setdefault("ran", True)))
     args = types.SimpleNamespace(output_csv=False, output_file=None, token=None, target="http://x", include_endpoints=None, endpoint_prefix=None)
@@ -259,6 +259,52 @@ def test_successful_coerces_string_counts(monkeypatch):
     assert isinstance(row[9], float)
 
 
+def test_successful_includes_outpost_credentials(monkeypatch):
+    out_cred = {
+        "uuid": "u1",
+        "label": "c",
+        "index": 1,
+        "enabled": True,
+        "username": "user",
+        "usage": "",
+        "iprange": None,
+        "exclusions": None,
+    }
+
+    monkeypatch.setattr(
+        reporting.api,
+        "map_outpost_credentials",
+        lambda app, include_details=False: ({"u1": "http://op"}, [out_cred]),
+    )
+    monkeypatch.setattr(reporting.api, "get_json", lambda *a, **k: [])
+    monkeypatch.setattr(reporting.api, "search_results", lambda *a, **k: [])
+    monkeypatch.setattr(reporting.builder, "get_credentials", lambda entry: entry)
+    monkeypatch.setattr(reporting.builder, "get_scans", lambda *a, **k: [])
+    monkeypatch.setattr(
+        reporting.tideway, "appliance", lambda target, token: object(), raising=False
+    )
+
+    captured = {}
+
+    def fake_report(data, headers, args, name=""):
+        captured["row"] = data[0]
+
+    monkeypatch.setattr(reporting, "output", types.SimpleNamespace(report=fake_report))
+
+    args = types.SimpleNamespace(
+        output_csv=False,
+        output_file=None,
+        token=None,
+        target="http://x",
+        include_endpoints=None,
+        endpoint_prefix=None,
+    )
+
+    reporting.successful(DummyCreds(), DummySearch(), args)
+
+    assert captured["row"][-1] == "http://op"
+
+
 def test_successful_uses_token_file(monkeypatch, tmp_path):
     file_path = tmp_path / "token.txt"
     file_path.write_text("abc")
@@ -274,7 +320,7 @@ def test_successful_uses_token_file(monkeypatch, tmp_path):
         return DummyApp(token)
 
     monkeypatch.setattr(reporting.tideway, "appliance", fake_appliance, raising=False)
-    monkeypatch.setattr(reporting.api, "map_outpost_credentials", lambda app: {})
+    monkeypatch.setattr(reporting.api, "map_outpost_credentials", lambda app: ({}, []))
     monkeypatch.setattr(reporting.api, "search_results", lambda *a, **k: [])
     monkeypatch.setattr(reporting.api, "get_json", lambda *a, **k: [])
     monkeypatch.setattr(reporting.builder, "unique_identities", lambda s, *a, **k: [])
@@ -336,7 +382,7 @@ def test_discovery_analysis_includes_raw_timestamp(monkeypatch):
 
     monkeypatch.setattr(reporting.api, "search_results", fake_search_results)
     monkeypatch.setattr(reporting.api, "get_json", lambda *a, **k: [])
-    monkeypatch.setattr(reporting.api, "map_outpost_credentials", lambda *a, **k: {})
+    monkeypatch.setattr(reporting.api, "map_outpost_credentials", lambda *a, **k: ({}, []))
     monkeypatch.setattr(reporting.pd, "DataFrame", lambda data: DummyDF(data), raising=False)
     monkeypatch.setattr(reporting.pd, "cut", lambda *a, **k: "recent", raising=False)
 

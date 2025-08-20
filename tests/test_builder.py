@@ -133,6 +133,30 @@ def _setup_overlap_patches(monkeypatch, scan_ranges, excludes, search_results_re
     return search, args, captured
 
 
+def _setup_ip_analysis_patches(monkeypatch, scan_ranges, excludes):
+    seq = iter([scan_ranges, excludes])
+    monkeypatch.setattr(builder.api, "get_json", lambda *a, **k: next(seq))
+    monkeypatch.setattr(builder.api, "search_results", lambda *a, **k: [])
+    monkeypatch.setattr(
+        builder.tools,
+        "range_to_ips",
+        lambda r: [ipaddress.ip_network(r, strict=False)] if r else [],
+    )
+    monkeypatch.setattr(builder.tools, "sortlist", lambda l, dv=None: list(l))
+    monkeypatch.setattr(builder.tools, "completage", lambda *a, **k: 0)
+    monkeypatch.setattr(builder.tools, "getr", lambda d, k, default=None: d.get(k, default))
+    search = types.SimpleNamespace(search=lambda *a, **k: None)
+    args = types.SimpleNamespace(output_csv=False, output_file=None)
+    captured = {}
+
+    def fake_report(data, heads, args, name=None):
+        captured["data"] = data
+
+    monkeypatch.setattr(builder, "output", types.SimpleNamespace(report=fake_report))
+
+    return search, args, captured
+
+
 def test_scheduling_empty_excludes(monkeypatch, capsys):
     cred = [{"uuid": "u1", "label": "c1", "index": 1, "ip_range": "10.0.0.0/24"}]
     vault, search, args, captured = _setup_schedule_patches(

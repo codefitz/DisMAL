@@ -952,6 +952,11 @@ def ip_analysis(tw_search, args):
 
     output.report(data, heads, args, name="ip_analysis")
 
+
+def overlapping(tw_search, args):
+    """Compatibility wrapper for legacy overlapping report."""
+    ip_analysis(tw_search, args)
+
 def get_scans(results, list_of_ranges):
     """Return labels of scans that include any of ``list_of_ranges``.
 

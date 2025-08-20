@@ -291,12 +291,19 @@ def get_outposts(appliance):
     return get_json(resp)
 
 
-def map_outpost_credentials(appliance):
-    """Return mapping of credential UUIDs to outpost URLs."""
+def map_outpost_credentials(appliance, include_details=False):
+    """Return mapping of credential UUIDs to outpost URLs.
+
+    If ``include_details`` is ``True`` a tuple ``(mapping, credentials)`` is
+    returned where ``credentials`` is a list of credential dictionaries
+    retrieved from the outposts.  When ``False`` only the mapping is returned
+    to maintain backwards compatibility.
+    """
     mapping = {}
+    credentials = []
     outposts = get_outposts(appliance)
     if not isinstance(outposts, list):
-        return mapping
+        return (mapping, credentials) if include_details else mapping
     token = getattr(appliance, "token", None)
     api_version = getattr(appliance, "api_version", None)
     for outpost in outposts:
@@ -319,11 +326,13 @@ def map_outpost_credentials(appliance):
                 uuid = cred.get("uuid")
                 if not uuid:
                     continue
-                get_json(creds_ep.get_vault_credential(uuid))
+                detail = get_json(creds_ep.get_vault_credential(uuid))
                 mapping[uuid] = url
+                if include_details and isinstance(detail, dict):
+                    credentials.append(detail)
         except Exception as e:  # pragma: no cover - network errors
             logger.error("Error processing outpost %s: %s", url, e)
-    return mapping
+    return (mapping, credentials) if include_details else mapping
 
 def success(twcreds, twsearch, args, dir):
     reporting.successful(twcreds, twsearch, args)
@@ -353,13 +362,18 @@ def discovery_runs(disco, args, dir):
     if r:
         runs = json.loads(json.dumps(r))
         logger.debug('Runs:\n%s' % r)
-        header, rows, header_hf = tools.json2csv(runs)
-        header_hf.insert(0, "Discovery Instance")
+        header, rows, _ = tools.json2csv(runs)
+        header.insert(0, "Discovery Instance")
         for row in rows:
             row.insert(0, args.target)
+            for idx in [1, 2, 4, 5]:
+                try:
+                    row[idx] = int(row[idx])
+                except (ValueError, TypeError):
+                    pass
         output.define_csv(
             args,
-            header_hf,
+            header,
             rows,
             dir + defaults.current_scans_filename,
             args.output_file,
@@ -423,7 +437,6 @@ def show_runs(disco, args):
             output.define_csv(
                 args,
                 csv_headers,
-                header_hf,
                 run_csvs,
                 os.path.join(out_dir, defaults.current_scans_filename),
                 getattr(args, "output_file", None),
@@ -508,6 +521,29 @@ def open_ports(search, args, dir):
         header_hf,
         rows,
         dir + defaults.open_ports_filename,
+        args.output_file,
+        args.target,
+        "csv_file",
+    )
+
+def device_capture_candidates(search, args, dir):
+    """Export capture candidates, defaulting missing sysobjectid to 0."""
+    results = search_results(search, queries.capture_candidates)
+    header, rows, header_hf = tools.json2csv(results or [])
+    header = [h.lower() for h in header]
+    if "sysobjectid" in header:
+        idx = header.index("sysobjectid")
+        for row in rows:
+            if row[idx] is None:
+                row[idx] = 0
+    header.insert(0, "Discovery Instance")
+    for row in rows:
+        row.insert(0, args.target)
+    output.define_csv(
+        args,
+        header,
+        rows,
+        dir + defaults.capture_candidates_filename,
         args.output_file,
         args.target,
         "csv_file",

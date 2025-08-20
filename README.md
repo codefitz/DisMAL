@@ -145,8 +145,16 @@ The toolkit now offers a broad range of reports. Selected examples include:
 - **device_ids** – list unique device identities with a Guide % for each originating endpoint.
 - **devices** – summarize unique device profiles with last access and credential details.
 - **discovery_analysis** – export latest access details for each endpoint and compare consecutive runs to highlight state changes.
+- **expected_agents** – analyse installed software and list hosts missing common agents.
 - **ip_analysis** – run IP analysis report.
 - **schedules** – export discovery schedules along with the credentials that will be used.
 - **suggested_cred_opt** – display suggested order of credentials based on restricted IPs, exclusions, success/failure, privilege and type.
 
 Run `python3 dismal.py --help` to see the complete list as new reports continue to be added.
+
+To flag hosts missing common agents:
+
+```bash
+python3 dismal.py --access_method api -i <appliance> -u <user> -p <password> \
+    --excavate expected_agents
+```

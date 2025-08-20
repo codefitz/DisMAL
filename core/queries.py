@@ -601,7 +601,7 @@ agents = """
                 name as "Host_Name",
                 hash(name) as 'hashed_name',
                 os_version as "OS_Version",
-                #:::SoftwareInstance.name as "Running_Software",
+                #HostedSoftware:RunningSoftware:SoftwareInstance.name as "Running_Software",
                 serial as "Serial",
                 uuid as "UUID",
                 ((age_count < 0) and 'Aging' or 'Alive') as 'Age_Status',

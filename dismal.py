@@ -152,6 +152,7 @@ Providing no <report> or using "default" will run all options that do not requir
 "host_utilisation"          - Export of Hosts which appear to be underutilised (less than 3 running SIs)
 "hostname"                  - Print hostname
 "installed_agents"          - Analysis of installed agents
+"expected_agents"          - Report hosts missing expected agents
 "ipaddr" <ip_address>       - Search specific IP address for DiscoveryAccess results
 "missing_vms"               - Report of Hypervisor Hosts that have VMs which have not been discovered
 "near_removal"              - Export list of devices near removal
@@ -345,6 +346,7 @@ def run_for_args(args):
             cli.unrecognised_snmp(cli_target, args, system_user, system_passwd, reporting_dir)
             cli.capture_candidates(cli_target, args, system_user, system_passwd, reporting_dir)
             cli.installed_agents(cli_target, args, system_user, system_passwd, reporting_dir)
+            cli.expected_agents(cli_target, args, system_user, system_passwd, reporting_dir)
             cli.software_usernames(cli_target, args, system_user, system_passwd, reporting_dir)
             cli.module_summary(cli_target, args, system_user, system_passwd, reporting_dir)
 
@@ -381,6 +383,7 @@ def run_for_args(args):
             api.slc(search, args, reporting_dir)
             api.dblc(search, args, reporting_dir)
             api.agents(search, args, reporting_dir)
+            api.expected_agents(search, args, reporting_dir)
             api.software_users(search, args, reporting_dir)
             api.tku(knowledge, args, reporting_dir)
             api.outpost_creds(creds, search, args, reporting_dir)
@@ -537,6 +540,9 @@ def run_for_args(args):
 
         if excavate_default or (args.excavate and args.excavate[0] == "installed_agents"):
             cli.installed_agents(cli_target, args, system_user, system_passwd, reporting_dir)
+
+        if excavate_default or (args.excavate and args.excavate[0] == "expected_agents"):
+            cli.expected_agents(cli_target, args, system_user, system_passwd, reporting_dir)
 
         if excavate_default or (args.excavate and args.excavate[0] == "si_user_accounts"):
             cli.software_usernames(cli_target, args, system_user, system_passwd, reporting_dir)
@@ -730,6 +736,9 @@ def run_for_args(args):
 
         if excavate_default or (args.excavate and args.excavate[0] == "installed_agents"):
             api.agents(search, args, reporting_dir)
+
+        if excavate_default or (args.excavate and args.excavate[0] == "expected_agents"):
+            api.expected_agents(search, args, reporting_dir)
 
         if excavate_default or (args.excavate and args.excavate[0] == "si_user_accounts"):
             api.software_users(search, args, reporting_dir)

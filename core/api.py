@@ -13,7 +13,7 @@ import pandas
 import tideway
 
 # Local
-from . import tools, output, builder, queries, defaults, reporting, access
+from . import tools, output, builder, queries, defaults, reporting, access, common_agents
 import socket
 
 logger = logging.getLogger("_api_")
@@ -790,6 +790,24 @@ def capture_candidates(search, args, dir):
 @output._timer("Agents")
 def agents(search, args, dir):
     output.define_csv(args,search,queries.agents,dir+defaults.installed_agents_filename,args.output_file,args.target,"query")
+
+@output._timer("Expected Agents")
+def expected_agents(search, args, dir):
+    """Report hosts missing common agents via the API."""
+
+    results = search_results(search, queries.agents)
+    records = []
+    for row in results:
+        running = tools.getr(row, "Running_Software", "") or ""
+        softwares = [s.strip() for s in running.split(";") if s.strip()]
+        records.append({"Host_Name": tools.getr(row, "Host_Name", ""), "Running_Software": softwares})
+    expected = common_agents.get_expected_agents(records)
+    if expected:
+        print("Expected agents: %s" % ", ".join(sorted(expected)))
+    missing = common_agents.find_missing_agents(records, expected)
+    data = [[rec["Host_Name"], ";".join(rec["Missing_Agents"])] for rec in missing]
+    headers = ["Host Name", "Missing Agents"]
+    output.report(data, headers, args, name="expected_agents")
 
 @output._timer("Software Users")
 def software_users(search, args, dir):

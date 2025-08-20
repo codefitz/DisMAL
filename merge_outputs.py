@@ -12,6 +12,7 @@ EXPECTED_REPORTS = OrderedDict([
     ("discovery_analysis", "Discovery analysis summary"),
     ("devices_with_cred", "Devices with associated credentials"),
     ("device", "Individual device information"),
+    ("suggested_cred_opt", "Suggested credential optimization"),
     ("schedules", "Discovery schedules"),
     ("overlapping_ips", "Overlapping IP ranges"),
     ("eca_errors", "List of ECA errors"),

@@ -20,6 +20,27 @@ deviceinfo_success = """
                           access_method as 'Session_Type'
                           process with countUnique(1,0)
                        """
+credential_success_7d = """
+                            search SessionResult where success and time_index > (currentTime() - 7*24*3600*10000000)
+                            show (slave or credential) as 'UUID',
+                            session_type as 'Session_Type'
+                            processwith countUnique(1,0)
+                        """
+credential_failure_7d = """
+                            search SessionResult where not success and time_index > (currentTime() - 7*24*3600*10000000)
+                            show (slave or credential) as 'UUID',
+                            session_type as 'Session_Type'
+                            processwith countUnique(1,0)
+                        """
+deviceinfo_success_7d = """
+                          search DeviceInfo where method_success and __had_inference
+                          and nodecount(traverse DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess
+                                            traverse DiscoveryAccess:Metadata:Detail:SessionResult) = 0
+                          and time_index > (currentTime() - 7*24*3600*10000000)
+                          show (last_credential or last_slave) as 'UUID',
+                          access_method as 'Session_Type'
+                          process with countUnique(1,0)
+                       """
 deviceInfo = {"query":
                         """
                             search DeviceInfo

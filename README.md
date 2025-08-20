@@ -37,6 +37,19 @@ Use at your own risk.
 
    - pytest
 
+## Configuration
+
+A template configuration file is provided at `config.yaml.template`. Copy it to
+`config.yaml` and replace the placeholder values with your appliance details
+and credentials:
+
+```bash
+cp config.yaml.template config.yaml
+```
+
+Then edit `config.yaml` and set values for `appliances`, `token_file`,
+`username`, `password_file`, `access_method`, `noping`, and `debug`.
+
 ## Running the test suite
 
 Run all tests with:

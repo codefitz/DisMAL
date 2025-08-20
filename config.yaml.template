@@ -1,0 +1,10 @@
+# DisMAL configuration template
+# Copy to config.yaml and replace placeholder values.
+appliances:
+  - <appliance_host>
+token_file: <path_to_token_file>
+username: <username>
+password_file: <path_to_password_file>
+access_method: <api_or_cli>
+noping: false
+debug: false

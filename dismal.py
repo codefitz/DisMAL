@@ -756,7 +756,6 @@ def run_for_args(args):
 
     print(os.linesep)
 
-
 def run_appliance_list(appliance_list, args):
     """Run the tool for each appliance entry in a config list.
 

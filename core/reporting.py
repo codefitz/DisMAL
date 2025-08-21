@@ -1443,6 +1443,23 @@ def discovery_analysis(twsearch, twcreds, args, disco_data=None):
     output.report(data, headers, args, name="discovery_analysis")
 
 
+@output._timer("Discovery Run Analysis")
+def discovery_run_analysis(twsearch, twcreds, args):
+    """Report on discovery run ranges and endpoint statistics."""
+    logger.info("Running Discovery Run Analysis report")
+    results = api.search_results(twsearch, queries.discovery_run_analysis)
+
+    if isinstance(results, list) and results:
+        headers, lookup = tools.normalize_headers(
+            results[0].keys(), return_lookup=True
+        )
+        rows = [[record.get(lookup[h]) for h in headers] for record in results]
+    else:
+        headers, rows = [], []
+
+    output.report(rows, headers, args, name="discovery_run_analysis")
+
+
 @output._timer("TPL Export")
 def tpl_export(search, query, dir, method, client, sysuser, syspass):
     tpldir = dir + "/tpl"

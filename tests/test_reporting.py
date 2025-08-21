@@ -4,7 +4,6 @@ import types
 import pytest
 import core.builder as builder
 import core.output as output
-import core.tools as tools
 
 sys.modules.setdefault("pandas", types.SimpleNamespace())
 sys.modules.setdefault("tabulate", types.SimpleNamespace(tabulate=lambda *a, **k: ""))
@@ -139,19 +138,19 @@ def test_discovery_access_outputs_records(monkeypatch):
 def test_discovery_run_analysis_outputs_records(monkeypatch):
     sample = [
         {
-            "Explicit Ranges": "1.1.1.1/32",
-            "Scan Label": "Run1",
-            "End Time": "2024-01-01",
-            "Range Summary": "1 IP",
-            "Outpost Name": "op1",
-            "Label": "SR1",
-            "Scan Kind": "Scheduled",
-            "Range": "1.1.1.1/32",
-            "Schedule": "Once",
-            "Total Endpoints": 1,
-            "Active Endpoints": 1,
-            "Dropped": 0,
-            "Scan Kinds": ["Normal"],
+            "DiscoveryRun.valid_ranges": "1.1.1.1/32",
+            "DiscoveryRun.label": "Run1",
+            "DiscoveryRun.end_time": "2024-01-01",
+            "DiscoveryRun.range_summary": "1 IP",
+            "DiscoveryRun.outpost_name": "op1",
+            "ScanRange.label": "SR1",
+            "ScanRange.scan_kind": "Scheduled",
+            "ScanRange.range": "1.1.1.1/32",
+            "ScanRange.schedule": "Once",
+            "DiscoveryRun.total_endpoints": 1,
+            "DiscoveryRun.active_endpoints": 1,
+            "DiscoveryRun.dropped": 0,
+            "DiscoveryRun.scan_kinds": ["Normal"],
         }
     ]
 
@@ -203,17 +202,17 @@ def test_successful_combines_query_results(monkeypatch):
     def fake_search_results(search, query):
         calls.append(query)
         if query is reporting.queries.credential_success:
-            return [{"UUID": "u1", "Session_Type": "ssh", "Count": 2}]
+            return [{"SessionResult.uuid": "u1", "SessionResult.session_type": "ssh", "SessionResult.count": 2}]
         if query is reporting.queries.deviceinfo_success:
-            return [{"UUID": "u1", "Session_Type": "ssh", "Count": 3}]
+            return [{"SessionResult.uuid": "u1", "SessionResult.session_type": "ssh", "SessionResult.count": 3}]
         if query is reporting.queries.credential_failure:
-            return [{"UUID": "u1", "Session_Type": "ssh", "Count": 4}]
+            return [{"SessionResult.uuid": "u1", "SessionResult.session_type": "ssh", "SessionResult.count": 4}]
         if query is reporting.queries.credential_success_7d:
-            return [{"UUID": "u1", "Session_Type": "ssh", "Count": 1}]
+            return [{"SessionResult.uuid": "u1", "SessionResult.session_type": "ssh", "SessionResult.count": 1}]
         if query is reporting.queries.deviceinfo_success_7d:
-            return [{"UUID": "u1", "Session_Type": "ssh", "Count": 1}]
+            return [{"SessionResult.uuid": "u1", "SessionResult.session_type": "ssh", "SessionResult.count": 1}]
         if query is reporting.queries.credential_failure_7d:
-            return [{"UUID": "u1", "Session_Type": "ssh", "Count": 1}]
+            return [{"SessionResult.uuid": "u1", "SessionResult.session_type": "ssh", "SessionResult.count": 1}]
         return []
 
     call = {"n": 0}
@@ -274,17 +273,17 @@ def test_successful_coerces_string_counts(monkeypatch):
 
     def fake_search_results(search, query):
         if query is reporting.queries.credential_success:
-            return [{"UUID": "u1", "Session_Type": "ssh", "Count": "2"}]
+            return [{"SessionResult.uuid": "u1", "SessionResult.session_type": "ssh", "SessionResult.count": "2"}]
         if query is reporting.queries.deviceinfo_success:
-            return [{"UUID": "u1", "Session_Type": "ssh", "Count": "3"}]
+            return [{"SessionResult.uuid": "u1", "SessionResult.session_type": "ssh", "SessionResult.count": "3"}]
         if query is reporting.queries.credential_failure:
-            return [{"UUID": "u1", "Session_Type": "ssh", "Count": "4"}]
+            return [{"SessionResult.uuid": "u1", "SessionResult.session_type": "ssh", "SessionResult.count": "4"}]
         if query is reporting.queries.credential_success_7d:
-            return [{"UUID": "u1", "Session_Type": "ssh", "Count": "1"}]
+            return [{"SessionResult.uuid": "u1", "SessionResult.session_type": "ssh", "SessionResult.count": "1"}]
         if query is reporting.queries.deviceinfo_success_7d:
-            return [{"UUID": "u1", "Session_Type": "ssh", "Count": "1"}]
+            return [{"SessionResult.uuid": "u1", "SessionResult.session_type": "ssh", "SessionResult.count": "1"}]
         if query is reporting.queries.credential_failure_7d:
-            return [{"UUID": "u1", "Session_Type": "ssh", "Count": "1"}]
+            return [{"SessionResult.uuid": "u1", "SessionResult.session_type": "ssh", "SessionResult.count": "1"}]
         return []
 
     call = {"n": 0}

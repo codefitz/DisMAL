@@ -476,10 +476,14 @@ def show_runs(disco, args):
             headers.append(key)
         parsed_runs.append(disco_run)
 
-    headers = list(dict.fromkeys(headers))
+    headers = tools.sortlist(headers)
     run_csvs = []
     for run in parsed_runs:
-        run_csvs.append([run.get(h) for h in headers])
+        run_csv = []
+        for header in headers:
+            value = run.get(header)
+            run_csv.append(value)
+        run_csvs.append(run_csv)
 
     export = getattr(args, "export", False)
     outfile = getattr(args, "file", getattr(args, "output_file", None))
@@ -602,9 +606,8 @@ def device_capture_candidates(search, args, dir):
     """Export capture candidates, defaulting missing sysobjectid to 0."""
     results = search_results(search, queries.capture_candidates)
     header, rows, _ = tools.json2csv(results or [])
-    lower = [h.lower() for h in header]
-    if "sysobjectid" in lower:
-        idx = lower.index("sysobjectid")
+    if "DeviceInfo.sysobjectid" in header:
+        idx = header.index("DeviceInfo.sysobjectid")
         for row in rows:
             if row[idx] is None:
                 row[idx] = 0
@@ -681,7 +684,11 @@ def missing_vms(search, args, dir):
             for row in data:
                 row.insert(0, args.target)
 
-            gf_index = header.index("VirtualMachine.guest_full_name") if "VirtualMachine.guest_full_name" in header else None
+            gf_index = (
+                header.index("VirtualMachine.guest_full_name")
+                if "VirtualMachine.guest_full_name" in header
+                else None
+            )
             header.append("Pingable")
 
             devices = devices_lookup(search)
@@ -830,7 +837,7 @@ def devices_lookup(search):
         if ip:
             mapping[ip] = {
                 "last_identity": tools.getr(result, "DeviceInfo.hostname", "N/A"),
-                "last_start_time": tools.getr(result, "DiscoveryAccess.starttime", "N/A"),
+                "last_start_time": tools.getr(result, "DiscoveryAccess.start_time", "N/A"),
                 "last_result": tools.getr(result, "DiscoveryAccess.result", "N/A"),
             }
     return mapping

@@ -158,11 +158,11 @@ def session_get(results):
     sessions = {}
     for result in results:
         # Cast count values to integers to ensure arithmetic works as expected
-        count = int(result.get('Count', 0))
-        uuid = result.get('UUID')
-        restype = result.get('Session_Type')
+        count = int(result.get('SessionResult.count', 0))
+        uuid = result.get('SessionResult.uuid')
+        restype = result.get('SessionResult.session_type')
         if uuid:
-            sessions[uuid] = [ restype, count ]
+            sessions[uuid] = [restype, count]
     return sessions
 
 def ip_or_string(value):
@@ -215,12 +215,12 @@ def dequote(s):
 
 
 def json2csv(jsdata, return_map=False):
-    orig_header = []
+    header = []
     data = []
     for jsitem in jsdata:
         for label in jsitem.keys():
-            orig_header.append(label)
-    header = list(dict.fromkeys(orig_header))
+            header.append(label)
+            header = sortlist(header)
 
     for jsitem in jsdata:
         values = []
@@ -228,11 +228,12 @@ def json2csv(jsdata, return_map=False):
             values.append(getr(jsitem, key, "N/A"))
         data.append(values)
 
+    lookup = {h: h for h in header}
     if return_map:
         lookup = {h: h for h in header}
         return header, data, lookup
 
-    return header, data, header[:]
+    return header, data, header
 
 def snake_to_title(value):
     """Convert ``snake_case`` strings to Title Case with spaces.

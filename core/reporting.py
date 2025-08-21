@@ -1448,7 +1448,7 @@ def discovery_run_analysis(twsearch, twcreds, args):
     results = api.search_results(twsearch, queries.discovery_run_analysis)
 
     if isinstance(results, list) and results:
-        headers = list(dict.fromkeys(results[0].keys()))
+        headers = list(results[0].keys())
         rows = [[record.get(h) for h in headers] for record in results]
     else:
         headers, rows = [], []

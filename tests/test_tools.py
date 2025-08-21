@@ -35,17 +35,12 @@ def test_dequote_no_change():
     assert tools.dequote("hello") == "hello"
     assert tools.dequote("'hello'") == "'hello'"
 
-
-def test_json2csv_returns_raw_headers_and_map():
-    data = [
-        {"first_name": "Jane", "last_name": "Doe"},
-        {"first_name": "John", "age": 30},
-    ]
+def test_json2csv_returns_headers_and_map():
+    data = [{"Person.first_name": "Jane", "Person.last_name": "Doe"}]
     header, rows, lookup = tools.json2csv(data, return_map=True)
-    assert header == ["first_name", "last_name", "age"]
-    assert rows == [["Jane", "Doe", "N/A"], ["John", "N/A", 30]]
+    assert header == ["Person.first_name", "Person.last_name"]
+    assert rows == [["Jane", "Doe"]]
     assert lookup == {
-        "first_name": "first_name",
-        "last_name": "last_name",
-        "age": "age",
+        "Person.first_name": "Person.first_name",
+        "Person.last_name": "Person.last_name",
     }

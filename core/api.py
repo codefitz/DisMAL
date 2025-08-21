@@ -444,7 +444,7 @@ def discovery_runs(disco, args, dir):
         for row in rows:
             row.insert(0, args.target)
             for idx, field in enumerate(header[1:], start=1):
-                if field in int_fields:
+                if field.split(".")[-1] in int_fields:
                     try:
                         row[idx] = int(row[idx])
                     except (ValueError, TypeError):

@@ -734,7 +734,7 @@ def unique_identities(search, include_endpoints=None, endpoint_prefix=None):
             logger.warning("Unexpected discovery access entry: %r", da)
             continue
             
-        endpoint = da.get("ip")
+        endpoint = da.get("DiscoveryAccess.endpoint")
         if endpoint and endpoint not in endpoint_map:
             logger.debug("Unique Endpoint: %s", endpoint)
             endpoint_map[endpoint] = {"ips": set(), "names": set()}

@@ -88,8 +88,76 @@ def test_device_ids_report_includes_coverage(monkeypatch):
         name="device_ids",
     )
 
+    assert captured["data"]
     assert captured["headers"][-1] == "Coverage %"
     assert captured["data"][0][-1] == 50.0
+
+
+def test_unique_identities_uses_da_endpoint(monkeypatch):
+    monkeypatch.setattr(builder.tools, "completage", lambda *a, **k: 0)
+    seq = iter([[], [{"DiscoveryAccess.endpoint": "10.0.0.1"}]])
+    monkeypatch.setattr(builder.api, "search_results", lambda *a, **k: next(seq))
+
+    result = builder.unique_identities(None)
+
+    assert result == [
+        {
+            "originating_endpoint": "10.0.0.1",
+            "list_of_ips": [],
+            "list_of_names": [],
+            "coverage_pct": 0.0,
+        }
+    ]
+
+
+def test_devices_report_contains_data(monkeypatch):
+    identities = [
+        {
+            "originating_endpoint": "1.1.1.1",
+            "list_of_ips": ["1.1.1.1"],
+            "list_of_names": ["host"],
+        }
+    ]
+    result = [
+        {
+            "DiscoveryAccess.endpoint": "1.1.1.1",
+            "DeviceInfo.hostname": "host",
+            "DiscoveryAccess.starttime": "2024-01-01 00:00:00 UTC",
+            "DiscoveryRun.label": "run1",
+            "DeviceInfo.last_credential": "cred-uuid",
+            "DiscoveryAccess.result": "ok",
+            "DiscoveryAccess.end_state": "finished",
+            "DeviceInfo.kind": "server",
+            "DeviceInfo.last_access_method": "ssh",
+        }
+    ]
+    monkeypatch.setattr(reporting.builder, "unique_identities", lambda *a, **k: identities)
+    monkeypatch.setattr(reporting.api, "search_results", lambda *a, **k: result)
+    monkeypatch.setattr(reporting.api, "get_json", lambda *a, **k: [])
+    monkeypatch.setattr(reporting.tools, "get_credential", lambda *a, **k: {"label": "cred1", "username": "user1"})
+    monkeypatch.setattr(reporting.tools, "list_of_lists", lambda *a, **k: a[2])
+    monkeypatch.setattr(reporting.tools, "sortlist", lambda l, dv=None: l)
+
+    captured = {}
+
+    def fake_report(data, headers, args, name=None):
+        captured["data"] = data
+        captured["headers"] = headers
+        captured["name"] = name
+
+    monkeypatch.setattr(reporting, "output", types.SimpleNamespace(report=fake_report))
+
+    args = types.SimpleNamespace(
+        output_csv=False,
+        output_file=None,
+        include_endpoints=None,
+        endpoint_prefix=None,
+    )
+
+    reporting.devices(DummySearch(), DummyCreds(), args)
+
+    assert captured["name"] == "devices"
+    assert captured["data"]
 
 
 def test_discovery_access_handles_bad_api(monkeypatch):

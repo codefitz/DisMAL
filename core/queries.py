@@ -2,34 +2,34 @@
 
 credential_success = """
                             search SessionResult where success
-                            show (slave or credential) as 'UUID',
-                            session_type as 'Session_Type'
+                            show (slave or credential) as 'SessionResult.credential',
+                            session_type as 'SessionResult.session_type'
                             processwith countUnique(1,0)
                         """
 credential_failure = """
                             search SessionResult where not success
-                            show (slave or credential) as 'UUID',
-                            session_type as 'Session_Type'
+                            show (slave or credential) as 'SessionResult.credential',
+                            session_type as 'SessionResult.session_type'
                             processwith countUnique(1,0)
                         """
 deviceinfo_success = """
                           search DeviceInfo where method_success and __had_inference
                           and nodecount(traverse DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess
                                             traverse DiscoveryAccess:Metadata:Detail:SessionResult) = 0
-                          show (last_credential or last_slave) as 'UUID',
-                          access_method as 'Session_Type'
+                          show (last_credential or last_slave) as 'DeviceInfo.last_credential',
+                          access_method as 'DeviceInfo.access_method'
                           process with countUnique(1,0)
                        """
 credential_success_7d = """
                             search SessionResult where success and time_index > (currentTime() - 7*24*3600*10000000)
-                            show (slave or credential) as 'UUID',
-                            session_type as 'Session_Type'
+                            show (slave or credential) as 'SessionResult.credential',
+                            session_type as 'SessionResult.session_type'
                             processwith countUnique(1,0)
                         """
 credential_failure_7d = """
                             search SessionResult where not success and time_index > (currentTime() - 7*24*3600*10000000)
-                            show (slave or credential) as 'UUID',
-                            session_type as 'Session_Type'
+                            show (slave or credential) as 'SessionResult.credential',
+                            session_type as 'SessionResult.session_type'
                             processwith countUnique(1,0)
                         """
 deviceinfo_success_7d = """
@@ -37,8 +37,8 @@ deviceinfo_success_7d = """
                           and nodecount(traverse DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess
                                             traverse DiscoveryAccess:Metadata:Detail:SessionResult) = 0
                           and time_index > (currentTime() - 7*24*3600*10000000)
-                          show (last_credential or last_slave) as 'UUID',
-                          access_method as 'Session_Type'
+                          show (last_credential or last_slave) as 'DeviceInfo.last_credential',
+                          access_method as 'DeviceInfo.access_method'
                           process with countUnique(1,0)
                        """
 outpost_credentials = """
@@ -51,26 +51,26 @@ deviceInfo = {"query":
                             search DeviceInfo
                             ORDER BY hostname
                             show
-                            hostname as 'Device_Hostname',
-                            hash(hostname) as 'Hashed_Device_Hostname',
-                            os_type as 'OS_Type',
-                            sysname as 'Device_Sysname',
-                            device_type as 'Device_Type',
-                            fqdn as 'Device_FQDN',
-                            method_success as 'M_Success',
-                            method_failure as 'M_Failure',
+                            hostname as 'DeviceInfo.hostname',
+                            hash(hostname) as 'DeviceInfo.hostname_hash',
+                            os_type as 'DeviceInfo.os_type',
+                            sysname as 'DeviceInfo.sysname',
+                            device_type as 'DeviceInfo.device_type',
+                            fqdn as 'DeviceInfo.fqdn',
+                            method_success as 'DeviceInfo.method_success',
+                            method_failure as 'DeviceInfo.method_failure',
                             #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.#::InferredElement:.name as 'Inferred_Name',
                             #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.#::InferredElement:.hostname as 'Inferred_Hostname',
                             #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.#::InferredElement:.local_fqdn as 'Inferred_FQDN',
                             #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.#::InferredElement:.sysname as 'Inferred_Sysname',
                             kind as 'Kind',
-                            (last_credential or last_slave or __preserved_last_credential) as 'Last_Credential',
-                            (last_access_method or __preserved_last_access_method) as 'Last_Access_Method',
-                            friendlyTime(#DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.starttime) as 'DA_Start',
-                            friendlyTime(#DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.endtime) as 'DA_End',
-                            #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.result as 'DA_Result',
-                            #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.endpoint as 'DA_Endpoint',
-                            #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.end_state as 'DA_End_State',
+                            (last_credential or last_slave or __preserved_last_credential) as 'DeviceInfo.last_credential',
+                            (last_access_method or __preserved_last_access_method) as 'DeviceInfo.last_access_method',
+                            friendlyTime(#DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.starttime) as 'DiscoveryAccess.starttime',
+                            friendlyTime(#DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.endtime) as 'DiscoveryAccess.endtime',
+                            #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.result as 'DiscoveryAccess.result',
+                            #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.endpoint as 'DiscoveryAccess.endpoint',
+                            #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.end_state as 'DiscoveryAccess.end_state',
                             #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.#DiscoveryAccess:Endpoint:Endpoint:Endpoint.endpoint as 'Chosen_Endpoint',
                             #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.#DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DiscoveredIPAddressList.#List:List:Member:DiscoveredIPAddress.ip_addr as 'Discovered_IP_Addrs',
                             #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.#::InferredElement:.__all_ip_addrs as 'Inferred_All_IP_Addrs',
@@ -318,17 +318,17 @@ open_ports = """
 host_utilisation = """
                         search Host where type <> 'Hypervisor'
                         show
-                        hostname,
-                        hash(hostname) as 'hashed_hostname',
-                        os,
-                        os_type as 'OS_Type',
-                        virtual,
-                        cloud,
-                        #InferredElement:Inference:Associate:DiscoveryAccess.endpoint as 'Endpoint',
-                        nodecount(traverse :::SoftwareInstance) as 'Running Software Instances',
-                        nodecount(traverse :::CandidateSoftwareInstance) as 'Candidate Software Instances',
-                        nodecount(traverse :::DiscoveryAccess where _last_marker traverse :::ProcessList traverse :::DiscoveredProcess) as 'Running Processes',
-                        nodecount(traverse :::DiscoveryAccess where _last_marker traverse :::ServiceList traverse :::DiscoveredService where state = 'RUNNING') as 'Running Services (Windows)'
+                        hostname as 'Host.hostname',
+                        hash(hostname) as 'Host.hostname_hash',
+                        os as 'Host.os',
+                        os_type as 'Host.os_type',
+                        virtual as 'Host.virtual',
+                        cloud as 'Host.cloud',
+                        #InferredElement:Inference:Associate:DiscoveryAccess.endpoint as 'DiscoveryAccess.endpoint',
+                        nodecount(traverse :::SoftwareInstance) as 'Host.running_software_instances',
+                        nodecount(traverse :::CandidateSoftwareInstance) as 'Host.candidate_software_instances',
+                        nodecount(traverse :::DiscoveryAccess where _last_marker traverse :::ProcessList traverse :::DiscoveredProcess) as 'Host.running_processes',
+                        nodecount(traverse :::DiscoveryAccess where _last_marker traverse :::ServiceList traverse :::DiscoveredService where state = 'RUNNING') as 'Host.running_services'
                       """
 
 orphan_vms = """
@@ -576,14 +576,14 @@ missing_vms = """
                     search VirtualMachine
                     where nodecount(traverse HostContainer:HostContainment:ContainedHost:) = 0
                     show
-                    vm_type as 'VM_Type',
-                    (product_version or cloud_class) as 'VM_Version',
-                    #RunningSoftware:HostedSoftware:Host:.name as 'VM_Host',
-                    #RunningSoftware:HostedSoftware:Host:.type as 'VM_Host_Type',
-                    vm_name as 'Guest_VM_Name',
-                    vm_guest_os as 'Guest_VM_OS',
-                    guest_full_name as 'Guest_Full_Name',
-                    (vm_status or cloud and "Cloud Hosted") as 'Status'
+                    vm_type as 'VirtualMachine.vm_type',
+                    (product_version or cloud_class) as 'VirtualMachine.product_version',
+                    #RunningSoftware:HostedSoftware:Host:.name as 'Host.name',
+                    #RunningSoftware:HostedSoftware:Host:.type as 'Host.type',
+                    vm_name as 'VirtualMachine.vm_name',
+                    vm_guest_os as 'VirtualMachine.vm_guest_os',
+                    guest_full_name as 'VirtualMachine.guest_full_name',
+                    (vm_status or cloud and "Cloud Hosted") as 'VirtualMachine.vm_status'
                 """
 
 agents = """

@@ -132,7 +132,7 @@ def test_discovery_access_outputs_records(monkeypatch):
 
     assert result == sample
     assert captured["name"] == "discovery_access"
-    assert captured["headers"] == ["Endpoint", "Hostname"]
+    assert captured["headers"] == ["endpoint", "hostname"]
     assert captured["data"] == [["1.1.1.1", "h1"], ["2.2.2.2", "h2"]]
 
 
@@ -171,7 +171,7 @@ def test_discovery_run_analysis_outputs_records(monkeypatch):
     reporting.discovery_run_analysis(DummySearch(), DummyCreds(), args)
 
     assert captured["name"] == "discovery_run_analysis"
-    expected_headers = tools.normalize_headers(sample[0].keys())
+    expected_headers = list(sample[0].keys())
     assert captured["headers"] == expected_headers
     assert captured["data"] == [list(sample[0].values())]
 
@@ -261,7 +261,7 @@ def test_successful_combines_query_results(monkeypatch):
         reporting.queries.deviceinfo_success_7d,
         reporting.queries.credential_failure_7d,
     }
-    assert "Success % 7 days" in captured["headers"]
+    assert "Success % 7 Days" in captured["headers"]
     row = captured["data"][0]
     assert row[6] == 5
     assert row[7] == 4

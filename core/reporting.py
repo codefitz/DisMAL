@@ -376,7 +376,7 @@ def successful(creds, search, args):
     print(os.linesep,end="\r")
 
     if data:
-        headers = tools.normalize_headers(headers)
+        headers = list(dict.fromkeys(headers))
         headers.insert(0, "Discovery Instance")
         for row in data:
             row.insert(0, getattr(args, "target", None))
@@ -462,7 +462,7 @@ def successful_cli(client, args, sysuser, passwd, reporting_dir):
             data.append([ detail.get('label'), uuid, detail.get('username'), types, None, None, 0.0, "Credential appears to not be in use (%s)" % status, detail.get('usage'), detail.get('internal_store'), list_of_ranges, ip_exclude ])
         headers = [ "Credential", "UUID", "Login ID", "Protocol", "Successes", "Failures", "Success %", "State", "Usage", "Store", "Scan Ranges", "Exclude Ranges" ]
 
-    headers = tools.normalize_headers(headers)
+    headers = list(dict.fromkeys(headers))
     headers.insert(0,"Discovery Instance")
     for row in data:
         row.insert(0, args.target)
@@ -1295,10 +1295,8 @@ def discovery_access(twsearch, twcreds, args):
     disco_data = _gather_discovery_data(twsearch, twcreds, args)
 
     if disco_data:
-        headers, lookup = tools.normalize_headers(
-            disco_data[0].keys(), return_lookup=True
-        )
-        rows = [[record.get(lookup[h]) for h in headers] for record in disco_data]
+        headers = list(dict.fromkeys(disco_data[0].keys()))
+        rows = [[record.get(h) for h in headers] for record in disco_data]
     else:
         headers, rows = [], []
 
@@ -1450,10 +1448,8 @@ def discovery_run_analysis(twsearch, twcreds, args):
     results = api.search_results(twsearch, queries.discovery_run_analysis)
 
     if isinstance(results, list) and results:
-        headers, lookup = tools.normalize_headers(
-            results[0].keys(), return_lookup=True
-        )
-        rows = [[record.get(lookup[h]) for h in headers] for record in results]
+        headers = list(dict.fromkeys(results[0].keys()))
+        rows = [[record.get(h) for h in headers] for record in results]
     else:
         headers, rows = [], []
 

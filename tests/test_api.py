@@ -18,7 +18,6 @@ from core.api import (
     get_outpost_credential_map,
 )
 import core.api as api_mod
-from core.tools import normalize_keys
 from core import queries, tools
 import core.access as access
 
@@ -154,7 +153,7 @@ def test_show_runs_excavate_routes_to_define_csv(monkeypatch):
 
     show_runs(disco, args)
 
-    assert recorded["header"] == normalize_keys(["Run Id", "Status"])
+    assert recorded["header"] == ["run_id", "status"]
     assert recorded["data"] == [["1", "running"]]
 
 
@@ -179,10 +178,17 @@ def test_discovery_runs_emits_ints_and_camel_headers(monkeypatch):
 
     api_mod.discovery_runs(disco, args, "/tmp")
 
-    assert captured["header"] == ["Discovery Instance", "Done", "Pre Scanning", "Range Id", "Scanning", "Total"]
-    assert captured["rows"] == [["appl", 1, 2, "r1", 3, 4]]
+    assert captured["header"] == [
+        "Discovery Instance",
+        "range_id",
+        "done",
+        "pre_scanning",
+        "scanning",
+        "total",
+    ]
+    assert captured["rows"] == [["appl", "r1", 1, 2, 3, 4]]
     row = captured["rows"][0]
-    for index in [1, 2, 4, 5]:
+    for index in [2, 3, 4, 5]:
         assert isinstance(row[index], int)
 
 def test_get_outposts_uses_deleted_false():
@@ -469,8 +475,8 @@ def test_capture_candidates_writes_csv(monkeypatch):
 
     api_mod.capture_candidates(types.SimpleNamespace(), args, "/tmp")
 
-    keys = sorted(results[0])
-    expected_header = ["Discovery Instance"] + normalize_keys(keys)
+    keys = list(results[0].keys())
+    expected_header = ["Discovery Instance"] + keys
     expected_row = [
         "appl"
     ] + [
@@ -532,17 +538,17 @@ def test_update_schedule_timezone_reset():
 def test_host_util_converts_numeric_columns(monkeypatch):
     sample = [
         {
-            "hostname": "h1",
-            "hashed_hostname": "hash",
-            "os": "Linux",
-            "OS_Type": "Linux",
-            "virtual": False,
-            "cloud": False,
-            "Endpoint": "ep",
-            "Running Software Instances": "1",
-            "Candidate Software Instances": "2",
-            "Running Processes": "3",
-            "Running Services (Windows)": "4",
+            "Host.hostname": "h1",
+            "Host.hostname_hash": "hash",
+            "Host.os": "Linux",
+            "Host.os_type": "Linux",
+            "Host.virtual": False,
+            "Host.cloud": False,
+            "DiscoveryAccess.endpoint": "ep",
+            "Host.running_software_instances": "1",
+            "Host.candidate_software_instances": "2",
+            "Host.running_processes": "3",
+            "Host.running_services": "4",
         }
     ]
 
@@ -565,13 +571,13 @@ def test_host_util_converts_numeric_columns(monkeypatch):
     row = recorded["rows"][0]
     index_map = {h: i for i, h in enumerate(header)}
     for col in [
-        "Running Software Instances",
-        "Candidate Software Instances",
-        "Running Processes",
-        "Running Services (Windows)",
+        "Host.running_software_instances",
+        "Host.candidate_software_instances",
+        "Host.running_processes",
+        "Host.running_services",
     ]:
         assert isinstance(row[index_map[col]], int)
-    assert "OS_Type" in header
+    assert "Host.os_type" in header
 
 
 def test_outpost_creds_passes_endpoint_as_appliance(monkeypatch):

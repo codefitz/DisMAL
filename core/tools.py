@@ -34,17 +34,6 @@ def to_camel_case(value: str) -> str:
     parts = re.split(r"[^0-9a-zA-Z]+", value)
     return "".join(part.capitalize() for part in parts if part)
 
-def snake_to_camel(value):
-    """Convert snake_case string to Camel Case with spaces.
-
-    Examples:
-        >>> snake_to_camel("pre_scanning")
-        'Pre Scanning'
-    """
-    if not isinstance(value, str):
-        return value
-    return " ".join(word.capitalize() for word in value.split("_"))
-
 def in_wsl() -> bool:
     """
         WSL is thought to be the only common Linux kernel with Microsoft in the name, per Microsoft:
@@ -141,46 +130,6 @@ def sortdic(lst):
     logger.debug(lst)
     return lst2
 
-def normalize_header(name: str) -> str:
-    """Return *name* converted to CamelCase.
-
-    Non-alphanumeric characters are treated as word separators.
-    """
-    if not name:
-        return ""
-    parts = re.split(r"[^0-9A-Za-z]+", str(name))
-    return "".join(p.capitalize() for p in parts if p)
-
-def normalize_key(key):
-    """Return ``key`` converted from ``snake_case`` or dotted names to Title Case."""
-    parts = re.split(r"[_\.]+", key)
-    return " ".join(p.capitalize() for p in parts if p)
-
-def normalize_headers(headers, return_lookup=False):
-    """Normalize ``headers`` and optionally return a lookup map.
-
-    Parameters
-    ----------
-    headers : Iterable[str]
-        Header labels to normalize.
-    return_lookup : bool, optional
-        When ``True`` return a tuple of ``(headers, lookup)`` where ``lookup``
-        maps the normalized labels back to their original values.  When
-        ``False`` only the list of normalized headers is returned.
-    """
-    if not headers:
-        return ([], {}) if return_lookup else []
-
-    normalized = []
-    lookup = {}
-    for key in headers:
-        norm = normalize_key(key)
-        normalized.append(norm)
-        lookup[norm] = key
-
-    if return_lookup:
-        return normalized, lookup
-    return normalized
 
 def completage(message, record_count, timer_count):
     timer_count += 1
@@ -269,26 +218,21 @@ def json2csv(jsdata, return_map=False):
     orig_header = []
     data = []
     for jsitem in jsdata:
-        headers = jsitem.keys()  # get the headers, unstructured
-        for label in headers:
-            # create a unique list of ALL possible headers
+        for label in jsitem.keys():
             orig_header.append(label)
-            orig_header = sortlist(orig_header)
-
-    header, lookup = normalize_headers(orig_header, return_lookup=True)
+    header = list(dict.fromkeys(orig_header))
 
     for jsitem in jsdata:
         values = []
-        for key in orig_header:
-            # Loop through the unique set of headers and get values if exist
-            values.append(getr(jsitem, key, "N/A"))  # Substitute if missing
+        for key in header:
+            values.append(getr(jsitem, key, "N/A"))
         data.append(values)
 
     if return_map:
+        lookup = {h: h for h in header}
         return header, data, lookup
 
-    human_header = [snake_to_camel(h) for h in header]
-    return header, data, human_header
+    return header, data, header[:]
 
 def snake_to_title(value):
     """Convert ``snake_case`` strings to Title Case with spaces.
@@ -330,20 +274,4 @@ def list_table_to_json(rows):
         headers = rows[0]
         return [dict(zip(headers, r)) for r in rows[1:]]
     return rows
-
-def normalize_keys(keys):
-    """Return header names in Title Case with spaces.
-
-    Any key containing underscores or entirely lowercase characters is
-    converted to a human-friendly form. Keys that already contain
-    capital letters or spaces are returned unchanged.
-    """
-
-    normalized = []
-    for key in keys:
-        if "_" in key or key.islower():
-            normalized.append(key.replace("_", " ").title())
-        else:
-            normalized.append(key)
-    return normalized
 

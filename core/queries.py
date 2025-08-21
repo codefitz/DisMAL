@@ -642,3 +642,23 @@ patterns =    """
                     extra_node_kinds as 'Extra_Node_Kinds',
                     extra_rel_kinds as 'Extra_Rel_Kinds'
                 """
+
+discovery_run_analysis = """
+                    search DiscoveryRun as DiscoveryRun
+                      with (traverse :::ScanRange as ScanRange),
+                           (traverse :::DroppedEndpoints as DroppedEndpoints),
+                           (traverse :::DiscoveryAccess as DiscoveryAccess)
+                      show valid_ranges as 'Explicit Ranges', label as 'Scan Label',
+                           range_summary as 'Range Summary', outpost_name as 'Outpost Name',
+                           #ScanRange.label as 'Label', #ScanRange.scan_kind as 'Scan Kind',
+                           (#ScanRange.range_strings or #ScanRange.provider) as 'Range',
+                           recurrenceDescription(#ScanRange.schedule) as 'Schedule',
+                           total as 'Total Endpoints',
+                           (result_success or 0) + (result_skipped or 0) + (result_error or 0) +
+                           (result_no_access or 0) + (result_no_response or 0) as 'Active Endpoints',
+                           (result_dropped or 0) as 'Dropped',
+                           unique(#DiscoveryAccess.scan_kind) as 'Scan Kinds'
+                      processwith show valid_ranges, label, endtime as 'End Time',
+                           range_summary, outpost_name, @4, @5, @6, @7, total, @9, @10,
+                           @11 as 'Scan Kinds'
+                """

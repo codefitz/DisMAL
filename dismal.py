@@ -172,6 +172,7 @@ Providing no <report> or using "default" will run all options that do not requir
 "capture_candidates" - Report of capture candidates
 "outpost_creds"            - Mapping of credentials to Outposts
 "vault"                     - Vault details
+"discovery_run_analysis"   - Report on DiscoveryRun ranges and endpoint stats
 "default"                   - Run all options that do not require a value
 \n
 ''',metavar='<report> [value]',nargs='*')
@@ -688,6 +689,9 @@ def run_for_args(args):
         if args.excavate and args.excavate[0] == "discovery_analysis":
             disco_data = reporting._gather_discovery_data(search, creds, args)
             reporting.discovery_analysis(search, creds, args, disco_data)
+
+        if excavate_default or (args.excavate and args.excavate[0] == "discovery_run_analysis"):
+            reporting.discovery_run_analysis(search, creds, args)
 
         if excavate_default or (args.excavate and args.excavate[0] == "active_runs"):
             api.show_runs(disco, args)

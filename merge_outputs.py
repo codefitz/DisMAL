@@ -10,6 +10,7 @@ EXPECTED_REPORTS = OrderedDict([
     ("device_ids", "List of unique device identifiers"),
     ("devices", "Detailed device information"),
     ("discovery_analysis", "Summary of discovery analysis results"),
+    ("discovery_run_analysis", "Summary of discovery run activity"),
     ("devices_with_cred", "Devices with associated credentials"),
     ("device", "Information for individual devices"),
     ("suggested_cred_opt", "Suggested credential optimization"),

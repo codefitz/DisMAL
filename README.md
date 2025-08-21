@@ -145,6 +145,7 @@ The toolkit now offers a broad range of reports. Selected examples include:
 - **device_ids** – list unique device identities with a Guide % for each originating endpoint.
 - **devices** – summarize unique device profiles with last access and credential details.
 - **discovery_analysis** – export latest access details for each endpoint and compare consecutive runs to highlight state changes.
+- **discovery_run_analysis** – summarises DiscoveryRun details including ranges, endpoint totals, and scan kinds.
 - **expected_agents** – analyse installed software and list hosts missing common agents.
 - **ip_analysis** – run IP analysis report.
 - **schedules** – export discovery schedules along with the credentials that will be used.

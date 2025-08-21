@@ -4,6 +4,7 @@ import types
 import pytest
 import core.builder as builder
 import core.output as output
+import core.tools as tools
 
 sys.modules.setdefault("pandas", types.SimpleNamespace())
 sys.modules.setdefault("tabulate", types.SimpleNamespace(tabulate=lambda *a, **k: ""))
@@ -99,6 +100,10 @@ def test_discovery_analysis_handles_bad_api(monkeypatch):
     _run_with_patches(monkeypatch, reporting.discovery_analysis)
 
 
+def test_discovery_run_analysis_handles_bad_api(monkeypatch):
+    _run_with_patches(monkeypatch, reporting.discovery_run_analysis)
+
+
 def test_discovery_access_outputs_records(monkeypatch):
     sample = [
         {"endpoint": "1.1.1.1", "hostname": "h1"},
@@ -129,6 +134,46 @@ def test_discovery_access_outputs_records(monkeypatch):
     assert captured["name"] == "discovery_access"
     assert captured["headers"] == ["Endpoint", "Hostname"]
     assert captured["data"] == [["1.1.1.1", "h1"], ["2.2.2.2", "h2"]]
+
+
+def test_discovery_run_analysis_outputs_records(monkeypatch):
+    sample = [
+        {
+            "Explicit Ranges": "1.1.1.1/32",
+            "Scan Label": "Run1",
+            "End Time": "2024-01-01",
+            "Range Summary": "1 IP",
+            "Outpost Name": "op1",
+            "Label": "SR1",
+            "Scan Kind": "Scheduled",
+            "Range": "1.1.1.1/32",
+            "Schedule": "Once",
+            "Total Endpoints": 1,
+            "Active Endpoints": 1,
+            "Dropped": 0,
+            "Scan Kinds": ["Normal"],
+        }
+    ]
+
+    monkeypatch.setattr(reporting.api, "search_results", lambda *a, **k: sample)
+
+    captured = {}
+
+    def fake_report(data, headers, args, name=None):
+        captured["data"] = data
+        captured["headers"] = headers
+        captured["name"] = name
+
+    monkeypatch.setattr(reporting, "output", types.SimpleNamespace(report=fake_report))
+
+    args = types.SimpleNamespace(output_csv=False, output_file=None)
+
+    reporting.discovery_run_analysis(DummySearch(), DummyCreds(), args)
+
+    assert captured["name"] == "discovery_run_analysis"
+    expected_headers = tools.normalize_headers(sample[0].keys())
+    assert captured["headers"] == expected_headers
+    assert captured["data"] == [list(sample[0].values())]
 
 
 def test_successful_runs_without_scan_data(monkeypatch):

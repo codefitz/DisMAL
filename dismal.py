@@ -292,6 +292,16 @@ def run_for_args(args):
         cli_target, tw_passwd = access.cli_target(args)
         system_user, system_passwd = access.login_target(cli_target, args)
 
+    identities = None
+    if api_target and (
+        args.access_method == "all"
+        or excavate_default
+        or (args.excavate and args.excavate[0] in ("devices", "device_ids"))
+    ):
+        identities = builder.unique_identities(
+            search, args.include_endpoints, args.endpoint_prefix
+        )
+
     if args.access_method == "all":
 
         curl_cmd = True
@@ -360,8 +370,8 @@ def run_for_args(args):
             if curl_cmd:
                 curl.platform_scripts(args, system_user, system_passwd, reporting_dir+"/platforms")
             api.modules(search, args, reporting_dir)
-            api.licensing(search, args, reporting_dir)     
-            reporting.devices(search, creds, args)
+            api.licensing(search, args, reporting_dir)
+            reporting.devices(search, creds, args, identities=identities)
             builder.ordering(creds, search, args, False)
             api.success(creds, search, args, reporting_dir)
             builder.scheduling(creds, search, args)
@@ -642,10 +652,13 @@ def run_for_args(args):
             builder.get_device(search, creds, args)
 
         if excavate_default or (args.excavate and args.excavate[0] == "devices"):
-            reporting.devices(search, creds, args)
+            reporting.devices(search, creds, args, identities=identities)
 
         if excavate_default or (args.excavate and args.excavate[0] == "device_ids"):
-            identities = builder.unique_identities(search, args.include_endpoints, args.endpoint_prefix)
+            if identities is None:
+                identities = builder.unique_identities(
+                    search, args.include_endpoints, args.endpoint_prefix
+                )
             data = []
             for identity in identities:
                 data.append([

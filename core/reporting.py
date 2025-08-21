@@ -469,7 +469,7 @@ def successful_cli(client, args, sysuser, passwd, reporting_dir):
     output.csv_file(data, headers, reporting_dir+"/credentials.csv")
 
 @output._timer("Device Access Analysis")
-def devices(twsearch, twcreds, args):
+def devices(twsearch, twcreds, args, identities=None):
 
     print("\nDevice Access Analyis")
     print("---------------------")
@@ -478,11 +478,15 @@ def devices(twsearch, twcreds, args):
 
     vaultcreds = api.get_json(twcreds.get_vault_credentials)
 
-    ### list of unique identities
-    identities = builder.unique_identities(
-        twsearch, args.include_endpoints, args.endpoint_prefix
-    )
-    results = api.search_results(twsearch,queries.deviceInfo)
+    # ``identities`` may be supplied by the caller to avoid recomputing the
+    # expensive lookup when multiple reports need the same data.  Fall back to
+    # gathering the identities here when not provided.
+    if identities is None:
+        identities = builder.unique_identities(
+            twsearch, args.include_endpoints, args.endpoint_prefix
+        )
+
+    results = api.search_results(twsearch, queries.deviceInfo)
 
     # Track progress for identities and device results separately to avoid
     # nested progress collisions.  ``identity_timer`` counts completed

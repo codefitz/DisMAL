@@ -190,7 +190,7 @@ def test_discovery_runs_emits_ints_and_headers(monkeypatch):
     ]
     assert captured["rows"] == [["appl", 1, 2, "r1", 3, 4]]
     row = captured["rows"][0]
-    for index in [2, 3, 4, 5]:
+    for index in [1, 2, 4, 5]:
         assert isinstance(row[index], int)
 
 def test_get_outposts_uses_deleted_false():

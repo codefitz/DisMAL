@@ -2,34 +2,34 @@
 
 credential_success = """
                             search SessionResult where success
-                            show (slave or credential) as 'UUID',
-                            session_type as 'Session_Type'
+                            show (slave or credential) as 'SessionResult.slave_or_credential',
+                            session_type as 'SessionResult.session_type'
                             processwith countUnique(1,0)
                         """
 credential_failure = """
                             search SessionResult where not success
-                            show (slave or credential) as 'UUID',
-                            session_type as 'Session_Type'
+                            show (slave or credential) as 'SessionResult.slave_or_credential',
+                            session_type as 'SessionResult.session_type'
                             processwith countUnique(1,0)
                         """
 deviceinfo_success = """
                           search DeviceInfo where method_success and __had_inference
                           and nodecount(traverse DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess
                                             traverse DiscoveryAccess:Metadata:Detail:SessionResult) = 0
-                          show (last_credential or last_slave) as 'UUID',
-                          access_method as 'Session_Type'
+                          show (last_credential or last_slave) as 'DeviceInfo.last_credential',
+                          access_method as 'DeviceInfo.access_method'
                           process with countUnique(1,0)
                        """
 credential_success_7d = """
                             search SessionResult where success and time_index > (currentTime() - 7*24*3600*10000000)
-                            show (slave or credential) as 'UUID',
-                            session_type as 'Session_Type'
+                            show (slave or credential) as 'SessionResult.slave_or_credential',
+                            session_type as 'SessionResult.session_type'
                             processwith countUnique(1,0)
                         """
 credential_failure_7d = """
                             search SessionResult where not success and time_index > (currentTime() - 7*24*3600*10000000)
-                            show (slave or credential) as 'UUID',
-                            session_type as 'Session_Type'
+                            show (slave or credential) as 'SessionResult.slave_or_credential',
+                            session_type as 'SessionResult.session_type'
                             processwith countUnique(1,0)
                         """
 deviceinfo_success_7d = """
@@ -37,8 +37,8 @@ deviceinfo_success_7d = """
                           and nodecount(traverse DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess
                                             traverse DiscoveryAccess:Metadata:Detail:SessionResult) = 0
                           and time_index > (currentTime() - 7*24*3600*10000000)
-                          show (last_credential or last_slave) as 'UUID',
-                          access_method as 'Session_Type'
+                          show (last_credential or last_slave) as 'DeviceInfo.last_credential',
+                          access_method as 'DeviceInfo.access_method'
                           process with countUnique(1,0)
                        """
 outpost_credentials = """
@@ -51,36 +51,36 @@ deviceInfo = {"query":
                             search DeviceInfo
                             ORDER BY hostname
                             show
-                            hostname as 'Device_Hostname',
-                            hash(hostname) as 'Hashed_Device_Hostname',
-                            os_type as 'OS_Type',
-                            sysname as 'Device_Sysname',
-                            device_type as 'Device_Type',
-                            fqdn as 'Device_FQDN',
-                            method_success as 'M_Success',
-                            method_failure as 'M_Failure',
-                            #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.#::InferredElement:.name as 'Inferred_Name',
-                            #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.#::InferredElement:.hostname as 'Inferred_Hostname',
-                            #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.#::InferredElement:.local_fqdn as 'Inferred_FQDN',
-                            #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.#::InferredElement:.sysname as 'Inferred_Sysname',
-                            kind as 'Kind',
-                            (last_credential or last_slave or __preserved_last_credential) as 'Last_Credential',
-                            (last_access_method or __preserved_last_access_method) as 'Last_Access_Method',
-                            friendlyTime(#DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.starttime) as 'DA_Start',
-                            friendlyTime(#DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.endtime) as 'DA_End',
-                            #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.result as 'DA_Result',
-                            #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.endpoint as 'DA_Endpoint',
-                            #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.end_state as 'DA_End_State',
-                            #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.#DiscoveryAccess:Endpoint:Endpoint:Endpoint.endpoint as 'Chosen_Endpoint',
-                            #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.#DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DiscoveredIPAddressList.#List:List:Member:DiscoveredIPAddress.ip_addr as 'Discovered_IP_Addrs',
-                            #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.#::InferredElement:.__all_ip_addrs as 'Inferred_All_IP_Addrs',
-                            #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.#::InferredElement:.#DeviceWithInterface:DeviceInterface:InterfaceOfDevice:NetworkInterface.ip_addr as 'NIC_IPs',
-                            #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.#::InferredElement:.#DeviceWithInterface:DeviceInterface:InterfaceOfDevice:NetworkInterface.fqdns as 'NIC_FQDNs',
-                            #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.#Member:List:List:DiscoveryRun.label as 'Discovery_Run',
-                            #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess._last_marker as 'Last_Marker',
-                            #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess._first_marker as 'First_Marker',
-                            #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess._last_interesting as 'Last_Interesting',
-                            #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.__had_inference as 'Had_Inference'
+                            hostname as 'DeviceInfo.hostname',
+                            hash(hostname) as 'DeviceInfo.hashed_hostname',
+                            os_type as 'DeviceInfo.os_type',
+                            sysname as 'DeviceInfo.sysname',
+                            device_type as 'DeviceInfo.device_type',
+                            fqdn as 'DeviceInfo.fqdn',
+                            method_success as 'DeviceInfo.method_success',
+                            method_failure as 'DeviceInfo.method_failure',
+                            #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.#::InferredElement:.name as 'InferredElement.name',
+                            #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.#::InferredElement:.hostname as 'InferredElement.hostname',
+                            #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.#::InferredElement:.local_fqdn as 'InferredElement.local_fqdn',
+                            #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.#::InferredElement:.sysname as 'InferredElement.sysname',
+                            kind as 'DeviceInfo.kind',
+                            (last_credential or last_slave or __preserved_last_credential) as 'DeviceInfo.last_credential',
+                            (last_access_method or __preserved_last_access_method) as 'DeviceInfo.last_access_method',
+                            friendlyTime(#DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.starttime) as 'DiscoveryAccess.starttime',
+                            friendlyTime(#DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.endtime) as 'DiscoveryAccess.endtime',
+                            #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.result as 'DiscoveryAccess.result',
+                            #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.endpoint as 'DiscoveryAccess.endpoint',
+                            #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.end_state as 'DiscoveryAccess.end_state',
+                            #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.#DiscoveryAccess:Endpoint:Endpoint:Endpoint.endpoint as 'Endpoint.endpoint',
+                            #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.#DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DiscoveredIPAddressList.#List:List:Member:DiscoveredIPAddress.ip_addr as 'DiscoveredIPAddress.ip_addr',
+                            #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.#::InferredElement:.__all_ip_addrs as 'InferredElement.__all_ip_addrs',
+                            #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.#::InferredElement:.#DeviceWithInterface:DeviceInterface:InterfaceOfDevice:NetworkInterface.ip_addr as 'NetworkInterface.ip_addr',
+                            #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.#::InferredElement:.#DeviceWithInterface:DeviceInterface:InterfaceOfDevice:NetworkInterface.fqdns as 'NetworkInterface.fqdns',
+                            #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.#Member:List:List:DiscoveryRun.label as 'DiscoveryRun.label',
+                            #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess._last_marker as 'DiscoveryAccess._last_marker',
+                            #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess._first_marker as 'DiscoveryAccess._first_marker',
+                            #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess._last_interesting as 'DiscoveryAccess._last_interesting',
+                            #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.__had_inference as 'DiscoveryAccess.__had_inference'
                             process with unique()
                         """
                 }
@@ -89,34 +89,34 @@ da_ip_lookup = {
                             """
                                 search DiscoveryAccess
                                 show
-                                endpoint as 'ip',
-                                hash(endpoint) as 'Hashed_Endpoint',
-                                #DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.hostname as 'device_hostname',
+                                endpoint as 'DiscoveryAccess.endpoint',
+                                hash(endpoint) as 'DiscoveryAccess.hashed_endpoint',
+                                #DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.hostname as 'DeviceInfo.hostname',
                                 (#DiscoveryAccess:Metadata:Detail:SessionResult.credential and success
                                     or #DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.last_credential
                                         or #DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.last_slave
-                                            or #DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.__preserved_last_credential) as 'last_credential',
-                                result as 'da_result',
-                                end_state as 'da_end_state',
-                                friendlyTime(starttime) as 'start_time',
-                                friendlyTime(endtime) as 'end_time',
-                                #Member:List:List:DiscoveryRun.label as 'discovery_run',
-                                _last_marker as 'last_marker',
-                                _first_marker as 'first_marker',
-                                _last_interesting as 'last_interesting',
-                                __had_inference as 'had_inference',
-                                best_ip_score as 'best_ip_score',
-                                (#DiscoveryAccess:Metadata:Detail:SessionResult.success or access_success) as 'access_success',
-                                access_failure as 'access_failure',
-                                message as 'message',
+                                            or #DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.__preserved_last_credential) as 'DeviceInfo.last_credential',
+                                result as 'DiscoveryAccess.result',
+                                end_state as 'DiscoveryAccess.end_state',
+                                friendlyTime(starttime) as 'DiscoveryAccess.starttime',
+                                friendlyTime(endtime) as 'DiscoveryAccess.endtime',
+                                #Member:List:List:DiscoveryRun.label as 'DiscoveryRun.label',
+                                _last_marker as 'DiscoveryAccess._last_marker',
+                                _first_marker as 'DiscoveryAccess._first_marker',
+                                _last_interesting as 'DiscoveryAccess._last_interesting',
+                                __had_inference as 'DiscoveryAccess.__had_inference',
+                                best_ip_score as 'DiscoveryAccess.best_ip_score',
+                                (#DiscoveryAccess:Metadata:Detail:SessionResult.success or access_success) as 'DiscoveryAccess.access_success',
+                                access_failure as 'DiscoveryAccess.access_failure',
+                                message as 'DiscoveryAccess.message',
                                 (#DiscoveryAccess:Metadata:Detail:SessionResult.session_type
                                     or #DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.access_method
-                                        or #DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.last_access_method) as 'access_method',
+                                        or #DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.last_access_method) as 'DiscoveryAccess.access_method',
                                 (kind(#Associate:Inference:InferredElement:)
                                     or inferred_kind
-                                        or #DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.kind) as 'inferred_node',
-                                #::InferredElement:.__all_ip_addrs as 'Inferred_All_IP_Addrs',
-                                #::InferredElement:.#DeviceWithInterface:DeviceInterface:InterfaceOfDevice:NetworkInterface.ip_addr as 'NIC_IPs'
+                                        or #DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.kind) as 'DiscoveryAccess.inferred_node',
+                                #::InferredElement:.__all_ip_addrs as 'InferredElement.__all_ip_addrs',
+                                #::InferredElement:.#DeviceWithInterface:DeviceInterface:InterfaceOfDevice:NetworkInterface.ip_addr as 'NetworkInterface.ip_addr'
                             """
                 }
 excludes = {"query": """search in '_System' ExcludeRange
@@ -142,53 +142,53 @@ last_disco = {
                     search DiscoveryAccess where endtime
                     ORDER BY discovery_endtime DESC
                     show
-                    #id as "DA_ID",
-                    #Next:Sequential:Previous:DiscoveryAccess.#id as "Previous_DA_ID",
-                    #Previous:Sequential:Next:DiscoveryAccess.#id as "Next_DA_ID",
-                    endpoint as 'Endpoint',
-                    #DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.hostname as 'Hostname',
-                    #DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.os_type as 'OS_Type',
-                    #DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.os_class as 'OS_Class',
-                    #Member:List:List:DiscoveryRun.label as 'Discovery_Run',
-                    friendlyTime(#Member:List:List:DiscoveryRun.starttime) as 'Run_Starttime',
-                    friendlyTime(#Member:List:List:DiscoveryRun.endtime) as 'Run_Endtime',
-                    friendlyTime(discovery_starttime) as 'Scan_Starttime',
-                    friendlyTime(discovery_endtime) as 'Scan_Endtime',
-                    discovery_endtime as 'Scan_Endtime_Raw',
-                    discovery_endtime as 'Discovery_Endtime',
-                    whenWasThat(discovery_endtime) as 'When_Last_Scan',
+                    #id as "DiscoveryAccess.id",
+                    #Next:Sequential:Previous:DiscoveryAccess.#id as "DiscoveryAccess.previous_id",
+                    #Previous:Sequential:Next:DiscoveryAccess.#id as "DiscoveryAccess.next_id",
+                    endpoint as 'DiscoveryAccess.endpoint',
+                    #DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.hostname as 'DeviceInfo.hostname',
+                    #DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.os_type as 'DeviceInfo.os_type',
+                    #DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.os_class as 'DeviceInfo.os_class',
+                    #Member:List:List:DiscoveryRun.label as 'DiscoveryRun.label',
+                    friendlyTime(#Member:List:List:DiscoveryRun.starttime) as 'DiscoveryRun.starttime',
+                    friendlyTime(#Member:List:List:DiscoveryRun.endtime) as 'DiscoveryRun.endtime',
+                    friendlyTime(discovery_starttime) as 'DiscoveryAccess.scan_starttime',
+                    friendlyTime(discovery_endtime) as 'DiscoveryAccess.scan_endtime',
+                    discovery_endtime as 'DiscoveryAccess.scan_endtime_raw',
+                    discovery_endtime as 'DiscoveryAccess.discovery_endtime',
+                    whenWasThat(discovery_endtime) as 'DiscoveryAccess.when_last_scan',
                     (#DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.last_access_method in ['windows', 'rcmd']
                         and #DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.last_slave
                             or #DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.probed_os and 'Probe'
-                                or #DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.last_access_method) as 'Current_Access',
-                    #DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.os_version as 'OS_Version',
+                                or #DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.last_access_method) as 'DiscoveryAccess.current_access',
+                    #DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.os_version as 'DeviceInfo.os_version',
                     (nodecount(traverse DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo
-                        traverse flags(include_destroyed) Primary:Inference:InferredElement: where not destroyed(#)) > 0) as 'Host_Node_Updated',
-                    end_state as 'End_State',
-                    #Next:Sequential:Previous:DiscoveryAccess.end_state as "Previous_End_State",
-                    reason as 'Reason_Not_Updated',
-                    (nodecount(traverse DiscoveryAccess:Metadata:Detail:SessionResult where not provider) > 0) as 'Session_Results_Logged',
+                        traverse flags(include_destroyed) Primary:Inference:InferredElement: where not destroyed(#)) > 0) as 'DiscoveryAccess.host_node_updated',
+                    end_state as 'DiscoveryAccess.end_state',
+                    #Next:Sequential:Previous:DiscoveryAccess.end_state as "DiscoveryAccess.previous_end_state",
+                    reason as 'DiscoveryAccess.reason_not_updated',
+                    (nodecount(traverse DiscoveryAccess:Metadata:Detail:SessionResult where not provider) > 0) as 'DiscoveryAccess.session_results_logged',
                     (kind(#Associate:Inference:InferredElement:)
                         or inferred_kind
-                            or #DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.kind) as 'Node_Kind',
+                            or #DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.kind) as 'DiscoveryAccess.node_kind',
                     (#DiscoveryAccess:Metadata:Detail:SessionResult.credential and success
                                     or #DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.last_credential
                                         or #DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.last_slave
-                                            or #DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.__preserved_last_credential) as 'Last_Credential',
-                    result as 'Result',
-                    _last_marker as 'Last_Marker',
-                    _first_marker as 'First_Marker',
-                    _last_interesting as 'Last_Interesting',
-                    __had_inference as 'Had_Inference',
-                    best_ip_score as 'Best_IP_Score',
-                    (#DiscoveryAccess:Metadata:Detail:SessionResult.success or access_success) as 'Access_Success',
-                    access_failure as 'Access_Failure',
-                    message as 'Message',
+                                            or #DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.__preserved_last_credential) as 'DeviceInfo.last_credential',
+                    result as 'DiscoveryAccess.result',
+                    _last_marker as 'DiscoveryAccess._last_marker',
+                    _first_marker as 'DiscoveryAccess._first_marker',
+                    _last_interesting as 'DiscoveryAccess._last_interesting',
+                    __had_inference as 'DiscoveryAccess.__had_inference',
+                    best_ip_score as 'DiscoveryAccess.best_ip_score',
+                    (#DiscoveryAccess:Metadata:Detail:SessionResult.success or access_success) as 'DiscoveryAccess.access_success',
+                    access_failure as 'DiscoveryAccess.access_failure',
+                    message as 'DiscoveryAccess.message',
                     (#DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.access_method
                         or #DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.last_access_method
-                            or #DiscoveryAccess:Metadata:Detail:SessionResult.session_type) as 'Access_Method',
-                    #::InferredElement:.__all_ip_addrs as 'Inferred_All_IP_Addrs',
-                    #::InferredElement:.#DeviceWithInterface:DeviceInterface:InterfaceOfDevice:NetworkInterface.ip_addr as 'NIC_IPs'
+                            or #DiscoveryAccess:Metadata:Detail:SessionResult.session_type) as 'DiscoveryAccess.access_method',
+                    #::InferredElement:__all_ip_addrs as 'InferredElement.__all_ip_addrs',
+                    #::InferredElement:.#DeviceWithInterface:DeviceInterface:InterfaceOfDevice:NetworkInterface.ip_addr as 'NetworkInterface.ip_addr'
                     process with unique(endpoint)
 """
 }
@@ -598,22 +598,22 @@ agents = """
                 nodecount(traverse Host:HostedSoftware::SoftwareInstance where type = 'Symantec Endpoint Protection Client') as Symantec
                 where os_type has subword 'Windows'
                 show
-                name as "Host_Name",
-                hash(name) as 'hashed_name',
-                os_version as "OS_Version",
-                #HostedSoftware:RunningSoftware:SoftwareInstance.name as "Running_Software",
-                serial as "Serial",
-                uuid as "UUID",
-                ((age_count < 0) and 'Aging' or 'Alive') as 'Age_Status',
-                whenWasThat(last_update_success) as 'Last_Successful_Scan',
-                last_update_success as 'Last_Scan_Date',
-                (@SCCM and 'Yes' or '-') as 'SCCM',
-                (@SophosAV and 'Yes' or '-') as 'Sophos_AV',
-                (@QualysCloud and 'Yes' or '-') as 'Qualys_Agent',
-                (@BCM and 'Yes' or '-') as 'BCM',
-                (@McAfee and 'Yes' or '-') as 'McAfee',
-                (@Patrol and 'Yes' or '-') as 'Patrol',
-                (@Symantec and 'Yes' or '-') as 'Symantec'
+                name as 'Host.name',
+                hash(name) as 'Host.hashed_name',
+                os_version as 'Host.os_version',
+                #HostedSoftware:RunningSoftware:SoftwareInstance.name as 'SoftwareInstance.name',
+                serial as 'Host.serial',
+                uuid as 'Host.uuid',
+                ((age_count < 0) and 'Aging' or 'Alive') as 'Host.age_status',
+                whenWasThat(last_update_success) as 'Host.last_successful_scan',
+                last_update_success as 'Host.last_scan_date',
+                (@SCCM and 'Yes' or '-') as 'Host.sccm',
+                (@SophosAV and 'Yes' or '-') as 'Host.sophos_av',
+                (@QualysCloud and 'Yes' or '-') as 'Host.qualys_agent',
+                (@BCM and 'Yes' or '-') as 'Host.bcm',
+                (@McAfee and 'Yes' or '-') as 'Host.mcafee',
+                (@Patrol and 'Yes' or '-') as 'Host.patrol',
+                (@Symantec and 'Yes' or '-') as 'Host.symantec'
             """
 
 user_accounts = """

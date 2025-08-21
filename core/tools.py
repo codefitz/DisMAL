@@ -210,10 +210,10 @@ def session_get(results):
     for result in results:
         # Cast count values to integers to ensure arithmetic works as expected
         count = int(result.get('Count', 0))
-        uuid = result.get('UUID')
-        restype = result.get('Session_Type')
+        uuid = result.get('SessionResult.slave_or_credential')
+        restype = result.get('SessionResult.session_type')
         if uuid:
-            sessions[uuid] = [ restype, count ]
+            sessions[uuid] = [restype, count]
     return sessions
 
 def ip_or_string(value):

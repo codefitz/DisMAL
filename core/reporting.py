@@ -522,7 +522,7 @@ def devices(twsearch, twcreds, args):
         for result in results:
             result_timer += 1
             _progress(identity_timer, len(identities), result_timer, total_result_iterations)
-            da_endpoint = tools.getr(result,'DA_Endpoint',None)
+            da_endpoint = tools.getr(result,'DiscoveryAccess.endpoint',None)
             logger.debug("Checking endpoint %s in identity %s"%(da_endpoint,identity))
 
             # If this deviceinfo record relates to this device identity
@@ -530,24 +530,24 @@ def devices(twsearch, twcreds, args):
 
                 # Collect ALL Data
 
-                device_name = tools.getr(result,'Device_Hostname',"None")
+                device_name = tools.getr(result,'DeviceInfo.hostname',"None")
                 logger.debug("%s Device Name: %s"%(da_endpoint,device_name))
                 all_device_names = [ device_name ]
                 all_device_names = tools.list_of_lists(result,'Inferred_Name',all_device_names)
                 all_device_names = tools.list_of_lists(result,'Inferred_Hostname',all_device_names)
                 all_device_names = tools.list_of_lists(result,'Inferred_FQDN',all_device_names)
                 all_endpoints = [ da_endpoint ]
-                all_endpoints = tools.list_of_lists(result,'Chosen_Endpoint',all_endpoints)
-                all_endpoints = tools.list_of_lists(result,'Discovered_IP_Addrs',all_endpoints)
-                all_endpoints = tools.list_of_lists(result,'Inferred_All_IP_Addrs',all_endpoints)
+                all_endpoints = tools.list_of_lists(result,'Endpoint.endpoint',all_endpoints)
+                all_endpoints = tools.list_of_lists(result,'DiscoveredIPAddress.ip_addr',all_endpoints)
+                all_endpoints = tools.list_of_lists(result,'InferredElement.__all_ip_addrs',all_endpoints)
                 logger.debug("%s All endpoints: %s"%(da_endpoint,all_endpoints))
                     
-                scan_run = tools.getr(result,'Discovery_Run',"None")
+                scan_run = tools.getr(result,'DiscoveryRun.label',"None")
                 all_discovery_runs.append(scan_run)
                 all_discovery_runs = tools.sortlist(all_discovery_runs)
                 logger.debug("%s All Runs: %s"%(da_endpoint,all_discovery_runs))
 
-                uuid = tools.getr(result,'Last_Credential',None)
+                uuid = tools.getr(result,'DeviceInfo.last_credential',None)
 
                 all_credentials_used = []
                 cred_label = None
@@ -560,29 +560,29 @@ def devices(twsearch, twcreds, args):
                 all_credentials_used = tools.sortlist(all_credentials_used)
                 logger.debug("%s All Runs: %s"%(da_endpoint,all_credentials_used))
                 
-                da_result = tools.getr(result,'DA_Result',"None")
-                end_state = tools.getr(result,'DA_End_State',"None")
-                last_marker = tools.getr(result,'Last_Marker',None)
-                had_inference = tools.getr(result,'Had_Inference',None)
+                da_result = tools.getr(result,'DiscoveryAccess.result',"None")
+                end_state = tools.getr(result,'DiscoveryAccess.end_state',"None")
+                last_marker = tools.getr(result,'DiscoveryAccess._last_marker',None)
+                had_inference = tools.getr(result,'DiscoveryAccess.__had_inference',None)
                 logger.debug("%s Last Marker: %s"%(da_endpoint,last_marker))
                 logger.debug("%s Had Inference: %s"%(da_endpoint,had_inference))
 
                 # Other Attributes
 
-                first_marker = tools.getr(result,'First_Marker',"None")
-                last_interesting = tools.getr(result,'Last_Interesting',"None")
-                os_type = tools.getr(result,'OS_Type',"None")
-                device_type = tools.getr(result,'Device_Type',"None")
-                method_success = tools.getr(result,'M_Success',"None")
-                method_failure = tools.getr(result,'M_Failure',"None")
-                endtime = tools.getr(result,'DA_End',"None")
-                kind = tools.getr(result,'Kind',"None")
-                last_access_method = tools.getr(result,'Last_Access_Method',"None")
+                first_marker = tools.getr(result,'DiscoveryAccess._first_marker',"None")
+                last_interesting = tools.getr(result,'DiscoveryAccess._last_interesting',"None")
+                os_type = tools.getr(result,'DeviceInfo.os_type',"None")
+                device_type = tools.getr(result,'DeviceInfo.device_type',"None")
+                method_success = tools.getr(result,'DeviceInfo.method_success',"None")
+                method_failure = tools.getr(result,'DeviceInfo.method_failure',"None")
+                endtime = tools.getr(result,'DiscoveryAccess.endtime',"None")
+                kind = tools.getr(result,'DeviceInfo.kind',"None")
+                last_access_method = tools.getr(result,'DeviceInfo.last_access_method',"None")
                 logger.debug("%s Last Access Method: %s"%(da_endpoint,last_access_method))
 
                 all_kinds.append(kind)
 
-                start_time = tools.getr(result,'DA_Start',"None")
+                start_time = tools.getr(result,'DiscoveryAccess.starttime',"None")
 
                 device.update({
                                 "all_device_names":identity.get('list_of_names'),
@@ -818,13 +818,13 @@ def ipaddr(search, credentials, args):
                 """
                     search DiscoveryAccess where endpoint = '%s'
                     show
-                    #DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.hostname as 'Name',
-                    #DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.device_type as 'Device_Type',
+                    #DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.hostname as 'DeviceInfo.hostname',
+                    #DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.device_type as 'DeviceInfo.device_type',
                     inferred_kind as 'nodekind',
                     (#DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.last_credential
-                        or #DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.last_slave) as 'credential',
-                    #DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.last_access_method as 'session_type',
-                    #DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.method_success as 'success',
+                        or #DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.last_slave) as 'DeviceInfo.last_credential',
+                    #DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.last_access_method as 'DeviceInfo.last_access_method',
+                    #DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.method_success as 'DeviceInfo.method_success',
                     'Credential ID Retrieved from DeviceInfo' as 'message'
                     process with unique()
                 """ % ipaddr
@@ -1059,7 +1059,7 @@ def _gather_discovery_data(twsearch, twcreds, args):
             hostname = tools.getr(result, "Hostname", None)
             os_type = tools.getr(result, "OS_Type", None)
             os_class = tools.getr(result, "OS_Class", None)
-            disco_run = tools.getr(result, "Discovery_Run", None)
+            disco_run = tools.getr(result, "DiscoveryRun.label", None)
             run_start = tools.getr(result, "Run_Starttime", None)
             run_end = tools.getr(result, "Run_Endtime", None)
             scan_start = tools.getr(result, "Scan_Starttime", None)
@@ -1101,7 +1101,7 @@ def _gather_discovery_data(twsearch, twcreds, args):
             node_kind = result.get("Node_Kind")
             if isinstance(node_kind, list):
                 node_kind = tools.sortlist(node_kind)
-            last_credential = tools.getr(result, "Last_Credential", None)
+            last_credential = tools.getr(result, "DeviceInfo.last_credential", None)
             credential_name = None
             credential_login = None
             if last_credential:
@@ -1111,7 +1111,7 @@ def _gather_discovery_data(twsearch, twcreds, args):
             node_id = result.get("DA_ID")
             prev_node_id = result.get("Previous_DA_ID")
             next_node_id = result.get("Next_DA_ID")
-            last_marker = result.get("Last_Marker")
+            last_marker = result.get("DiscoveryAccess._last_marker")
 
             ep_record.update(
                 {

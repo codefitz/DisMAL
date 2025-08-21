@@ -835,12 +835,12 @@ def devices_lookup(search):
     results = search_results(search, queries.deviceInfo)
     mapping = {}
     for result in results:
-        ip = tools.getr(result, "DA_Endpoint", None)
+        ip = tools.getr(result, "DiscoveryAccess.endpoint", None)
         if ip:
             mapping[ip] = {
-                "last_identity": tools.getr(result, "Device_Hostname", "N/A"),
-                "last_start_time": tools.getr(result, "DA_Start", "N/A"),
-                "last_result": tools.getr(result, "DA_Result", "N/A"),
+                "last_identity": tools.getr(result, "DeviceInfo.hostname", "N/A"),
+                "last_start_time": tools.getr(result, "DiscoveryAccess.starttime", "N/A"),
+                "last_result": tools.getr(result, "DiscoveryAccess.result", "N/A"),
             }
     return mapping
 

@@ -4,7 +4,6 @@ import types
 import pytest
 import core.builder as builder
 import core.output as output
-import core.tools as tools
 
 sys.modules.setdefault("pandas", types.SimpleNamespace())
 sys.modules.setdefault("tabulate", types.SimpleNamespace(tabulate=lambda *a, **k: ""))
@@ -132,26 +131,26 @@ def test_discovery_access_outputs_records(monkeypatch):
 
     assert result == sample
     assert captured["name"] == "discovery_access"
-    assert captured["headers"] == ["Endpoint", "Hostname"]
+    assert captured["headers"] == ["endpoint", "hostname"]
     assert captured["data"] == [["1.1.1.1", "h1"], ["2.2.2.2", "h2"]]
 
 
 def test_discovery_run_analysis_outputs_records(monkeypatch):
     sample = [
         {
-            "Explicit Ranges": "1.1.1.1/32",
-            "Scan Label": "Run1",
-            "End Time": "2024-01-01",
-            "Range Summary": "1 IP",
-            "Outpost Name": "op1",
-            "Label": "SR1",
-            "Scan Kind": "Scheduled",
-            "Range": "1.1.1.1/32",
-            "Schedule": "Once",
-            "Total Endpoints": 1,
-            "Active Endpoints": 1,
-            "Dropped": 0,
-            "Scan Kinds": ["Normal"],
+            "DiscoveryRun.valid_ranges": "1.1.1.1/32",
+            "DiscoveryRun.label": "Run1",
+            "DiscoveryRun.end_time": "2024-01-01",
+            "DiscoveryRun.range_summary": "1 IP",
+            "DiscoveryRun.outpost_name": "op1",
+            "ScanRange.label": "SR1",
+            "ScanRange.scan_kind": "Scheduled",
+            "ScanRange.range": "1.1.1.1/32",
+            "ScanRange.schedule": "Once",
+            "DiscoveryRun.total_endpoints": 1,
+            "DiscoveryRun.active_endpoints": 1,
+            "DiscoveryRun.dropped": 0,
+            "DiscoveryRun.scan_kinds": ["Normal"],
         }
     ]
 
@@ -171,7 +170,7 @@ def test_discovery_run_analysis_outputs_records(monkeypatch):
     reporting.discovery_run_analysis(DummySearch(), DummyCreds(), args)
 
     assert captured["name"] == "discovery_run_analysis"
-    expected_headers = tools.normalize_headers(sample[0].keys())
+    expected_headers = list(sample[0].keys())
     assert captured["headers"] == expected_headers
     assert captured["data"] == [list(sample[0].values())]
 
@@ -261,7 +260,7 @@ def test_successful_combines_query_results(monkeypatch):
         reporting.queries.deviceinfo_success_7d,
         reporting.queries.credential_failure_7d,
     }
-    assert "Success % 7 days" in captured["headers"]
+    assert "Success % 7 Days" in captured["headers"]
     row = captured["data"][0]
     assert row[6] == 5
     assert row[7] == 4

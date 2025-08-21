@@ -318,17 +318,17 @@ open_ports = """
 host_utilisation = """
                         search Host where type <> 'Hypervisor'
                         show
-                        hostname,
-                        hash(hostname) as 'hashed_hostname',
-                        os,
-                        os_type as 'OS_Type',
-                        virtual,
-                        cloud,
-                        #InferredElement:Inference:Associate:DiscoveryAccess.endpoint as 'Endpoint',
-                        nodecount(traverse :::SoftwareInstance) as 'Running Software Instances',
-                        nodecount(traverse :::CandidateSoftwareInstance) as 'Candidate Software Instances',
-                        nodecount(traverse :::DiscoveryAccess where _last_marker traverse :::ProcessList traverse :::DiscoveredProcess) as 'Running Processes',
-                        nodecount(traverse :::DiscoveryAccess where _last_marker traverse :::ServiceList traverse :::DiscoveredService where state = 'RUNNING') as 'Running Services (Windows)'
+                        hostname as 'Host.hostname',
+                        hash(hostname) as 'Host.hostname_hash',
+                        os as 'Host.os',
+                        os_type as 'Host.os_type',
+                        virtual as 'Host.virtual',
+                        cloud as 'Host.cloud',
+                        #InferredElement:Inference:Associate:DiscoveryAccess.endpoint as 'DiscoveryAccess.endpoint',
+                        nodecount(traverse :::SoftwareInstance) as 'Host.running_software_instances',
+                        nodecount(traverse :::CandidateSoftwareInstance) as 'Host.candidate_software_instances',
+                        nodecount(traverse :::DiscoveryAccess where _last_marker traverse :::ProcessList traverse :::DiscoveredProcess) as 'Host.running_processes',
+                        nodecount(traverse :::DiscoveryAccess where _last_marker traverse :::ServiceList traverse :::DiscoveredService where state = 'RUNNING') as 'Host.running_services'
                       """
 
 orphan_vms = """
@@ -576,14 +576,14 @@ missing_vms = """
                     search VirtualMachine
                     where nodecount(traverse HostContainer:HostContainment:ContainedHost:) = 0
                     show
-                    vm_type as 'VM_Type',
-                    (product_version or cloud_class) as 'VM_Version',
-                    #RunningSoftware:HostedSoftware:Host:.name as 'VM_Host',
-                    #RunningSoftware:HostedSoftware:Host:.type as 'VM_Host_Type',
-                    vm_name as 'Guest_VM_Name',
-                    vm_guest_os as 'Guest_VM_OS',
-                    guest_full_name as 'Guest_Full_Name',
-                    (vm_status or cloud and "Cloud Hosted") as 'Status'
+                    vm_type as 'VirtualMachine.vm_type',
+                    (product_version or cloud_class) as 'VirtualMachine.product_version',
+                    #RunningSoftware:HostedSoftware:Host:.name as 'Host.name',
+                    #RunningSoftware:HostedSoftware:Host:.type as 'Host.type',
+                    vm_name as 'VirtualMachine.vm_name',
+                    vm_guest_os as 'VirtualMachine.vm_guest_os',
+                    guest_full_name as 'VirtualMachine.guest_full_name',
+                    (vm_status or cloud and "Cloud Hosted") as 'VirtualMachine.vm_status'
                 """
 
 agents = """

@@ -74,11 +74,11 @@ def test_ordering_inserts_instance_and_outpost(monkeypatch):
     assert captured["headers"] == [
         "Discovery Instance",
         "Credential",
-        "CurrentIndex",
+        "Current Index",
         "Weighting",
-        "NewIndex",
+        "New Index",
         "Scope",
-        "OutpostUrl",
+        "Outpost URL",
     ]
     assert captured["data"] == [["appl", "c", 1, 99, 0, "s", "http://op"]]
 

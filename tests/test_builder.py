@@ -425,7 +425,10 @@ def test_unique_identities_merges_device_data(monkeypatch):
             "DeviceInfo.sysname": "host2",
         },
     ]
-    da_results = [{"ip": "10.0.0.1"}, {"ip": "10.0.0.2"}]
+    da_results = [
+        {"DiscoveryAccess.endpoint": "10.0.0.1"},
+        {"DiscoveryAccess.endpoint": "10.0.0.2"},
+    ]
 
     seq = iter([devices, da_results])
     monkeypatch.setattr(builder.api, "search_results", lambda *a, **k: next(seq))

@@ -209,11 +209,11 @@ def session_get(results):
     sessions = {}
     for result in results:
         # Cast count values to integers to ensure arithmetic works as expected
-        count = int(result.get('Count', 0))
-        uuid = result.get('UUID')
-        restype = result.get('Session_Type')
+        count = int(result.get('SessionResult.count', 0))
+        uuid = result.get('SessionResult.uuid')
+        restype = result.get('SessionResult.session_type')
         if uuid:
-            sessions[uuid] = [ restype, count ]
+            sessions[uuid] = [restype, count]
     return sessions
 
 def ip_or_string(value):
@@ -266,29 +266,24 @@ def dequote(s):
 
 
 def json2csv(jsdata, return_map=False):
-    orig_header = []
+    header = []
     data = []
     for jsitem in jsdata:
-        headers = jsitem.keys()  # get the headers, unstructured
-        for label in headers:
-            # create a unique list of ALL possible headers
-            orig_header.append(label)
-            orig_header = sortlist(orig_header)
-
-    header, lookup = normalize_headers(orig_header, return_lookup=True)
+        for label in jsitem.keys():
+            header.append(label)
+            header = sortlist(header)
 
     for jsitem in jsdata:
         values = []
-        for key in orig_header:
-            # Loop through the unique set of headers and get values if exist
-            values.append(getr(jsitem, key, "N/A"))  # Substitute if missing
+        for key in header:
+            values.append(getr(jsitem, key, "N/A"))
         data.append(values)
 
+    lookup = {h: h for h in header}
     if return_map:
         return header, data, lookup
 
-    human_header = [snake_to_camel(h) for h in header]
-    return header, data, human_header
+    return header, data, header
 
 def snake_to_title(value):
     """Convert ``snake_case`` strings to Title Case with spaces.

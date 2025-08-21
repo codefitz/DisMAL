@@ -1450,10 +1450,8 @@ def discovery_run_analysis(twsearch, twcreds, args):
     results = api.search_results(twsearch, queries.discovery_run_analysis)
 
     if isinstance(results, list) and results:
-        headers, lookup = tools.normalize_headers(
-            results[0].keys(), return_lookup=True
-        )
-        rows = [[record.get(lookup[h]) for h in headers] for record in results]
+        headers = list(results[0].keys())
+        rows = [[record.get(h) for h in headers] for record in results]
     else:
         headers, rows = [], []
 

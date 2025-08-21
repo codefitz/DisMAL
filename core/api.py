@@ -475,13 +475,11 @@ def show_runs(disco, args):
         parsed_runs.append(disco_run)
 
     headers = tools.sortlist(headers)
-    headers, lookup = tools.normalize_headers(headers, return_lookup=True)
-    header_hf = [tools.snake_to_camel(h) for h in headers]
     run_csvs = []
     for run in parsed_runs:
         run_csv = []
         for header in headers:
-            value = run.get(lookup[header])
+            value = run.get(header)
             run_csv.append(value)
         run_csvs.append(run_csv)
 
@@ -502,10 +500,9 @@ def show_runs(disco, args):
     else:
         if getattr(args, "excavate", None):
             out_dir = getattr(args, "reporting_dir", "")
-            csv_headers = tools.normalize_keys(headers)
             output.define_csv(
                 args,
-                csv_headers,
+                headers,
                 run_csvs,
                 os.path.join(out_dir, defaults.current_scans_filename),
                 getattr(args, "output_file", None),
@@ -606,10 +603,9 @@ def open_ports(search, args, dir):
 def device_capture_candidates(search, args, dir):
     """Export capture candidates, defaulting missing sysobjectid to 0."""
     results = search_results(search, queries.capture_candidates)
-    header, rows, header_hf = tools.json2csv(results or [])
-    header = [h.lower() for h in header]
-    if "sysobjectid" in header:
-        idx = header.index("sysobjectid")
+    header, rows, _ = tools.json2csv(results or [])
+    if "DeviceInfo.sysobjectid" in header:
+        idx = header.index("DeviceInfo.sysobjectid")
         for row in rows:
             if row[idx] is None:
                 row[idx] = 0
@@ -682,20 +678,21 @@ def missing_vms(search, args, dir):
     if getattr(args, "resolve_hostnames", False):
         response = search_results(search, queries.missing_vms)
         if isinstance(response, list) and len(response) > 0:
-            header, data, header_hf = tools.json2csv(response)
+            header, data, _ = tools.json2csv(response)
             header.insert(0, "Discovery Instance")
-            header_hf.insert(0, "Discovery Instance")
             for row in data:
                 row.insert(0, args.target)
 
-            gf_index = header.index("Guest Full Name") if "Guest Full Name" in header else None
+            gf_index = (
+                header.index("VirtualMachine.guest_full_name")
+                if "VirtualMachine.guest_full_name" in header
+                else None
+            )
             header.append("Pingable")
-            header_hf.append("Pingable")
 
             devices = devices_lookup(search)
-            
+
             header.extend(["last_identity", "last_scanned", "last_result"])
-            header_hf.extend(["Last Identity", "Last Scanned", "Last Result"])
 
             timer_count = 0
             for row in data:
@@ -724,10 +721,9 @@ def missing_vms(search, args, dir):
                     row.extend(["N/A", "N/A", "N/A"])
             print(os.linesep, end="\r")
 
-            csv_header = tools.normalize_keys(header)
             output.define_csv(
                 args,
-                csv_header,
+                header,
                 data,
                 dir + defaults.missing_vms_filename,
                 args.output_file,
@@ -793,10 +789,9 @@ def capture_candidates(search, args, dir):
             # Replace ``None`` values with "N/A" for readability
             row[1:] = [value if value is not None else "N/A" for value in row[1:]]
     header.insert(0, "Discovery Instance")
-    csv_header = tools.normalize_keys(header)
     output.define_csv(
         args,
-        csv_header,
+        header,
         rows,
         dir + defaults.capture_candidates_filename,
         args.output_file,
@@ -835,12 +830,12 @@ def devices_lookup(search):
     results = search_results(search, queries.deviceInfo)
     mapping = {}
     for result in results:
-        ip = tools.getr(result, "DA_Endpoint", None)
+        ip = tools.getr(result, "DiscoveryAccess.endpoint", None)
         if ip:
             mapping[ip] = {
-                "last_identity": tools.getr(result, "Device_Hostname", "N/A"),
-                "last_start_time": tools.getr(result, "DA_Start", "N/A"),
-                "last_result": tools.getr(result, "DA_Result", "N/A"),
+                "last_identity": tools.getr(result, "DeviceInfo.hostname", "N/A"),
+                "last_start_time": tools.getr(result, "DiscoveryAccess.start_time", "N/A"),
+                "last_result": tools.getr(result, "DiscoveryAccess.result", "N/A"),
             }
     return mapping
 

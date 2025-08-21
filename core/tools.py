@@ -10,30 +10,6 @@ from cidrize import cidrize
 
 logger = logging.getLogger("_tools_")
 
-def to_camel_case(value: str) -> str:
-    """Convert a string with separators to CamelCase.
-
-    Non-alphanumeric characters are treated as delimiters. For example,
-    ``last_scanned`` becomes ``LastScanned``.
-
-    Parameters
-    ----------
-    value : str
-        The string to convert.
-
-    Returns
-    -------
-    str
-        The CamelCase version of ``value``. Non-string inputs are returned
-        unchanged.
-    """
-
-    if not isinstance(value, str):
-        return value
-
-    parts = re.split(r"[^0-9a-zA-Z]+", value)
-    return "".join(part.capitalize() for part in parts if part)
-
 def snake_to_camel(value):
     """Convert snake_case string to Camel Case with spaces.
 
@@ -140,16 +116,6 @@ def sortdic(lst):
     lst2 = [i for n, i in enumerate(lst) if i not in lst[n + 1:]]
     logger.debug(lst)
     return lst2
-
-def normalize_header(name: str) -> str:
-    """Return *name* converted to CamelCase.
-
-    Non-alphanumeric characters are treated as word separators.
-    """
-    if not name:
-        return ""
-    parts = re.split(r"[^0-9A-Za-z]+", str(name))
-    return "".join(p.capitalize() for p in parts if p)
 
 def normalize_key(key):
     """Return ``key`` converted from ``snake_case`` or dotted names to Title Case."""

@@ -69,16 +69,16 @@ def test_ordering_inserts_instance_and_outpost(monkeypatch):
     builder.ordering(creds, DummySearch(), args, False)
 
     # Verify the new key is propagated through the report and that only
-    # weighted credentials are included with populated Scope and OutpostUrl.
+    # weighted credentials are included with populated Scope and Outpost URL.
     assert captured["name"] == "suggested_cred_opt"
     assert captured["headers"] == [
         "Discovery Instance",
         "Credential",
-        "CurrentIndex",
+        "Current Index",
         "Weighting",
-        "NewIndex",
+        "New Index",
         "Scope",
-        "OutpostUrl",
+        "Outpost URL",
     ]
     assert captured["data"] == [["appl", "c", 1, 99, 0, "s", "http://op"]]
 

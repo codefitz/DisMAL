@@ -415,14 +415,14 @@ def test_unique_identities_merges_device_data(monkeypatch):
 
     devices = [
         {
-            "DA_Endpoint": "10.0.0.1",
-            "Inferred_All_IP_Addrs": ["10.0.0.1", "10.0.0.2"],
-            "Device_Sysname": "host1",
+            "DiscoveryAccess.endpoint": "10.0.0.1",
+            "InferredElement.__all_ip_addrs": ["10.0.0.1", "10.0.0.2"],
+            "DeviceInfo.sysname": "host1",
         },
         {
-            "DA_Endpoint": "10.0.0.2",
-            "Inferred_All_IP_Addrs": ["10.0.0.2"],
-            "Device_Sysname": "host2",
+            "DiscoveryAccess.endpoint": "10.0.0.2",
+            "InferredElement.__all_ip_addrs": ["10.0.0.2"],
+            "DeviceInfo.sysname": "host2",
         },
     ]
     da_results = [{"ip": "10.0.0.1"}, {"ip": "10.0.0.2"}]

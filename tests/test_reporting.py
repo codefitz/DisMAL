@@ -202,17 +202,17 @@ def test_successful_combines_query_results(monkeypatch):
     def fake_search_results(search, query):
         calls.append(query)
         if query is reporting.queries.credential_success:
-            return [{"SessionResult.uuid": "u1", "SessionResult.session_type": "ssh", "SessionResult.count": 2}]
+            return [{"SessionResult.slave_or_credential": "u1", "SessionResult.session_type": "ssh", "Count": 2}]
         if query is reporting.queries.deviceinfo_success:
-            return [{"SessionResult.uuid": "u1", "SessionResult.session_type": "ssh", "SessionResult.count": 3}]
+            return [{"SessionResult.slave_or_credential": "u1", "SessionResult.session_type": "ssh", "Count": 3}]
         if query is reporting.queries.credential_failure:
-            return [{"SessionResult.uuid": "u1", "SessionResult.session_type": "ssh", "SessionResult.count": 4}]
+            return [{"SessionResult.slave_or_credential": "u1", "SessionResult.session_type": "ssh", "Count": 4}]
         if query is reporting.queries.credential_success_7d:
-            return [{"SessionResult.uuid": "u1", "SessionResult.session_type": "ssh", "SessionResult.count": 1}]
+            return [{"SessionResult.slave_or_credential": "u1", "SessionResult.session_type": "ssh", "Count": 1}]
         if query is reporting.queries.deviceinfo_success_7d:
-            return [{"SessionResult.uuid": "u1", "SessionResult.session_type": "ssh", "SessionResult.count": 1}]
+            return [{"SessionResult.slave_or_credential": "u1", "SessionResult.session_type": "ssh", "Count": 1}]
         if query is reporting.queries.credential_failure_7d:
-            return [{"SessionResult.uuid": "u1", "SessionResult.session_type": "ssh", "SessionResult.count": 1}]
+            return [{"SessionResult.slave_or_credential": "u1", "SessionResult.session_type": "ssh", "Count": 1}]
         return []
 
     call = {"n": 0}
@@ -273,17 +273,17 @@ def test_successful_coerces_string_counts(monkeypatch):
 
     def fake_search_results(search, query):
         if query is reporting.queries.credential_success:
-            return [{"SessionResult.uuid": "u1", "SessionResult.session_type": "ssh", "SessionResult.count": "2"}]
+            return [{"SessionResult.slave_or_credential": "u1", "SessionResult.session_type": "ssh", "Count": "2"}]
         if query is reporting.queries.deviceinfo_success:
-            return [{"SessionResult.uuid": "u1", "SessionResult.session_type": "ssh", "SessionResult.count": "3"}]
+            return [{"SessionResult.slave_or_credential": "u1", "SessionResult.session_type": "ssh", "Count": "3"}]
         if query is reporting.queries.credential_failure:
-            return [{"SessionResult.uuid": "u1", "SessionResult.session_type": "ssh", "SessionResult.count": "4"}]
+            return [{"SessionResult.slave_or_credential": "u1", "SessionResult.session_type": "ssh", "Count": "4"}]
         if query is reporting.queries.credential_success_7d:
-            return [{"SessionResult.uuid": "u1", "SessionResult.session_type": "ssh", "SessionResult.count": "1"}]
+            return [{"SessionResult.slave_or_credential": "u1", "SessionResult.session_type": "ssh", "Count": "1"}]
         if query is reporting.queries.deviceinfo_success_7d:
-            return [{"SessionResult.uuid": "u1", "SessionResult.session_type": "ssh", "SessionResult.count": "1"}]
+            return [{"SessionResult.slave_or_credential": "u1", "SessionResult.session_type": "ssh", "Count": "1"}]
         if query is reporting.queries.credential_failure_7d:
-            return [{"SessionResult.uuid": "u1", "SessionResult.session_type": "ssh", "SessionResult.count": "1"}]
+            return [{"SessionResult.slave_or_credential": "u1", "SessionResult.session_type": "ssh", "Count": "1"}]
         return []
 
     call = {"n": 0}
@@ -532,7 +532,7 @@ def test_discovery_analysis_merges_latest_fields(monkeypatch):
                     "Scan_Endtime": "2024-01-03 00:00:00",
                     "Scan_Endtime_Raw": "2024-01-03T00:00:00+00:00",
                     "End_State": "OK",
-                    "Last_Credential": "cred1",
+                    "DeviceInfo.last_credential": "cred1",
                 },
             ]
         if query is reporting.queries.dropped_endpoints:

@@ -48,7 +48,7 @@ def test_missing_vms_enriches_from_devices(monkeypatch):
     device_info = [{
         "DiscoveryAccess.endpoint": "1.2.3.4",
         "DeviceInfo.hostname": "id1",
-        "DiscoveryAccess.start_time": "2024-01-01 10:00:00",
+        "DiscoveryAccess.starttime": "2024-01-01 10:00:00",
         "DiscoveryAccess.result": "OK",
     }]
 

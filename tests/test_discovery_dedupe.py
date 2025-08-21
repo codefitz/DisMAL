@@ -56,15 +56,15 @@ def test_prefers_named_and_updates_timestamp(monkeypatch):
         "Run_Endtime": "2024-01-01 00:05:00 +0000",
         "Run_Starttime": "2024-01-01 00:00:00 +0000",
         "Scan_Starttime": "2024-01-01 00:00:00 +0000",
-        "Discovery_Run": "r1",
+        "DiscoveryRun.label": "r1",
         "End_State": "Complete",
         "Previous_End_State": "DarkSpace",
-        "Last_Credential": "c1",
+        "DeviceInfo.last_credential": "c1",
     }
     newer = dict(older)
     newer.update({
         "Hostname": None,
-        "Last_Credential": None,
+        "DeviceInfo.last_credential": None,
         "Scan_Endtime": "2024-02-01 00:05:00 +0000",
         "Run_Endtime": "2024-02-01 00:05:00 +0000",
         "Run_Starttime": "2024-02-01 00:00:00 +0000",
@@ -87,10 +87,10 @@ def test_picks_latest_when_no_names(monkeypatch):
         "Run_Endtime": "2024-01-01 00:05:00 +0000",
         "Run_Starttime": "2024-01-01 00:00:00 +0000",
         "Scan_Starttime": "2024-01-01 00:00:00 +0000",
-        "Discovery_Run": "r1",
+        "DiscoveryRun.label": "r1",
         "End_State": "Complete",
         "Previous_End_State": "DarkSpace",
-        "Last_Credential": None,
+        "DeviceInfo.last_credential": None,
     }
     newer = dict(older)
     newer.update({

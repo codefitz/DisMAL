@@ -158,8 +158,8 @@ def session_get(results):
     sessions = {}
     for result in results:
         # Cast count values to integers to ensure arithmetic works as expected
-        count = int(result.get('SessionResult.count', 0))
-        uuid = result.get('SessionResult.uuid')
+        count = int(result.get('Count', 0))
+        uuid = result.get('SessionResult.slave_or_credential')
         restype = result.get('SessionResult.session_type')
         if uuid:
             sessions[uuid] = [restype, count]

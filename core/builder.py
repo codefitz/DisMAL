@@ -360,7 +360,7 @@ def ordering(creds, search, args, apply):
         # Only log the new order to avoid mixing datasets.
 
     if data:
-        headers = list(dict.fromkeys(headers))
+        # Prepend the discovery instance before exporting the report.
         headers.insert(0, "Discovery Instance")
         for row in data:
             row.insert(0, getattr(args, "target", None))

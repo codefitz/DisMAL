@@ -10,30 +10,6 @@ from cidrize import cidrize
 
 logger = logging.getLogger("_tools_")
 
-def to_camel_case(value: str) -> str:
-    """Convert a string with separators to CamelCase.
-
-    Non-alphanumeric characters are treated as delimiters. For example,
-    ``last_scanned`` becomes ``LastScanned``.
-
-    Parameters
-    ----------
-    value : str
-        The string to convert.
-
-    Returns
-    -------
-    str
-        The CamelCase version of ``value``. Non-string inputs are returned
-        unchanged.
-    """
-
-    if not isinstance(value, str):
-        return value
-
-    parts = re.split(r"[^0-9a-zA-Z]+", value)
-    return "".join(part.capitalize() for part in parts if part)
-
 def in_wsl() -> bool:
     """
         WSL is thought to be the only common Linux kernel with Microsoft in the name, per Microsoft:
@@ -129,7 +105,6 @@ def sortdic(lst):
     lst2 = [i for n, i in enumerate(lst) if i not in lst[n + 1:]]
     logger.debug(lst)
     return lst2
-
 
 def completage(message, record_count, timer_count):
     timer_count += 1

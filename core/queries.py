@@ -348,7 +348,7 @@ orphan_vms = """
                     vm_class
                 """
 
-audit = """
+audit = r"""
             search in 'Audit' UserEventAuditRecord
             where not (user matches '^\[\w+\]$')
             show

@@ -242,11 +242,11 @@ def cmd2csv(header,result,seperator,filename,appliance):
 def query2csv(search, query, filename, appliance):
     response = api.search_results(search, query)
     if type(response) == list and len(response) > 0:
-        header, data, header_hf = tools.json2csv(response)
-        header_hf.insert(0, "Discovery Instance")
+        header, data, _ = tools.json2csv(response)
+        header.insert(0, "Discovery Instance")
         for row in data:
             row.insert(0, appliance)
-        csv_file(data, header_hf, filename)
+        csv_file(data, header, filename)
     else:
         txt_dump("No results.",filename)
 
@@ -281,8 +281,6 @@ def define_csv(args, head_ep, data, path, file, target, type, tku=None):
     """
 
     cli_out = getattr(args, "output_cli", False)
-    if isinstance(head_ep, list):
-        head_ep = tools.normalize_keys(head_ep)
     if type == "cmd":
         if args.output_file:
             cmd2csv(head_ep, data, ":", file, target)

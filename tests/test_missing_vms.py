@@ -10,7 +10,6 @@ sys.modules.setdefault("paramiko", types.SimpleNamespace())
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import core.api as api_mod
-from core.tools import normalize_keys
 
 class DummySearch:
     def search(self, query, format="object", limit=500):
@@ -76,9 +75,9 @@ def test_missing_vms_enriches_from_devices(monkeypatch):
 
     api_mod.missing_vms(DummySearch(), args, "")
 
-    assert captured["header"][-3:] == normalize_keys([
+    assert captured["header"][-3:] == [
         "last_identity",
         "last_scanned",
         "last_result",
-    ])
+    ]
     assert captured["data"][0][-3:] == ["id1", "2024-01-01 10:00:00", "OK"]

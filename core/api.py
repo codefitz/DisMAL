@@ -186,14 +186,21 @@ def baseline(disco, args, dir):
                 # Failures
                 header = []
                 rows = []
-                header_hf = []
                 if "FAILED" in baseline['results']:
                     failures = baseline['results']['FAILED']
-                    header, rows, header_hf = tools.json2csv(failures)
-                header_hf.insert(0, "Discovery Instance")
+                    header, rows, _ = tools.json2csv(failures)
+                header.insert(0, "Discovery Instance")
                 for row in rows:
                     row.insert(0, args.target)
-                output.define_csv(args, header_hf, rows, dir + defaults.baseline_filename, args.output_file, args.target, "csv_file")
+                output.define_csv(
+                    args,
+                    header,
+                    rows,
+                    dir + defaults.baseline_filename,
+                    args.output_file,
+                    args.target,
+                    "csv_file",
+                )
         except Exception as e:
             logger.error("Problem with baseline:\n%s\n%s"%(e.__class__,str(e)))
             # Try dumping it
@@ -476,7 +483,7 @@ def show_runs(disco, args):
 
     headers = tools.sortlist(headers)
     headers, lookup = tools.normalize_headers(headers, return_lookup=True)
-    header_hf = [tools.snake_to_camel(h) for h in headers]
+    raw_headers = [lookup.get(h, h) for h in headers]
     run_csvs = []
     for run in parsed_runs:
         run_csv = []
@@ -489,12 +496,12 @@ def show_runs(disco, args):
     outfile = getattr(args, "file", getattr(args, "output_file", None))
     if export:
         w = csv.writer(sys.stdout)
-        w.writerow(headers)
+        w.writerow(raw_headers)
         w.writerows(run_csvs)
     elif outfile:
         with open(outfile, "w", newline="") as file:
             writer = csv.writer(file)
-            writer.writerow(headers)
+            writer.writerow(raw_headers)
             writer.writerows(run_csvs)
             msg = "Report saved to %s" % outfile
             print(msg)
@@ -502,10 +509,9 @@ def show_runs(disco, args):
     else:
         if getattr(args, "excavate", None):
             out_dir = getattr(args, "reporting_dir", "")
-            csv_headers = tools.normalize_keys(headers)
             output.define_csv(
                 args,
-                csv_headers,
+                raw_headers,
                 run_csvs,
                 os.path.join(out_dir, defaults.current_scans_filename),
                 getattr(args, "output_file", None),
@@ -526,17 +532,17 @@ def sensitive(search, args, dir):
     count = len(results) if isinstance(results, list) else 0
     tools.completage("Processing", count or 1, (count or 1) - 1)
     print(os.linesep, end="\r")
-    header, rows, header_hf = [], [], []
+    header, rows = [], []
     if isinstance(results, list) and results:
-        header, rows, header_hf = tools.json2csv(results)
-        header_hf.insert(0, "Discovery Instance")
+        header, rows, _ = tools.json2csv(results)
+        header.insert(0, "Discovery Instance")
         for row in rows:
             row.insert(0, args.target)
     else:
-        header_hf.insert(0, "Discovery Instance")
+        header.insert(0, "Discovery Instance")
     output.define_csv(
         args,
-        header_hf,
+        header,
         rows,
         dir + defaults.sensitive_data_filename,
         args.output_file,
@@ -561,17 +567,17 @@ def eca_errors(search, args, dir):
     count = len(results) if isinstance(results, list) else 0
     tools.completage("Processing", count or 1, (count or 1) - 1)
     print(os.linesep, end="\r")
-    header, rows, header_hf = [], [], []
+    header, rows = [], []
     if isinstance(results, list) and results:
-        header, rows, header_hf = tools.json2csv(results)
-        header_hf.insert(0, "Discovery Instance")
+        header, rows, _ = tools.json2csv(results)
+        header.insert(0, "Discovery Instance")
         for row in rows:
             row.insert(0, args.target)
     else:
-        header_hf.insert(0, "Discovery Instance")
+        header.insert(0, "Discovery Instance")
     output.define_csv(
         args,
-        header_hf,
+        header,
         rows,
         dir + defaults.eca_errors_filename,
         args.output_file,
@@ -585,17 +591,17 @@ def open_ports(search, args, dir):
     count = len(results) if isinstance(results, list) else 0
     tools.completage("Processing", count or 1, (count or 1) - 1)
     print(os.linesep, end="\r")
-    header, rows, header_hf = [], [], []
+    header, rows = [], []
     if isinstance(results, list) and results:
-        header, rows, header_hf = tools.json2csv(results)
-        header_hf.insert(0, "Discovery Instance")
+        header, rows, _ = tools.json2csv(results)
+        header.insert(0, "Discovery Instance")
         for row in rows:
             row.insert(0, args.target)
     else:
-        header_hf.insert(0, "Discovery Instance")
+        header.insert(0, "Discovery Instance")
     output.define_csv(
         args,
-        header_hf,
+        header,
         rows,
         dir + defaults.open_ports_filename,
         args.output_file,
@@ -606,8 +612,8 @@ def open_ports(search, args, dir):
 def device_capture_candidates(search, args, dir):
     """Export capture candidates, defaulting missing sysobjectid to 0."""
     results = search_results(search, queries.capture_candidates)
-    header, rows, header_hf = tools.json2csv(results or [])
-    header = [h.lower() for h in header]
+    header, rows, lookup = tools.json2csv(results or [], return_map=True)
+    header = [lookup.get(h, h) for h in header]
     if "sysobjectid" in header:
         idx = header.index("sysobjectid")
         for row in rows:
@@ -632,18 +638,18 @@ def host_util(search, args, dir):
     count = len(results) if isinstance(results, list) else 0
     tools.completage("Processing", count or 1, (count or 1) - 1)
     print(os.linesep, end="\r")
-    header, rows, header_hf = [], [], []
+    header, rows = [], []
     if isinstance(results, list) and results:
         header, rows, lookup = tools.json2csv(results, return_map=True)
-        header_hf = [lookup.get(h, h) for h in header]
-        header_hf.insert(0, "Discovery Instance")
+        header = [lookup.get(h, h) for h in header]
+        header.insert(0, "Discovery Instance")
         numeric_cols = [
             "Running Software Instances",
             "Candidate Software Instances",
             "Running Processes",
             "Running Services (Windows)",
         ]
-        numeric_indexes = [header_hf.index(c) for c in numeric_cols if c in header_hf]
+        numeric_indexes = [header.index(c) for c in numeric_cols if c in header]
         for row in rows:
             row.insert(0, args.target)
             for idx in numeric_indexes:
@@ -652,10 +658,10 @@ def host_util(search, args, dir):
                 except (ValueError, TypeError):
                     row[idx] = 0
     else:
-        header_hf.insert(0, "Discovery Instance")
+        header.insert(0, "Discovery Instance")
     output.define_csv(
         args,
-        header_hf,
+        header,
         rows,
         dir + defaults.host_util_filename,
         args.output_file,
@@ -682,20 +688,17 @@ def missing_vms(search, args, dir):
     if getattr(args, "resolve_hostnames", False):
         response = search_results(search, queries.missing_vms)
         if isinstance(response, list) and len(response) > 0:
-            header, data, header_hf = tools.json2csv(response)
+            header, data, _ = tools.json2csv(response)
             header.insert(0, "Discovery Instance")
-            header_hf.insert(0, "Discovery Instance")
             for row in data:
                 row.insert(0, args.target)
 
             gf_index = header.index("Guest Full Name") if "Guest Full Name" in header else None
             header.append("Pingable")
-            header_hf.append("Pingable")
 
             devices = devices_lookup(search)
-            
+
             header.extend(["last_identity", "last_scanned", "last_result"])
-            header_hf.extend(["Last Identity", "Last Scanned", "Last Result"])
 
             timer_count = 0
             for row in data:
@@ -724,10 +727,9 @@ def missing_vms(search, args, dir):
                     row.extend(["N/A", "N/A", "N/A"])
             print(os.linesep, end="\r")
 
-            csv_header = tools.normalize_keys(header)
             output.define_csv(
                 args,
-                csv_header,
+                header,
                 data,
                 dir + defaults.missing_vms_filename,
                 args.output_file,
@@ -787,16 +789,16 @@ def capture_candidates(search, args, dir):
     print(os.linesep, end="\r")
     header, rows = [], []
     if isinstance(results, list) and results:
-        header, rows, _ = tools.json2csv(results)
+        header, rows, lookup = tools.json2csv(results, return_map=True)
+        header = [lookup.get(h, h) for h in header]
         for row in rows:
             row.insert(0, args.target)
             # Replace ``None`` values with "N/A" for readability
             row[1:] = [value if value is not None else "N/A" for value in row[1:]]
     header.insert(0, "Discovery Instance")
-    csv_header = tools.normalize_keys(header)
     output.define_csv(
         args,
-        csv_header,
+        header,
         rows,
         dir + defaults.capture_candidates_filename,
         args.output_file,

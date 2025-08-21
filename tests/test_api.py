@@ -18,7 +18,6 @@ from core.api import (
     get_outpost_credential_map,
 )
 import core.api as api_mod
-from core.tools import normalize_keys
 from core import queries, tools
 import core.access as access
 
@@ -154,7 +153,7 @@ def test_show_runs_excavate_routes_to_define_csv(monkeypatch):
 
     show_runs(disco, args)
 
-    assert recorded["header"] == normalize_keys(["Run Id", "Status"])
+    assert recorded["header"] == ["run_id", "status"]
     assert recorded["data"] == [["1", "running"]]
 
 
@@ -470,7 +469,7 @@ def test_capture_candidates_writes_csv(monkeypatch):
     api_mod.capture_candidates(types.SimpleNamespace(), args, "/tmp")
 
     keys = sorted(results[0])
-    expected_header = ["Discovery Instance"] + normalize_keys(keys)
+    expected_header = ["Discovery Instance"] + keys
     expected_row = [
         "appl"
     ] + [

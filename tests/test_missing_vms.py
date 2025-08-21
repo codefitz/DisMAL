@@ -18,8 +18,8 @@ class DummySearch:
 
 def test_missing_vms_calls_completage(monkeypatch):
     results = [
-        {"Guest_Full_Name": "h1"},
-        {"Guest_Full_Name": "h2"},
+        {"VirtualMachine.guest_full_name": "h1"},
+        {"VirtualMachine.guest_full_name": "h2"},
     ]
 
     monkeypatch.setattr(api_mod, "search_results", lambda *a, **k: results)
@@ -43,13 +43,13 @@ def test_missing_vms_calls_completage(monkeypatch):
 
 
 def test_missing_vms_enriches_from_devices(monkeypatch):
-    missing = [{"Guest_Full_Name": "h1"}]
+    missing = [{"VirtualMachine.guest_full_name": "h1"}]
 
     device_info = [{
-        "DA_Endpoint": "1.2.3.4",
-        "Device_Hostname": "id1",
-        "DA_Start": "2024-01-01 10:00:00",
-        "DA_Result": "OK",
+        "DiscoveryAccess.endpoint": "1.2.3.4",
+        "DeviceInfo.hostname": "id1",
+        "DiscoveryAccess.starttime": "2024-01-01 10:00:00",
+        "DiscoveryAccess.result": "OK",
     }]
 
     def fake_search_results(search, query):

@@ -69,16 +69,16 @@ def test_ordering_inserts_instance_and_outpost(monkeypatch):
     builder.ordering(creds, DummySearch(), args, False)
 
     # Verify the new key is propagated through the report and that only
-    # weighted credentials are included with populated Scope and OutpostUrl.
+    # weighted credentials are included with populated Scope and Outpost URL.
     assert captured["name"] == "suggested_cred_opt"
     assert captured["headers"] == [
         "Discovery Instance",
         "Credential",
-        "CurrentIndex",
+        "Current Index",
         "Weighting",
-        "NewIndex",
+        "New Index",
         "Scope",
-        "OutpostUrl",
+        "Outpost URL",
     ]
     assert captured["data"] == [["appl", "c", 1, 99, 0, "s", "http://op"]]
 
@@ -415,14 +415,14 @@ def test_unique_identities_merges_device_data(monkeypatch):
 
     devices = [
         {
-            "DA_Endpoint": "10.0.0.1",
-            "Inferred_All_IP_Addrs": ["10.0.0.1", "10.0.0.2"],
-            "Device_Sysname": "host1",
+            "DiscoveryAccess.endpoint": "10.0.0.1",
+            "InferredElement.__all_ip_addrs": ["10.0.0.1", "10.0.0.2"],
+            "DeviceInfo.sysname": "host1",
         },
         {
-            "DA_Endpoint": "10.0.0.2",
-            "Inferred_All_IP_Addrs": ["10.0.0.2"],
-            "Device_Sysname": "host2",
+            "DiscoveryAccess.endpoint": "10.0.0.2",
+            "InferredElement.__all_ip_addrs": ["10.0.0.2"],
+            "DeviceInfo.sysname": "host2",
         },
     ]
     da_results = [{"ip": "10.0.0.1"}, {"ip": "10.0.0.2"}]

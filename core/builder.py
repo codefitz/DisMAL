@@ -360,11 +360,7 @@ def ordering(creds, search, args, apply):
         # Only log the new order to avoid mixing datasets.
 
     if data:
-        # ``normalize_headers`` returns ``(headers, lookup)`` with headers in
-        # Title Case. Convert the header names to a mutable list and then to
-        # CamelCase so we can safely insert additional labels.
-        headers = list(tools.normalize_headers(headers, return_lookup=True)[0])
-        headers = [tools.normalize_header(h) for h in headers]
+        # Prepend the discovery instance before exporting the report.
         headers.insert(0, "Discovery Instance")
         for row in data:
             row.insert(0, getattr(args, "target", None))
@@ -750,20 +746,20 @@ def unique_identities(search, include_endpoints=None, endpoint_prefix=None):
 
     # Fields to expand for IPs and hostnames
     ip_fields = [
-        "Chosen_Endpoint",
-        "Discovered_IP_Addrs",
-        "Inferred_All_IP_Addrs",
-        "NIC_IPs",
+        "Endpoint.endpoint",
+        "DiscoveredIPAddress.ip_addr",
+        "InferredElement.__all_ip_addrs",
+        "NetworkInterface.ip_addr",
     ]
     name_fields = [
-        "Device_Sysname",
-        "Device_Hostname",
-        "Device_FQDN",
-        "Inferred_Name",
-        "Inferred_Hostname",
-        "Inferred_FQDN",
-        "Inferred_Sysname",
-        "NIC_FQDNs",
+        "DeviceInfo.sysname",
+        "DeviceInfo.hostname",
+        "DeviceInfo.fqdn",
+        "InferredElement.name",
+        "InferredElement.hostname",
+        "InferredElement.local_fqdn",
+        "InferredElement.sysname",
+        "NetworkInterface.fqdns",
     ]
 
     # Populate endpoint map while iterating over devices once
@@ -777,7 +773,7 @@ def unique_identities(search, include_endpoints=None, endpoint_prefix=None):
 
         ips = []
         names = []
-        endpoint = device.get("DA_Endpoint")
+        endpoint = device.get("DiscoveryAccess.endpoint")
         if endpoint:
             ips.append(endpoint)
 

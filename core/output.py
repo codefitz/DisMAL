@@ -221,7 +221,6 @@ def report(data, heads, args, name=None):
 
 def cmd2csv(header,result,seperator,filename,appliance):
     data = []
-    header = tools.normalize_headers(header)
     header.insert(0,"Discovery Instance")
     for line in result.split("\r\n"):
         lines = line.split("\n")

@@ -433,13 +433,15 @@ def discovery_runs(disco, args, dir):
         logger.debug('Runs:\n%s' % r)
         header, rows, _ = tools.json2csv(runs)
         header.insert(0, "Discovery Instance")
+        int_fields = {"done", "pre_scanning", "scanning", "total"}
         for row in rows:
             row.insert(0, args.target)
-            for idx in [1, 2, 4, 5]:
-                try:
-                    row[idx] = int(row[idx])
-                except (ValueError, TypeError):
-                    pass
+            for idx, field in enumerate(header[1:], start=1):
+                if field in int_fields:
+                    try:
+                        row[idx] = int(row[idx])
+                    except (ValueError, TypeError):
+                        pass
         output.define_csv(
             args,
             header,
@@ -628,30 +630,29 @@ def host_util(search, args, dir):
     count = len(results) if isinstance(results, list) else 0
     tools.completage("Processing", count or 1, (count or 1) - 1)
     print(os.linesep, end="\r")
-    header, rows, header_hf = [], [], []
+    header, rows = [], []
     if isinstance(results, list) and results:
-        header, rows, lookup = tools.json2csv(results, return_map=True)
-        header_hf = [lookup.get(h, h) for h in header]
-        header_hf.insert(0, "Discovery Instance")
-        numeric_cols = [
-            "Running Software Instances",
-            "Candidate Software Instances",
-            "Running Processes",
-            "Running Services (Windows)",
-        ]
-        numeric_indexes = [header_hf.index(c) for c in numeric_cols if c in header_hf]
+        header, rows, _ = tools.json2csv(results, return_map=True)
+        header.insert(0, "Discovery Instance")
+        numeric_cols = {
+            "Host.running_software_instances",
+            "Host.candidate_software_instances",
+            "Host.running_processes",
+            "Host.running_services",
+        }
         for row in rows:
             row.insert(0, args.target)
-            for idx in numeric_indexes:
-                try:
-                    row[idx] = int(row[idx])
-                except (ValueError, TypeError):
-                    row[idx] = 0
+            for idx, field in enumerate(header[1:], start=1):
+                if field in numeric_cols:
+                    try:
+                        row[idx] = int(row[idx])
+                    except (ValueError, TypeError):
+                        row[idx] = 0
     else:
-        header_hf.insert(0, "Discovery Instance")
+        header = ["Discovery Instance"]
     output.define_csv(
         args,
-        header_hf,
+        header,
         rows,
         dir + defaults.host_util_filename,
         args.output_file,
@@ -788,6 +789,8 @@ def capture_candidates(search, args, dir):
             row.insert(0, args.target)
             # Replace ``None`` values with "N/A" for readability
             row[1:] = [value if value is not None else "N/A" for value in row[1:]]
+    else:
+        header, rows = [], []
     header.insert(0, "Discovery Instance")
     output.define_csv(
         args,

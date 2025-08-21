@@ -88,3 +88,30 @@ def test_cli_orphan_vms_includes_os_type(monkeypatch):
     assert "DeviceInfo.os_type" in captured["query"]
     assert "OS_Type" in captured["header"]
 
+
+def test_api_orphan_vms_handles_non_list_response(monkeypatch):
+    captured = {}
+
+    def fake_search_results(search, query):
+        return {"error": "bad"}
+
+    def fake_csv_file(data, header, filename):
+        captured["data"] = data
+        captured["header"] = header
+
+    monkeypatch.setattr(api_mod, "search_results", fake_search_results)
+    monkeypatch.setattr(api_mod.output, "csv_file", fake_csv_file)
+
+    args = types.SimpleNamespace(
+        output_file=None,
+        output_csv=None,
+        output_null=False,
+        output_cli=False,
+        target="t",
+    )
+
+    api_mod.orphan_vms(DummySearch(), args, "")
+
+    assert captured["data"] == []
+    assert captured["header"] == []
+

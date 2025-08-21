@@ -440,7 +440,12 @@ def discovery_runs(disco, args, dir):
         logger.debug('Runs:\n%s' % r)
         header, rows, _ = tools.json2csv(runs)
         header.insert(0, "Discovery Instance")
-        int_fields = {"done", "pre_scanning", "scanning", "total"}
+        int_fields = {
+            "DiscoveryRun.done",
+            "DiscoveryRun.pre_scanning",
+            "DiscoveryRun.scanning",
+            "DiscoveryRun.total",
+        }
         for row in rows:
             row.insert(0, args.target)
             for idx, field in enumerate(header[1:], start=1):
@@ -670,6 +675,14 @@ def host_util(search, args, dir):
 @output._timer("Orphan VMs")
 def orphan_vms(search, args, dir):
     results = search_results(search, queries.orphan_vms)
+    if not isinstance(results, list) or not all(isinstance(r, dict) for r in results):
+        logger.error(
+            "Unexpected search results type for orphan_vms: %s",
+            type(results).__name__,
+        )
+        output.csv_file([], [], dir + defaults.orphan_vms_filename)
+        return
+
     headers = []
     rows = []
     for r in results or []:

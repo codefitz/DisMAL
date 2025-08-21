@@ -221,7 +221,6 @@ def report(data, heads, args, name=None):
 
 def cmd2csv(header,result,seperator,filename,appliance):
     data = []
-    header = tools.normalize_headers(header)
     header.insert(0,"Discovery Instance")
     for line in result.split("\r\n"):
         lines = line.split("\n")
@@ -282,7 +281,7 @@ def define_csv(args, head_ep, data, path, file, target, type, tku=None):
 
     cli_out = getattr(args, "output_cli", False)
     if isinstance(head_ep, list):
-        head_ep = tools.normalize_keys(head_ep)
+        head_ep = list(head_ep)
     if type == "cmd":
         if args.output_file:
             cmd2csv(head_ep, data, ":", file, target)

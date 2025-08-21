@@ -746,20 +746,20 @@ def unique_identities(search, include_endpoints=None, endpoint_prefix=None):
 
     # Fields to expand for IPs and hostnames
     ip_fields = [
-        "Chosen_Endpoint",
-        "Discovered_IP_Addrs",
-        "Inferred_All_IP_Addrs",
-        "NIC_IPs",
+        "Endpoint.endpoint",
+        "DiscoveredIPAddress.ip_addr",
+        "InferredElement.__all_ip_addrs",
+        "NetworkInterface.ip_addr",
     ]
     name_fields = [
-        "Device_Sysname",
-        "Device_Hostname",
-        "Device_FQDN",
-        "Inferred_Name",
-        "Inferred_Hostname",
-        "Inferred_FQDN",
-        "Inferred_Sysname",
-        "NIC_FQDNs",
+        "DeviceInfo.sysname",
+        "DeviceInfo.hostname",
+        "DeviceInfo.fqdn",
+        "InferredElement.name",
+        "InferredElement.hostname",
+        "InferredElement.local_fqdn",
+        "InferredElement.sysname",
+        "NetworkInterface.fqdns",
     ]
 
     # Populate endpoint map while iterating over devices once
@@ -773,7 +773,7 @@ def unique_identities(search, include_endpoints=None, endpoint_prefix=None):
 
         ips = []
         names = []
-        endpoint = device.get("DA_Endpoint")
+        endpoint = device.get("DiscoveryAccess.endpoint")
         if endpoint:
             ips.append(endpoint)
 

@@ -10,17 +10,6 @@ from cidrize import cidrize
 
 logger = logging.getLogger("_tools_")
 
-def snake_to_camel(value):
-    """Convert snake_case string to Camel Case with spaces.
-
-    Examples:
-        >>> snake_to_camel("pre_scanning")
-        'Pre Scanning'
-    """
-    if not isinstance(value, str):
-        return value
-    return " ".join(word.capitalize() for word in value.split("_"))
-
 def in_wsl() -> bool:
     """
         WSL is thought to be the only common Linux kernel with Microsoft in the name, per Microsoft:
@@ -117,37 +106,6 @@ def sortdic(lst):
     logger.debug(lst)
     return lst2
 
-def normalize_key(key):
-    """Return ``key`` converted from ``snake_case`` or dotted names to Title Case."""
-    parts = re.split(r"[_\.]+", key)
-    return " ".join(p.capitalize() for p in parts if p)
-
-def normalize_headers(headers, return_lookup=False):
-    """Normalize ``headers`` and optionally return a lookup map.
-
-    Parameters
-    ----------
-    headers : Iterable[str]
-        Header labels to normalize.
-    return_lookup : bool, optional
-        When ``True`` return a tuple of ``(headers, lookup)`` where ``lookup``
-        maps the normalized labels back to their original values.  When
-        ``False`` only the list of normalized headers is returned.
-    """
-    if not headers:
-        return ([], {}) if return_lookup else []
-
-    normalized = []
-    lookup = {}
-    for key in headers:
-        norm = normalize_key(key)
-        normalized.append(norm)
-        lookup[norm] = key
-
-    if return_lookup:
-        return normalized, lookup
-    return normalized
-
 def completage(message, record_count, timer_count):
     timer_count += 1
     pc = (float(timer_count) / float(record_count))
@@ -176,10 +134,10 @@ def session_get(results):
     for result in results:
         # Cast count values to integers to ensure arithmetic works as expected
         count = int(result.get('Count', 0))
-        uuid = result.get('UUID')
-        restype = result.get('Session_Type')
+        uuid = result.get('SessionResult.slave_or_credential')
+        restype = result.get('SessionResult.session_type')
         if uuid:
-            sessions[uuid] = [ restype, count ]
+            sessions[uuid] = [restype, count]
     return sessions
 
 def ip_or_string(value):
@@ -232,29 +190,25 @@ def dequote(s):
 
 
 def json2csv(jsdata, return_map=False):
-    orig_header = []
+    header = []
     data = []
     for jsitem in jsdata:
-        headers = jsitem.keys()  # get the headers, unstructured
-        for label in headers:
-            # create a unique list of ALL possible headers
-            orig_header.append(label)
-            orig_header = sortlist(orig_header)
-
-    header, lookup = normalize_headers(orig_header, return_lookup=True)
+        for label in jsitem.keys():
+            header.append(label)
+            header = sortlist(header)
 
     for jsitem in jsdata:
         values = []
-        for key in orig_header:
-            # Loop through the unique set of headers and get values if exist
-            values.append(getr(jsitem, key, "N/A"))  # Substitute if missing
+        for key in header:
+            values.append(getr(jsitem, key, "N/A"))
         data.append(values)
 
+    lookup = {h: h for h in header}
     if return_map:
+        lookup = {h: h for h in header}
         return header, data, lookup
 
-    human_header = [snake_to_camel(h) for h in header]
-    return header, data, human_header
+    return header, data, header
 
 def snake_to_title(value):
     """Convert ``snake_case`` strings to Title Case with spaces.
@@ -296,20 +250,4 @@ def list_table_to_json(rows):
         headers = rows[0]
         return [dict(zip(headers, r)) for r in rows[1:]]
     return rows
-
-def normalize_keys(keys):
-    """Return header names in Title Case with spaces.
-
-    Any key containing underscores or entirely lowercase characters is
-    converted to a human-friendly form. Keys that already contain
-    capital letters or spaces are returned unchanged.
-    """
-
-    normalized = []
-    for key in keys:
-        if "_" in key or key.islower():
-            normalized.append(key.replace("_", " ").title())
-        else:
-            normalized.append(key)
-    return normalized
 

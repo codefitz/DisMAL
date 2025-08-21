@@ -186,14 +186,21 @@ def baseline(disco, args, dir):
                 # Failures
                 header = []
                 rows = []
-                header_hf = []
                 if "FAILED" in baseline['results']:
                     failures = baseline['results']['FAILED']
-                    header, rows, header_hf = tools.json2csv(failures)
-                header_hf.insert(0, "Discovery Instance")
+                    header, rows, _ = tools.json2csv(failures)
+                header.insert(0, "Discovery Instance")
                 for row in rows:
                     row.insert(0, args.target)
-                output.define_csv(args, header_hf, rows, dir + defaults.baseline_filename, args.output_file, args.target, "csv_file")
+                output.define_csv(
+                    args,
+                    header,
+                    rows,
+                    dir + defaults.baseline_filename,
+                    args.output_file,
+                    args.target,
+                    "csv_file",
+                )
         except Exception as e:
             logger.error("Problem with baseline:\n%s\n%s"%(e.__class__,str(e)))
             # Try dumping it
@@ -489,12 +496,12 @@ def show_runs(disco, args):
     outfile = getattr(args, "file", getattr(args, "output_file", None))
     if export:
         w = csv.writer(sys.stdout)
-        w.writerow(headers)
+        w.writerow(raw_headers)
         w.writerows(run_csvs)
     elif outfile:
         with open(outfile, "w", newline="") as file:
             writer = csv.writer(file)
-            writer.writerow(headers)
+            writer.writerow(raw_headers)
             writer.writerows(run_csvs)
             msg = "Report saved to %s" % outfile
             print(msg)
@@ -525,17 +532,17 @@ def sensitive(search, args, dir):
     count = len(results) if isinstance(results, list) else 0
     tools.completage("Processing", count or 1, (count or 1) - 1)
     print(os.linesep, end="\r")
-    header, rows, header_hf = [], [], []
+    header, rows = [], []
     if isinstance(results, list) and results:
-        header, rows, header_hf = tools.json2csv(results)
-        header_hf.insert(0, "Discovery Instance")
+        header, rows, _ = tools.json2csv(results)
+        header.insert(0, "Discovery Instance")
         for row in rows:
             row.insert(0, args.target)
     else:
-        header_hf.insert(0, "Discovery Instance")
+        header.insert(0, "Discovery Instance")
     output.define_csv(
         args,
-        header_hf,
+        header,
         rows,
         dir + defaults.sensitive_data_filename,
         args.output_file,
@@ -560,17 +567,17 @@ def eca_errors(search, args, dir):
     count = len(results) if isinstance(results, list) else 0
     tools.completage("Processing", count or 1, (count or 1) - 1)
     print(os.linesep, end="\r")
-    header, rows, header_hf = [], [], []
+    header, rows = [], []
     if isinstance(results, list) and results:
-        header, rows, header_hf = tools.json2csv(results)
-        header_hf.insert(0, "Discovery Instance")
+        header, rows, _ = tools.json2csv(results)
+        header.insert(0, "Discovery Instance")
         for row in rows:
             row.insert(0, args.target)
     else:
-        header_hf.insert(0, "Discovery Instance")
+        header.insert(0, "Discovery Instance")
     output.define_csv(
         args,
-        header_hf,
+        header,
         rows,
         dir + defaults.eca_errors_filename,
         args.output_file,
@@ -584,17 +591,17 @@ def open_ports(search, args, dir):
     count = len(results) if isinstance(results, list) else 0
     tools.completage("Processing", count or 1, (count or 1) - 1)
     print(os.linesep, end="\r")
-    header, rows, header_hf = [], [], []
+    header, rows = [], []
     if isinstance(results, list) and results:
-        header, rows, header_hf = tools.json2csv(results)
-        header_hf.insert(0, "Discovery Instance")
+        header, rows, _ = tools.json2csv(results)
+        header.insert(0, "Discovery Instance")
         for row in rows:
             row.insert(0, args.target)
     else:
-        header_hf.insert(0, "Discovery Instance")
+        header.insert(0, "Discovery Instance")
     output.define_csv(
         args,
-        header_hf,
+        header,
         rows,
         dir + defaults.open_ports_filename,
         args.output_file,
@@ -784,7 +791,8 @@ def capture_candidates(search, args, dir):
     print(os.linesep, end="\r")
     header, rows = [], []
     if isinstance(results, list) and results:
-        header, rows, _ = tools.json2csv(results)
+        header, rows, lookup = tools.json2csv(results, return_map=True)
+        header = [lookup.get(h, h) for h in header]
         for row in rows:
             row.insert(0, args.target)
             # Replace ``None`` values with "N/A" for readability

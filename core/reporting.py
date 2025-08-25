@@ -162,16 +162,16 @@ def successful(creds, search, args):
 
     timer_count = 0
     for cred in vaultcreds:
-        timer_count = tools.completage("Gathering Credentials", len(vaultcreds), timer_count)
+        timer_count = tools.completage(
+            "Gathering Credentials", len(vaultcreds), timer_count
+        )
 
-        msg = "Analysing Credential:%s\n"%cred.get('uuid')
-        logger.debug(msg)
+        logger.debug("Analysing Credential:%s", cred.get('uuid'))
 
         detail = builder.get_credentials(cred)
 
         uuid = detail.get('uuid')
-        msg = "Working UUID :%s\n"%uuid
-        logger.debug(msg)
+        logger.debug("Working UUID :%s", uuid)
         # Ensure index is numeric for downstream calculations
         index = int(tools.getr(detail, 'index', 0) or 0)
         
@@ -229,20 +229,17 @@ def successful(creds, search, args):
         if sessions[0] and devinfos[0]:
             success_all = int(sessions[1]) + int(devinfos[1])
             session = sessions[0] or devinfos[0]
-            msg = "Sessions and DevInfos: %s" % success_all
-            logger.debug(msg)
+            logger.debug("Sessions and DevInfos: %s", success_all)
         elif sessions[0]:
             # Successful sessions without device info results
             success_all = int(sessions[1])
             session = sessions[0]
-            msg = "Sessions only: %s" % success_all
-            logger.debug(msg)
+            logger.debug("Sessions only: %s", success_all)
         elif devinfos[0]:
             # Device info successes only
             success_all = int(devinfos[1])
             session = devinfos[0]
-            msg = "DevInfos only: %s" % success_all
-            logger.debug(msg)
+            logger.debug("DevInfos only: %s", success_all)
 
         if sessions7[0] and devinfos7[0]:
             success7 = int(sessions7[1]) + int(devinfos7[1])
@@ -252,16 +249,14 @@ def successful(creds, search, args):
             success7 = int(devinfos7[1])
 
         scheduled_scans = builder.get_scans(scan_ranges_results, list_of_ranges)
-        msg = "Scheduled Scans List" % scheduled_scans
-        logger.debug(msg)
+        logger.debug("Scheduled Scans List %s", scheduled_scans)
 
         excluded_scans = builder.get_scans(excludes_results, list_of_ranges)
-        msg = "Excluded Scans List" % excluded_scans
-        logger.debug(msg)
+        logger.debug("Excluded Scans List %s", excluded_scans)
 
         fails_all = int(failure[1])
         if fails_all:
-            logger.debug("Failures:%s" % fails_all)
+            logger.debug("Failures:%s", fails_all)
         fails7 = int(failure7[1])
 
         # Mark credential as active when any failure data exists so the
@@ -275,7 +270,7 @@ def successful(creds, search, args):
         fails_all = int(fails_all)
         total = success_all + fails_all
         if total > 0:
-            logger.debug("Success:%s\nTotal:%s" % (success_all, total))
+            logger.debug("Success:%s Total:%s", success_all, total)
             percent_all = success_all / float(total)
 
         success7 = int(success7)
@@ -415,8 +410,7 @@ def successful_cli(client, args, sysuser, passwd, reporting_dir):
     headers = []
 
     for cred_detail in credjson:
-        msg = "Analysing Credential: %s\n"%cred_detail.get('uuid')
-        logger.debug(msg)
+        logger.debug("Analysing Credential: %s", cred_detail.get('uuid'))
 
         detail = tools.extract_credential(cred_detail)
         uuid = detail.get('uuid')
@@ -468,20 +462,19 @@ def successful_cli(client, args, sysuser, passwd, reporting_dir):
         failure = _sum_for_uuid(credfail, uuid)
         active = success > 0 or failure > 0
 
-        msg = "Failures found, Active: %s" % failure
-        logger.debug(msg)
+        logger.debug("Failures found, Active: %s", failure)
             
         total = success + failure
         percent = 0.0
         if total > 0:
-            logger.debug("Successes: %s\nOut of Total: %s" % (success, total))
+            logger.debug("Successes: %s Out of Total: %s", success, total)
             percent = success / total
 
         if active:
-            logger.debug("UUID %s found Active"%uuid)
+            logger.debug("UUID %s found Active", uuid)
             data.append([ detail.get('label'), uuid, detail.get('username'), types, success, failure, percent, status, list_of_ranges, ip_exclude ])
         else:
-            logger.debug("UUID %s found Inactive"%uuid)
+            logger.debug("UUID %s found Inactive", uuid)
             data.append([ detail.get('label'), uuid, detail.get('username'), types, None, None, 0.0, "Credential appears to not be in use (%s)" % status, detail.get('usage'), detail.get('internal_store'), list_of_ranges, ip_exclude ])
         headers = [ "Credential", "UUID", "Login ID", "Protocol", "Successes", "Failures", "Success %", "State", "Usage", "Store", "Scan Ranges", "Exclude Ranges" ]
 
@@ -537,7 +530,7 @@ def devices(twsearch, twcreds, args, identities=None):
     for identity in identities:
         identity_timer += 1
         _progress(identity_timer, len(identities), result_timer, total_result_iterations)
-        logger.debug("Processing identity %s"%identity)
+        logger.debug("Processing identity %s", identity)
         latest_timestamp = None
         all_credentials_used = []
         all_discovery_runs = []
@@ -550,7 +543,7 @@ def devices(twsearch, twcreds, args, identities=None):
             result_timer += 1
             _progress(identity_timer, len(identities), result_timer, total_result_iterations)
             da_endpoint = tools.getr(result,'DiscoveryAccess.endpoint',None)
-            logger.debug("Checking endpoint %s in identity %s"%(da_endpoint,identity))
+            logger.debug("Checking endpoint %s in identity %s", da_endpoint, identity)
 
             # If this deviceinfo record relates to this device identity
             if da_endpoint in identity.get('list_of_ips'):
@@ -558,7 +551,7 @@ def devices(twsearch, twcreds, args, identities=None):
                 # Collect ALL Data
 
                 device_name = tools.getr(result,'DeviceInfo.hostname',"None")
-                logger.debug("%s Device Name: %s"%(da_endpoint,device_name))
+                logger.debug("%s Device Name: %s", da_endpoint, device_name)
                 all_device_names = [ device_name ]
                 all_device_names = tools.list_of_lists(result,'Inferred_Name',all_device_names)
                 all_device_names = tools.list_of_lists(result,'Inferred_Hostname',all_device_names)
@@ -567,12 +560,12 @@ def devices(twsearch, twcreds, args, identities=None):
                 all_endpoints = tools.list_of_lists(result,'Endpoint.endpoint',all_endpoints)
                 all_endpoints = tools.list_of_lists(result,'DiscoveredIPAddress.ip_addr',all_endpoints)
                 all_endpoints = tools.list_of_lists(result,'InferredElement.__all_ip_addrs',all_endpoints)
-                logger.debug("%s All endpoints: %s"%(da_endpoint,all_endpoints))
+                logger.debug("%s All endpoints: %s", da_endpoint, all_endpoints)
                     
                 scan_run = tools.getr(result,'DiscoveryRun.label',"None")
                 all_discovery_runs.append(scan_run)
                 all_discovery_runs = tools.sortlist(all_discovery_runs)
-                logger.debug("%s All Runs: %s"%(da_endpoint,all_discovery_runs))
+                logger.debug("%s All Runs: %s", da_endpoint, all_discovery_runs)
 
                 uuid = tools.getr(result,'DeviceInfo.last_credential',None)
 
@@ -585,14 +578,14 @@ def devices(twsearch, twcreds, args, identities=None):
                     cred_username = tools.getr(credential_details,'username',"Not Found")
                     all_credentials_used.append("%s (%s)" % (cred_label,uuid))
                 all_credentials_used = tools.sortlist(all_credentials_used)
-                logger.debug("%s All Runs: %s"%(da_endpoint,all_credentials_used))
+                logger.debug("%s All Runs: %s", da_endpoint, all_credentials_used)
                 
                 da_result = tools.getr(result,'DiscoveryAccess.result',"None")
                 end_state = tools.getr(result,'DiscoveryAccess.end_state',"None")
                 last_marker = tools.getr(result,'DiscoveryAccess._last_marker',None)
                 had_inference = tools.getr(result,'DiscoveryAccess.__had_inference',None)
-                logger.debug("%s Last Marker: %s"%(da_endpoint,last_marker))
-                logger.debug("%s Had Inference: %s"%(da_endpoint,had_inference))
+                logger.debug("%s Last Marker: %s", da_endpoint, last_marker)
+                logger.debug("%s Had Inference: %s", da_endpoint, had_inference)
 
                 # Other Attributes
 
@@ -605,7 +598,7 @@ def devices(twsearch, twcreds, args, identities=None):
                 endtime = tools.getr(result,'DiscoveryAccess.endtime',"None")
                 kind = tools.getr(result,'DeviceInfo.kind',"None")
                 last_access_method = tools.getr(result,'DeviceInfo.last_access_method',"None")
-                logger.debug("%s Last Access Method: %s"%(da_endpoint,last_access_method))
+                logger.debug("%s Last Access Method: %s", da_endpoint, last_access_method)
 
                 all_kinds.append(kind)
 
@@ -622,16 +615,30 @@ def devices(twsearch, twcreds, args, identities=None):
                 start_time_str = start_time_str[:2]
                 start_time_str = " ".join(start_time_str)
                 start_timestamp = datetime.datetime.strptime(start_time_str, "%Y-%m-%d %H:%M:%S")
-                logger.debug("%s Start Timestamp: %s latest Timestamp: %s"%(da_endpoint,start_timestamp,latest_timestamp))
+                logger.debug(
+                    "%s Start Timestamp: %s latest Timestamp: %s",
+                    da_endpoint,
+                    start_timestamp,
+                    latest_timestamp,
+                )
                 if not latest_timestamp:
-                    logger.debug("%s No Latest Timestamp, setting to Start Timestamp: %s"%(da_endpoint,latest_timestamp))
+                    logger.debug(
+                        "%s No Latest Timestamp, setting to Start Timestamp: %s",
+                        da_endpoint,
+                        latest_timestamp,
+                    )
                     latest_timestamp = start_timestamp
                 if start_timestamp > latest_timestamp:
-                    logger.debug("%s Start Timestamp %s is fresher than latest_timestamp: %s"%(da_endpoint,start_timestamp,latest_timestamp))
+                    logger.debug(
+                        "%s Start Timestamp %s is fresher than latest_timestamp: %s",
+                        da_endpoint,
+                        start_timestamp,
+                        latest_timestamp,
+                    )
                     latest_timestamp = start_timestamp
 
                     if last_marker: # The last scan
-                        logger.debug("%s, %s Last Marker is set."%(da_endpoint,latest_timestamp))
+                        logger.debug("%s, %s Last Marker is set.", da_endpoint, latest_timestamp)
 
                         # Collect the very LAST Data
 
@@ -662,7 +669,7 @@ def devices(twsearch, twcreds, args, identities=None):
                                     })
                     
                     if had_inference: # The last successful
-                        logger.debug("%s, %s Had Inference."%(da_endpoint,latest_timestamp))
+                        logger.debug("%s, %s Had Inference.", da_endpoint, latest_timestamp)
 
                         last_successful_identity = device_name
                         last_successful_ip = da_endpoint
@@ -690,25 +697,40 @@ def devices(twsearch, twcreds, args, identities=None):
                 if not last_identity:
                     last_identity = all_device_names[0]
                     device.update({"last_identity":last_identity})
-                    logger.debug("%s, %s Last Identity missing, set to %s"%(da_endpoint,latest_timestamp,last_identity))
+                    logger.debug(
+                        "%s, %s Last Identity missing, set to %s",
+                        da_endpoint,
+                        latest_timestamp,
+                        last_identity,
+                    )
                 if not last_kind:
                     last_kind = kind
                     device.update({"last_kind":last_kind})
-                    logger.debug("%s, %s Last Kind missing, set to %s"%(da_endpoint,latest_timestamp,last_kind))
+                    logger.debug(
+                        "%s, %s Last Kind missing, set to %s",
+                        da_endpoint,
+                        latest_timestamp,
+                        last_kind,
+                    )
                 if not last_scanned_ip:
                     last_scanned_ip = da_endpoint
                     device.update({"last_scanned_ip":last_scanned_ip})
-                    logger.debug("%s, %s Last Scanned IP missing, set to %s"%(da_endpoint,latest_timestamp,last_scanned_ip))
+                    logger.debug(
+                        "%s, %s Last Scanned IP missing, set to %s",
+                        da_endpoint,
+                        latest_timestamp,
+                        last_scanned_ip,
+                    )
 
                 devices.append(device)
-                logger.debug("Device added to list of devices:%s"%(device))
+                logger.debug("Device added to list of devices:%s", device)
 
     # Move to the next line after the progress output
     print()
 
     # Make sure we only report each device once - there is probably a more efficient way to do this in the loop.
     devices = list({v['last_identity']:v for v in devices}.values())
-    logger.debug("Unique List of devices:%s"%(devices))
+    logger.debug("Unique List of devices:%s", devices)
 
     # Build the report
 
@@ -865,45 +887,45 @@ def ipaddr(search, credentials, args):
     if len(devResults) == 1:
         msg = "\nDevices Found:"
         devices_found.append(devResults[0]['Name'])
-        logger.debug("1 Dev Result: %s,%s"%(msg,devices_found))
+        logger.debug("1 Dev Result: %s,%s", msg.strip(), devices_found)
     elif len(devResults) > 1:
         msg = "\nDevices Found:"
         for dev in devResults:
             devices_found.append(dev.get('Name'))
-            logger.debug("Added Dev Result: %s"%(devices_found))
+            logger.debug("Added Dev Result: %s", devices_found)
     if len(accessResults) == 1:
         msg = "\nDevices Found:"
         devices_found.append(accessResults[0]['Name'])
-        logger.debug("1 DA result: %s,%s"%(msg,devices_found))
+        logger.debug("1 DA result: %s,%s", msg.strip(), devices_found)
     elif len(accessResults) > 1:
         msg = "\nDevices Found:"
         for dev in accessResults:
             devices_found.append(dev.get('Name'))
-            logger.debug("Added DA result: %s"%(devices_found))
+            logger.debug("Added DA result: %s", devices_found)
 
     if len(devices_found) == 0:
         msg = "\nDevice not found or data may have aged out!"
-    
+
         for drop in dropped:
             if drop.get('Endpoint') == ipaddr:
                 msg = "Dropped IP Address"
-                logger.debug("Endpoint %s is dropped IP"%(ipaddr))
+                logger.debug("Endpoint %s is dropped IP", ipaddr)
     else:
         devices_found = tools.sortlist(devices_found)
 
     print(msg,devices_found,"\n")
-    logger.debug("Unique List: %s,%s"%(msg,devices_found))
+    logger.debug("Unique List: %s,%s", msg.strip(), devices_found)
 
     id_list = []
     unique_ids = builder.unique_identities(
         search, args.include_endpoints, args.endpoint_prefix
     )
     for identity in unique_ids:
-        logger.debug("Checking IP address %s in Identity %s"%(ipaddr,identity))
+        logger.debug("Checking IP address %s in Identity %s", ipaddr, identity)
         if ipaddr in identity.get('list_of_ips'):
             msg = "Identities Matched:"
             id_list.append(identity)
-            logger.debug("Appending identity to list %s"%(identity))
+            logger.debug("Appending identity to list %s", identity)
     
     if len(id_list) > 0:
         print(msg)
@@ -935,12 +957,12 @@ def ipaddr(search, credentials, args):
                }
     sessionResults = api.search_results(search,sessionQry)
     total = len(sessionResults)
-    logger.debug("%s Session results"%total)
+    logger.debug("%s Session results", total)
     if total == 0:
         # Alternate lookup
         sessionResults = accessResults
         total = len(sessionResults)
-        logger.debug("%s Alternate Session results"%total)
+        logger.debug("%s Alternate Session results", total)
 
     # Build the results
     
@@ -950,13 +972,13 @@ def ipaddr(search, credentials, args):
 
     for result in sessionResults:
         uuid = result.get('credential')
-        logger.debug("UUID from SessionResult %s"%uuid)
+        logger.debug("UUID from SessionResult %s", uuid)
         label = None
         username = None
         status = None
         if uuid:
             vaultcreds = api.get_json(credentials.get_vault_credential(uuid))
-            logger.debug("Pulled Vault Credential %s"%vaultcreds)
+            logger.debug("Pulled Vault Credential %s", vaultcreds)
             detail = builder.get_credentials(vaultcreds)
             label = tools.getr(detail,'label')
             username = tools.getr(detail,'username')
@@ -1517,11 +1539,11 @@ def tpl_export(search, query, dir, method, client, sysuser, syspass):
                         filename = "%s/%s.tpl"%(tpldir,columns[0])
                         columns.pop(0)
                         row = [ tools.dequote(columns) ]
-                        logger.debug("Parsing row:\n%s"%row)
+                        logger.debug("Parsing row: %s", row)
                         row2 = ''.join(row[0])
                         row3 = tools.dequote(row2)
                         newrow = row3.replace('""""','","')
-                        logger.debug("NEW row:\n%s"%newrow)
+                        logger.debug("NEW row: %s", newrow)
                         try:
                             f=open(filename, 'w', encoding="utf-8")
                             f.write(newrow)

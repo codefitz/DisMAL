@@ -1,6 +1,7 @@
 import os
 import sys
 import ipaddress
+import logging
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import core.tools as tools
@@ -66,3 +67,11 @@ def test_session_get_normalizes_uuid_case():
         }
     ]
     assert tools.session_get(results) == {"abcdef": ["ssh", 1]}
+
+
+def test_session_get_logs_warning_for_invalid_input(caplog):
+    with caplog.at_level(logging.DEBUG):
+        result = tools.session_get("oops")
+    assert result == {}
+    assert "session_get expected list of results, got str" in caplog.text
+    assert "session_get received payload: 'oops'" in caplog.text

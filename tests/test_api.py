@@ -154,7 +154,7 @@ def test_show_runs_excavate_routes_to_define_csv(monkeypatch):
 
     reporting_dir = "/tmp"
     args = types.SimpleNamespace(
-        excavate=["active_runs"], reporting_dir=reporting_dir, target="appl"
+        excavate=["active_scans"], reporting_dir=reporting_dir, target="appl"
     )
 
     show_runs(disco, args)
@@ -177,7 +177,7 @@ def test_show_runs_excavate_default_dir(monkeypatch):
 
     monkeypatch.setattr(api_mod.output, "define_csv", fake_define_csv)
 
-    args = types.SimpleNamespace(excavate=["active_runs"])
+    args = types.SimpleNamespace(excavate=["active_scans"])
 
     show_runs(disco, args)
 
@@ -246,15 +246,15 @@ def test_run_queries_executes_named_query(monkeypatch, tmp_path):
     monkeypatch.setattr(api_mod.output, "define_csv", fake_define_csv)
 
     args = types.SimpleNamespace(
-        excavate=["active_runs"], output_file=None, target="appl"
+        excavate=["active_scans"], output_file=None, target="appl"
     )
     search = object()
     outdir = str(tmp_path)
 
     api_mod.run_queries(search, args, outdir)
 
-    assert recorded["query"] == api_mod.queries.active_runs
-    expected = os.path.join(outdir, "qry_active_runs.csv")
+    assert recorded["query"] == api_mod.queries.active_scans
+    expected = os.path.join(outdir, "qry_active_scans.csv")
     assert recorded["path"] == expected
     assert recorded["type"] == "query"
 

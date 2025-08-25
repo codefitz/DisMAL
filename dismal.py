@@ -138,7 +138,7 @@ excavation.add_argument('--excavate', dest='excavate', type=str, required=False,
 Excavation reports - for automated beneficial reporting and deeper analysis.
 Providing no <report> or using "default" will run all options that do not require a value.
 \nOptions:
-"active_runs"               - List active Discovery Runs (use --queries for query output)
+"active_scans"              - List active Discovery Runs (use --queries for query output)
 "credential_success"        - Report on credential success with total number of accesses, success %% and ranges
 "db_lifecycle"              - Export Database lifecycle report
 "device" <name>             - Report on a specific device node by name (Host, NetworkDevice, Printer, SNMPManagedDevice, StorageDevice, ManagementController)
@@ -726,7 +726,7 @@ def run_for_args(args):
         if excavate_default or (args.excavate and args.excavate[0] == "discovery_run_analysis"):
             reporting.discovery_run_analysis(search, creds, args)
 
-        if excavate_default or (args.excavate and args.excavate[0] == "active_runs"):
+        if excavate_default or (args.excavate and args.excavate[0] == "active_scans"):
             api.show_runs(disco, args)
             api.discovery_runs(disco, args, reporting_dir)
 

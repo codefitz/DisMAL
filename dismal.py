@@ -180,6 +180,14 @@ excavation.add_argument('--resolve-hostnames', dest='resolve_hostnames', action=
                         help='Ping guest full names and record the resolved IP address in results.')
 
 excavation.add_argument(
+    '--queries',
+    dest='queries',
+    action='store_true',
+    required=False,
+    help='Run specified --excavate items as raw queries and export CSV results without post-processing.',
+)
+
+excavation.add_argument(
     '--include-endpoints',
     dest='include_endpoints',
     nargs='*',
@@ -303,6 +311,15 @@ def run_for_args(args):
         identities = builder.unique_identities(
             search, args.include_endpoints, args.endpoint_prefix
         )
+
+    if getattr(args, "queries", False):
+        if "search" in locals() and search:
+            api.run_queries(search, args, reporting_dir)
+        else:
+            msg = "API access required to run queries"
+            print(msg)
+            logger.error(msg)
+        return
 
     if args.access_method == "all":
 

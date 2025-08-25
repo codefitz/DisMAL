@@ -1179,5 +1179,36 @@ def search_results(api_endpoint, query):
             )
         return []
 
+def run_queries(search, args, dir):
+    """Execute queries from :mod:`core.queries` without post-processing.
+
+    This utility looks up each name provided via ``args.excavate`` in the
+    :mod:`core.queries` module, runs the raw query against the API and saves the
+    results to CSV.  Each file is written to ``dir`` and prefixed with
+    ``qry_`` so users can inspect the unmodified output from the appliance.
+    """
+
+    names = getattr(args, "excavate", []) or []
+    for name in names:
+        query = getattr(queries, name, None)
+        if query is None:
+            msg = f"Query '{name}' not found"
+            print(msg)
+            logger.error(msg)
+            continue
+
+        filename = os.path.join(dir, f"qry_{name}.csv")
+        # Use the "query" output type so ``define_csv`` handles the API call
+        # and CSV conversion for us without additional processing.
+        output.define_csv(
+            args,
+            search,
+            query,
+            filename,
+            getattr(args, "output_file", None),
+            getattr(args, "target", None),
+            "query",
+        )
+
 def hostname(args,dir):
     output.define_txt(args,args.target,os.path.join(dir, defaults.hostname_filename),None)

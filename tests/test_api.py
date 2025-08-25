@@ -234,6 +234,31 @@ def test_get_outposts_uses_deleted_false():
     assert app.requested == "/discovery/outposts?deleted=false"
 
 
+def test_run_queries_executes_named_query(monkeypatch, tmp_path):
+    recorded = {}
+
+    def fake_define_csv(args, search, query, path, file, target, typ):
+        recorded["search"] = search
+        recorded["query"] = query
+        recorded["path"] = path
+        recorded["type"] = typ
+
+    monkeypatch.setattr(api_mod.output, "define_csv", fake_define_csv)
+
+    args = types.SimpleNamespace(
+        excavate=["credential_success"], output_file=None, target="appl"
+    )
+    search = object()
+    outdir = str(tmp_path)
+
+    api_mod.run_queries(search, args, outdir)
+
+    assert recorded["query"] == api_mod.queries.credential_success
+    expected = os.path.join(outdir, "qry_credential_success.csv")
+    assert recorded["path"] == expected
+    assert recorded["type"] == "query"
+
+
 def test_map_outpost_credentials_strips_scheme(monkeypatch):
     """Outpost targets should not include protocol."""
 
@@ -384,6 +409,77 @@ def test_cli_dispatch_outpost_creds(monkeypatch):
     dismal.run_for_args(args)
 
     assert called.get("ran")
+
+
+def test_run_for_args_queries_invokes_run_queries(monkeypatch):
+    import importlib
+
+    monkeypatch.setattr(sys, "argv", ["dismal"])
+    dismal = importlib.reload(importlib.import_module("dismal"))
+
+    dummy_search = types.SimpleNamespace()
+
+    monkeypatch.setattr(dismal.access, "api_target", lambda args: types.SimpleNamespace())
+    monkeypatch.setattr(
+        dismal.api,
+        "init_endpoints",
+        lambda ap, args: (None, dummy_search, None, None, None),
+    )
+    monkeypatch.setattr(dismal.access, "login_target", lambda *a, **k: (None, None))
+    monkeypatch.setattr(dismal.access, "ping", lambda host: 0)
+    monkeypatch.setattr(dismal.os.path, "exists", lambda p: True)
+    monkeypatch.setattr(dismal.os, "makedirs", lambda p: None)
+    monkeypatch.setattr(dismal.output, "format_duration", lambda s: "0s")
+    monkeypatch.setattr(dismal.logging, "basicConfig", lambda *a, **k: None)
+
+    called = {}
+
+    def fake_run_queries(search, args, dir):
+        called["search"] = search
+        called["dir"] = dir
+
+    monkeypatch.setattr(dismal.api, "run_queries", fake_run_queries)
+
+    args = types.SimpleNamespace(
+        version=False,
+        wakey=False,
+        target="appl",
+        access_method="api",
+        username=None,
+        password=None,
+        f_passwd=None,
+        token="tok",
+        f_token=None,
+        noping=True,
+        output_path=None,
+        excavate=["credential_success"],
+        queries=True,
+        output_csv=False,
+        output_file=None,
+        include_endpoints=None,
+        endpoint_prefix=None,
+        a_query=None,
+        a_kill_run=None,
+        schedule_timezone=None,
+        reset_schedule_timezone=False,
+        sysadmin=None,
+        tideway=None,
+        clear_queue=False,
+        tw_user=None,
+        servicecctl=None,
+        debugging=False,
+        output_cli=False,
+        output_null=False,
+        a_enable=None,
+        f_enablelist=None,
+        a_opt=None,
+        a_removal=None,
+        f_remlist=None,
+    )
+
+    dismal.run_for_args(args)
+
+    assert called["search"] is dummy_search
 
 def test_search_results_cleans_query(monkeypatch):
     """Ensure newlines removed and single quotes preserved."""

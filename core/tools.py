@@ -130,7 +130,12 @@ def list_of_lists(ci,attr,list_to_append):
     return list_to_append
 
 def session_get(results):
-    """Convert a list of session result dictionaries into a mapping.
+    """Convert session/device info search results into a mapping.
+
+    Results may contain either ``SessionResult.slave_or_credential`` or
+    ``DeviceInfo.last_credential`` fields.  Any object path prefixes are
+    stripped so the returned dictionary uses raw credential UUIDs as keys.  The
+    stored value is a two-item list of the access method and lookup count.
 
     Previous implementations assumed ``results`` was always a list of
     dictionaries returned from the search API.  When the API call failed (for
@@ -159,23 +164,21 @@ def session_get(results):
         except (TypeError, ValueError):
             count = 0
 
-        # Support both SessionResult and DeviceInfo style fields
-        uuid = (
-            result.get("SessionResult.slave_or_credential")
-            or result.get("DeviceInfo.last_credential")
-        )
-        restype = (
-            result.get("SessionResult.session_type")
-            or result.get("DeviceInfo.access_method")
+        # Accept both SessionResult and DeviceInfo credential fields
+        uuid = result.get("SessionResult.slave_or_credential") or result.get(
+            "DeviceInfo.last_credential"
         )
 
-        if isinstance(uuid, str):
-            # Results may include object-path prefixes (e.g., "Credential/<uuid>")
-            # Split on '/' and take the last segment to extract the raw UUID.
-            uuid = uuid.split("/")[-1]
+        # Pull the access/session type from whichever query populated the row
+        restype = result.get("SessionResult.session_type") or result.get(
+            "DeviceInfo.access_method"
+        )
 
         if uuid:
-            sessions[str(uuid)] = [restype, count]
+            # Remove any object-path prefixes and keep only the raw UUID
+            if isinstance(uuid, str):
+                uuid = uuid.split("/")[-1]
+            sessions[uuid] = [restype, count]
 
     return sessions
 

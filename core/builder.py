@@ -267,7 +267,7 @@ def ordering(creds, search, args, apply):
                                         show (slave or credential) as cred_uuid, session_type process with countUnique(0)
                                         """ % (cred['uuid'],cred['uuid']))
         devinfosux = api.search_results(search,"""
-                                        search DeviceInfo where method_success and __had_inference
+                                        search DeviceInfo where method_success
                                         and (slave = "%s" or credential = "%s")
                                         and nodecount(traverse DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess traverse DiscoveryAccess:Metadata:Detail:SessionResult) = 0
                                         show (last_credential or last_slave) as cred_uuid,

@@ -149,11 +149,8 @@ def session_get(results):
 
     sessions = {}
 
-    # Some API wrappers return a dictionary with a top-level "results" list.
-    # Coerce this structure into the expected list format before validation.
-    if isinstance(results, dict) and "results" in results:
-        logger.debug("session_get coercing dictionary input via 'results' key")
-        results = results["results"]
+    if isinstance(results, dict):
+        results = results.get("results", [])
 
     if not isinstance(results, list):
         logger.warning(

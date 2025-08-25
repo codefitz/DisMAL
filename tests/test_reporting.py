@@ -327,6 +327,7 @@ def test_successful_combines_query_results(monkeypatch):
         reporting.queries.credential_success_7d,
         reporting.queries.deviceinfo_success_7d,
         reporting.queries.credential_failure_7d,
+        reporting.queries.outpost_credentials,
     }
     assert "Success % 7 Days" in captured["headers"]
     row = captured["data"][0]
@@ -492,23 +493,38 @@ def test_successful_includes_outpost_credentials(monkeypatch):
         "exclusions": None,
     }
 
-    monkeypatch.setattr(
-        reporting.api,
-        "get_outpost_credential_map",
-        lambda *a, **k: {"u1": "http://op"},
-    )
+    def fake_search_results(search, query):
+        if query is reporting.queries.credential_success:
+            return [
+                {
+                    "SessionResult.slave_or_credential": "/prefix/u1",
+                    "SessionResult.session_type": "ssh",
+                    "Count": 2,
+                }
+            ]
+        if query is reporting.queries.credential_failure:
+            return [
+                {
+                    "SessionResult.slave_or_credential": "/prefix/u1",
+                    "SessionResult.session_type": "ssh",
+                    "Count": 1,
+                }
+            ]
+        if query is reporting.queries.outpost_credentials:
+            return [{"credential": "u1", "outpost": "op1"}]
+        return []
+
+    monkeypatch.setattr(reporting.api, "search_results", fake_search_results)
     monkeypatch.setattr(reporting.api, "get_json", lambda *a, **k: [out_cred])
-    monkeypatch.setattr(reporting.api, "search_results", lambda *a, **k: [])
+    monkeypatch.setattr(reporting.api, "get_outpost_credential_map", lambda *a, **k: {"op1": {"url": "http://op1", "credentials": []}})
     monkeypatch.setattr(reporting.builder, "get_credentials", lambda entry: entry)
     monkeypatch.setattr(reporting.builder, "get_scans", lambda *a, **k: [])
-    monkeypatch.setattr(
-        reporting.tideway, "appliance", lambda target, token: object(), raising=False
-    )
 
     captured = {}
 
     def fake_report(data, headers, args, name=""):
         captured["row"] = data[0]
+        captured["headers"] = headers
 
     monkeypatch.setattr(reporting, "output", types.SimpleNamespace(report=fake_report))
 
@@ -523,7 +539,64 @@ def test_successful_includes_outpost_credentials(monkeypatch):
 
     reporting.successful(DummyCreds(), DummySearch(), args)
 
-    assert captured["row"][-1] == "http://op"
+    row = captured["row"]
+    headers = captured["headers"]
+    assert row[headers.index("Successes")] == 2
+    assert row[headers.index("Failures")] == 1
+    assert row[-1] == "http://op1"
+
+
+def test_successful_shows_zero_percent_when_no_success_7d(monkeypatch):
+    """If there are no successes in last 7 days, percent should be 0."""
+
+    out_cred = {
+        "uuid": "u1",
+        "label": "c",
+        "index": 1,
+        "enabled": True,
+        "username": "user",
+        "usage": "",
+        "iprange": None,
+        "exclusions": None,
+    }
+
+    def fake_search_results(search, query):
+        if query is reporting.queries.credential_success:
+            return [{"SessionResult.slave_or_credential": "u1", "SessionResult.session_type": "ssh", "Count": 2}]
+        if query is reporting.queries.credential_failure:
+            return [{"SessionResult.slave_or_credential": "u1", "SessionResult.session_type": "ssh", "Count": 1}]
+        if query is reporting.queries.credential_failure_7d:
+            return [{"SessionResult.slave_or_credential": "u1", "SessionResult.session_type": "ssh", "Count": 1}]
+        return []
+
+    monkeypatch.setattr(reporting.api, "search_results", fake_search_results)
+    monkeypatch.setattr(reporting.api, "get_json", lambda *a, **k: [out_cred])
+    monkeypatch.setattr(reporting.api, "get_outpost_credential_map", lambda *a, **k: {})
+    monkeypatch.setattr(reporting.builder, "get_credentials", lambda entry: entry)
+    monkeypatch.setattr(reporting.builder, "get_scans", lambda *a, **k: [])
+
+    captured = {}
+
+    def fake_report(data, headers, args, name=""):
+        captured["row"] = data[0]
+        captured["headers"] = headers
+
+    monkeypatch.setattr(reporting, "output", types.SimpleNamespace(report=fake_report))
+
+    args = types.SimpleNamespace(
+        output_csv=False,
+        output_file=None,
+        token=None,
+        target="http://x",
+        include_endpoints=None,
+        endpoint_prefix=None,
+    )
+
+    reporting.successful(DummyCreds(), DummySearch(), args)
+
+    row = captured["row"]
+    headers = captured["headers"]
+    assert row[headers.index("Success % 7 Days")] == 0
 
 
 def test_successful_handles_prefixed_credential_paths(monkeypatch):

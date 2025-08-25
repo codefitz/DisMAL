@@ -52,25 +52,25 @@ def successful(creds, search, args):
     with ThreadPoolExecutor() as executor:
         futures = {
             "credsux_results": executor.submit(
-                api.search_results, search, queries.credential_success
+                api.search_results, search, queries.credential_success, limit=0
             ),
             "devinfosux": executor.submit(
-                api.search_results, search, queries.deviceinfo_success
+                api.search_results, search, queries.deviceinfo_success, limit=0
             ),
             "credfail_results": executor.submit(
-                api.search_results, search, queries.credential_failure
+                api.search_results, search, queries.credential_failure, limit=0
             ),
             "credsux7_results": executor.submit(
-                api.search_results, search, queries.credential_success_7d
+                api.search_results, search, queries.credential_success_7d, limit=0
             ),
             "devinfosux7": executor.submit(
-                api.search_results, search, queries.deviceinfo_success_7d
+                api.search_results, search, queries.deviceinfo_success_7d, limit=0
             ),
             "credfail7_results": executor.submit(
-                api.search_results, search, queries.credential_failure_7d
+                api.search_results, search, queries.credential_failure_7d, limit=0
             ),
             "outpost_cred_results": executor.submit(
-                api.search_results, search, queries.outpost_credentials
+                api.search_results, search, queries.outpost_credentials, limit=0
             ),
         }
 

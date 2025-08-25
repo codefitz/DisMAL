@@ -43,6 +43,81 @@ def _run_with_patches(monkeypatch, func):
     func(DummySearch(), DummyCreds(), args)
     assert "ran" in called
 
+
+def test_successful_writes_all_credentials(tmp_path, monkeypatch):
+    """credential_success.csv should include more than the default 500 rows."""
+
+    total = 600
+
+    vaultcreds = [
+        {
+            "uuid": f"cred{i}",
+            "label": f"cred{i}",
+            "index": i,
+            "types": "ssh",
+            "username": "user",
+            "iprange": None,
+            "exclusions": None,
+            "enabled": True,
+            "usage": "",
+        }
+        for i in range(total)
+    ]
+
+    vault_resp = types.SimpleNamespace(
+        status_code=200,
+        ok=True,
+        text=json.dumps(vaultcreds),
+        json=lambda: vaultcreds,
+    )
+
+    class Creds:
+        def get_vault_credentials(self):
+            return vault_resp
+
+    class Search:
+        def search(self, query, format="object", limit=500, offset=0):
+            return types.SimpleNamespace(status_code=200, ok=True, text="[]", json=lambda: [])
+
+    monkeypatch.setattr(reporting.builder, "get_credentials", lambda c: c)
+    monkeypatch.setattr(reporting.builder, "get_scans", lambda *a, **k: [])
+    monkeypatch.setattr(reporting.api, "get_outpost_credential_map", lambda *a, **k: {})
+    monkeypatch.setattr(reporting.tools, "getr", lambda d, k, default=None: d.get(k, default))
+    monkeypatch.setattr(reporting.tools, "range_to_ips", lambda r: [])
+    monkeypatch.setattr(reporting.tools, "completage", lambda *a, **k: 0)
+
+    def session_get(results):
+        return {f"cred{i}": ["ssh", 1] for i in range(total)}
+
+    monkeypatch.setattr(reporting.tools, "session_get", session_get)
+
+    called_limits = []
+
+    def fake_search_results(api_endpoint, query, limit=500):
+        called_limits.append(limit)
+        return [{} for _ in range(total)]
+
+    monkeypatch.setattr(reporting.api, "search_results", fake_search_results)
+
+    args = types.SimpleNamespace(
+        output_file=str(tmp_path / "credential_success.csv"),
+        output_csv=False,
+        output_cli=False,
+        output_null=False,
+        token=None,
+        target="app",
+        include_endpoints=None,
+        endpoint_prefix=None,
+    )
+
+    reporting.successful(Creds(), Search(), args)
+
+    with open(tmp_path / "credential_success.csv") as f:
+        lines = f.readlines()
+
+    assert len(lines) == total + 1  # header + data
+    assert all(l == 0 for l in called_limits)
+
 def test_device_ids_report_includes_coverage(monkeypatch):
     sample = [
         {
@@ -268,7 +343,7 @@ def test_successful_runs_without_scan_data(monkeypatch):
 def test_successful_combines_query_results(monkeypatch):
     calls = []
 
-    def fake_search_results(search, query):
+    def fake_search_results(search, query, limit=500):
         calls.append(query)
         if query is reporting.queries.credential_success:
             return [{"SessionResult.credential_or_slave": "u1", "SessionResult.session_type": "ssh", "Count": 2}]
@@ -341,7 +416,7 @@ def test_successful_combines_query_results(monkeypatch):
 def test_successful_coerces_string_counts(monkeypatch):
     """Counts provided as strings should be converted to numbers."""
 
-    def fake_search_results(search, query):
+    def fake_search_results(search, query, limit=500):
         if query is reporting.queries.credential_success:
             return [{"SessionResult.credential_or_slave": "u1", "SessionResult.session_type": "ssh", "Count": "2"}]
         if query is reporting.queries.deviceinfo_success:
@@ -410,7 +485,7 @@ def test_successful_coerces_string_counts(monkeypatch):
 
 
 def test_successful_emits_row_when_deviceinfo_7d_empty(monkeypatch):
-    def fake_search_results(search, query):
+    def fake_search_results(search, query, limit=500):
         if query is reporting.queries.credential_success:
             return []
         if query is reporting.queries.deviceinfo_success:
@@ -559,7 +634,7 @@ def test_successful_marks_explicit_zero_count_active(monkeypatch, output_csv):
             return [cred]
         return []
 
-    def fake_search_results(search, query):
+    def fake_search_results(search, query, limit=500):
         if query is reporting.queries.credential_success:
             return [
                 {
@@ -615,7 +690,7 @@ def test_successful_includes_outpost_credentials(monkeypatch):
         "exclusions": None,
     }
 
-    def fake_search_results(search, query):
+    def fake_search_results(search, query, limit=500):
         if query is reporting.queries.credential_success:
             return [
                 {
@@ -682,7 +757,7 @@ def test_successful_shows_zero_percent_when_no_success_7d(monkeypatch):
         "exclusions": None,
     }
 
-    def fake_search_results(search, query):
+    def fake_search_results(search, query, limit=500):
         if query is reporting.queries.credential_success:
             return [{"SessionResult.credential_or_slave": "u1", "SessionResult.session_type": "ssh", "Count": 2}]
         if query is reporting.queries.credential_failure:
@@ -724,7 +799,7 @@ def test_successful_shows_zero_percent_when_no_success_7d(monkeypatch):
 def test_successful_handles_prefixed_and_mixed_case_credential_paths(monkeypatch):
     """Query results may return object-path prefixes and mixed-case UUIDs."""
 
-    def fake_search_results(search, query):
+    def fake_search_results(search, query, limit=500):
         if query is reporting.queries.credential_success:
             return [
                 {
@@ -806,7 +881,7 @@ def test_successful_handles_prefixed_and_mixed_case_credential_paths(monkeypatch
 def test_successful_uses_uuid_for_failures(monkeypatch):
     """Failure queries may only include a raw 'uuid' field."""
 
-    def fake_search_results(search, query):
+    def fake_search_results(search, query, limit=500):
         if query is reporting.queries.credential_failure:
             return [
                 {
@@ -933,7 +1008,7 @@ def test_discovery_analysis_includes_raw_timestamp(monkeypatch):
 
     monkeypatch.setattr(reporting.builder, "unique_identities", lambda s, *a, **k: [])
 
-    def fake_search_results(search, query):
+    def fake_search_results(search, query, limit=500):
         if query is reporting.queries.last_disco:
             return [
                 {
@@ -1007,7 +1082,7 @@ def test_discovery_analysis_merges_latest_fields(monkeypatch):
 
     monkeypatch.setattr(reporting.builder, "unique_identities", lambda s, *a, **k: [])
 
-    def fake_search_results(search, query):
+    def fake_search_results(search, query, limit=500):
         if query is reporting.queries.last_disco:
             return [
                 {
@@ -1140,7 +1215,7 @@ def test_successful_handles_dict_results(monkeypatch):
 
     monkeypatch.setattr(reporting.api, "get_json", fake_get_json)
 
-    def fake_search_results(search, query):
+    def fake_search_results(search, query, limit=500):
         if query == reporting.queries.credential_success:
             return {
                 "results": [

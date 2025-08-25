@@ -75,11 +75,14 @@ def test_successful_combines_query_results(monkeypatch):
     def fake_search_results(search, query):
         calls.append(query)
         if query is reporting.queries.credential_success:
-            return [{"UUID": "u1", "Session_Type": "ssh", "Count": 2}]
+            # standard lower-case field names
+            return [{"uuid": "u1", "session_type": "ssh", "count": 2}]
         if query is reporting.queries.deviceinfo_success:
-            return [{"UUID": "u1", "Session_Type": "ssh", "Count": 3}]
+            # alternative key for UUID field
+            return [{"credential": "u1", "session_type": "ssh", "count": 3}]
         if query is reporting.queries.credential_failure:
-            return [{"UUID": "u1", "Session_Type": "ssh", "Count": 4}]
+            # another possible key name for UUID field
+            return [{"slave": "u1", "session_type": "ssh", "count": 4}]
         return []
 
     call = {"n": 0}

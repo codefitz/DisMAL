@@ -291,24 +291,37 @@ def get_outposts(appliance):
 
 
 def map_outpost_credentials(appliance):
-    """Return mapping of credential UUIDs to outpost URLs."""
+    """Return mapping of credential UUIDs to outpost id and URL.
+
+    The returned dictionary uses the credential UUID as the key and maps it to
+    a tuple ``(outpost_id, url)`` for the outpost that provides the
+    credential.  Previously only the URL was returned which made it difficult
+    to reference the specific outpost in reports.
+    """
+
     mapping = {}
     outposts = get_outposts(appliance)
     if not isinstance(outposts, list):
         return mapping
+
     token = getattr(appliance, "token", None)
     api_version = getattr(appliance, "api_version", None)
+
     for outpost in outposts:
         url = outpost.get("url")
+        outpost_id = outpost.get("id")
         if not url:
             continue
+
         parsed = urlparse(url)
         host = parsed.hostname or (parsed.netloc or parsed.path).split(":")[0]
+
         if access.ping(host) != 0:
             msg = f"Outpost {url} is not available"
             print(msg)
             logger.warning(msg)
             continue
+
         target = (parsed.netloc or parsed.path).rstrip("/")
         try:
             op_app = tideway.outpost(target, token, api_version=api_version)
@@ -318,10 +331,12 @@ def map_outpost_credentials(appliance):
                 uuid = cred.get("uuid")
                 if not uuid:
                     continue
+                # Touch the credential to ensure it is reachable from the outpost
                 get_json(creds_ep.get_vault_credential(uuid))
-                mapping[uuid] = url
+                mapping[uuid] = (outpost_id, url)
         except Exception as e:  # pragma: no cover - network errors
             logger.error("Error processing outpost %s: %s", url, e)
+
     return mapping
 
 def success(twcreds, twsearch, args, dir):

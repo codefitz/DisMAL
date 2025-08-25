@@ -127,6 +127,8 @@ def test_successful_combines_query_results(monkeypatch):
     assert row[6] == 5
     assert row[7] == 4
     assert row[8] == pytest.approx(5 / 9)
+    assert "Outpost ID" in captured["headers"]
+    assert "Outpost URL" in captured["headers"]
 
 
 def test_successful_uses_token_file(monkeypatch, tmp_path):

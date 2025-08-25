@@ -335,7 +335,7 @@ def ordering(creds, search, args, apply):
                     scope = cred.get("scopes") or []
                     if isinstance(scope, list):
                         scope = ", ".join(scope)
-                    url = outpost_map.get(cred.get("uuid"))
+                    _, url = outpost_map.get(cred.get("uuid"), (None, None))
                     msg = "%s: Index: %s, Weight: %s, New Index: %s" % (
                         label,
                         index,
@@ -358,7 +358,7 @@ def ordering(creds, search, args, apply):
         scope = cred.get("scopes") or []
         if isinstance(scope, list):
             scope = ", ".join(scope)
-        url = outpost_map.get(cred.get("uuid"))
+        _, url = outpost_map.get(cred.get("uuid"), (None, None))
         data.append([index, label, scope, url])
 
     if data:

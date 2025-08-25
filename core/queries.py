@@ -198,7 +198,7 @@ ip_schedules = """search DiscoveryAccess
                     process with unique()"""
 
 active_runs = """
-                    search DiscoveryRun where status <> 'Finished'
+                    search DiscoveryRun where not endtime
                     show run_id as 'DiscoveryRun.run_id',
                          status as 'DiscoveryRun.status',
                          range_id as 'DiscoveryRun.range_id',

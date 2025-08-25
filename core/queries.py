@@ -137,6 +137,17 @@ scanrange = {
                 recurrenceDescription(schedule) as 'Date_Rules'
                 """
                }
+active_runs = """
+                    search DiscoveryRun where not endtime
+                    show
+                    run_id as 'DiscoveryRun.run_id',
+                    status as 'DiscoveryRun.status',
+                    range_id as 'DiscoveryRun.range_id',
+                    total as 'DiscoveryRun.total',
+                    scanning as 'DiscoveryRun.scanning',
+                    pre_scanning as 'DiscoveryRun.pre_scanning',
+                    done as 'DiscoveryRun.done'
+                """
 last_disco = {
             "query":"""
                     search DiscoveryAccess where endtime

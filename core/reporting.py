@@ -162,54 +162,29 @@ def successful(creds, search, args):
         session = None
         percent_all = 0.0
         percent7 = 0.0
-        failure = [None, 0]
-        sessions = [None, 0]
-        devinfos = [None, 0]
-        failure7 = [None, 0]
-        sessions7 = [None, 0]
-        devinfos7 = [None, 0]
-        try:
-            sessions = suxCreds[uuid]
-            active = True
-            msg = "Sessions found, Active: %s" % sessions
-            logger.debug(msg)
-        except KeyError:
-            pass
-        try:
-            devinfos = suxDev[uuid]
-            active = True
-            msg = "DeviceInfos found, Active: %s" % devinfos
-            logger.debug(msg)
-        except KeyError:
-            pass
-        try:
-            failure = failCreds[uuid]
-            active = True
-            msg = "Failures found, Active: %s" % failure
-            logger.debug(msg)
-        except KeyError:
-            pass
-        try:
-            sessions7 = suxCreds7[uuid]
-            active = True
-            msg = "Sessions 7d found, Active: %s" % sessions7
-            logger.debug(msg)
-        except KeyError:
-            pass
-        try:
-            devinfos7 = suxDev7[uuid]
-            active = True
-            msg = "DeviceInfos 7d found, Active: %s" % devinfos7
-            logger.debug(msg)
-        except KeyError:
-            pass
-        try:
-            failure7 = failCreds7[uuid]
-            active = True
-            msg = "Failures 7d found, Active: %s" % failure7
-            logger.debug(msg)
-        except KeyError:
-            pass
+
+        # Look up success/failure information for this credential
+        sessions = suxCreds.get(uuid)
+        devinfos = suxDev.get(uuid)
+        failure = failCreds.get(uuid)
+        sessions7 = suxCreds7.get(uuid)
+        devinfos7 = suxDev7.get(uuid)
+        failure7 = failCreds7.get(uuid)
+
+        # Determine if this credential was seen in any query results, even if
+        # the count is zero
+        active = any(
+            record is not None
+            for record in [sessions, devinfos, failure, sessions7, devinfos7, failure7]
+        )
+
+        # Replace missing entries with default zero counts for later math
+        sessions = sessions or [None, 0]
+        devinfos = devinfos or [None, 0]
+        failure = failure or [None, 0]
+        sessions7 = sessions7 or [None, 0]
+        devinfos7 = devinfos7 or [None, 0]
+        failure7 = failure7 or [None, 0]
 
         if sessions[0] and devinfos[0]:
             seshcount = int(sessions[1])

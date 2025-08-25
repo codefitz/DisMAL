@@ -168,7 +168,7 @@ def test_map_outpost_credentials_strips_scheme(monkeypatch):
     """Outpost targets should not include protocol."""
 
     def fake_get_outposts(app):
-        return [{"url": "https://op.example.com", "id": "op1"}]
+        return [{"id": "op1", "url": "https://op.example.com"}]
 
     class DummyCreds:
         def get_vault_credentials(self):
@@ -193,12 +193,11 @@ def test_map_outpost_credentials_strips_scheme(monkeypatch):
     mapping = map_outpost_credentials(types.SimpleNamespace(token="t"))
 
     assert captured["target"] == "op.example.com"
-    assert mapping == {"u1": ("op1", "https://op.example.com")}
-
+    assert mapping == {"u1": {"id": "op1", "url": "https://op.example.com"}}
 
 def test_map_outpost_credentials_skips_unreachable(monkeypatch, capsys, caplog):
     def fake_get_outposts(app):
-        return [{"url": "https://op.example.com", "id": "op1"}]
+        return [{"id": "op1", "url": "https://op.example.com"}]
 
     called = {"outpost": False}
 

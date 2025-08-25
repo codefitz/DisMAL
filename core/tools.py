@@ -126,13 +126,31 @@ def list_of_lists(ci,attr,list_to_append):
     return list_to_append
 
 def session_get(results):
+    """Normalize and extract session details.
+
+    Keys from the results are normalised to lowercase so that values can be
+    accessed without relying on the original capitalisation.  Additionally,
+    multiple key variants are accepted for the UUID field to cope with the
+    different names returned by various APIs (e.g. ``credential`` or
+    ``slave``).  The function returns a mapping of UUID to a list containing
+    the session type and count.
+    """
+
     sessions = {}
     for result in results:
-        count = result.get('Count')
-        uuid = result.get('UUID')
-        restype = result.get('Session_Type')
+        # Normalise keys to lower case for consistent lookups
+        norm = {key.lower(): value for key, value in result.items()}
+
+        count = norm.get("count")
+
+        # UUID may be reported under a few different names
+        uuid = norm.get("uuid") or norm.get("credential") or norm.get("slave")
+
+        restype = norm.get("session_type")
+
         if uuid:
-            sessions[uuid] = [ restype, count ]
+            sessions[uuid] = [restype, count]
+
     return sessions
 
 def ip_or_string(value):

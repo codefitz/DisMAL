@@ -54,7 +54,11 @@ def test_ordering_inserts_instance_and_outpost(monkeypatch):
 
     monkeypatch.setattr(builder, "output", types.SimpleNamespace(report=fake_report))
     monkeypatch.setattr(builder.api, "search_results", lambda *a, **k: [])
-    monkeypatch.setattr(builder.api, "map_outpost_credentials", lambda app: {"u1": ("op1", "http://op")})
+    monkeypatch.setattr(
+        builder.api,
+        "map_outpost_credentials",
+        lambda app: {"u1": {"id": "op1", "url": "http://op"}},
+    )
     monkeypatch.setattr(builder.tideway, "appliance", lambda target, token: types.SimpleNamespace(), raising=False)
     monkeypatch.setattr(
         builder.api,
@@ -70,6 +74,7 @@ def test_ordering_inserts_instance_and_outpost(monkeypatch):
     assert captured["name"] == "suggest_cred_opt"
     assert captured["headers"][0] == "Discovery Instance"
     assert "Scope" in captured["headers"]
+    assert "Outpost ID" in captured["headers"]
     assert "Outpost URL" in captured["headers"]
     assert captured["data"]
     assert captured["data"][0][0] == "appl"

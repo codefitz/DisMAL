@@ -297,6 +297,11 @@ def map_outpost_credentials(appliance):
     a tuple ``(outpost_id, url)`` for the outpost that provides the
     credential.  Previously only the URL was returned which made it difficult
     to reference the specific outpost in reports.
+
+    The returned dictionary maps a credential UUID to a dictionary containing
+    the outpost ``id`` (if available) and ``url``.  This provides callers with
+    enough information to reference both the outpost identifier and its
+    location.
     """
 
     mapping = {}
@@ -333,7 +338,8 @@ def map_outpost_credentials(appliance):
                     continue
                 # Touch the credential to ensure it is reachable from the outpost
                 get_json(creds_ep.get_vault_credential(uuid))
-                mapping[uuid] = (outpost_id, url)
+                outpost_id = outpost.get("id") or outpost.get("uuid")
+                mapping[uuid] = {"id": outpost_id, "url": url}
         except Exception as e:  # pragma: no cover - network errors
             logger.error("Error processing outpost %s: %s", url, e)
 

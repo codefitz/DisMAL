@@ -204,7 +204,9 @@ def successful(creds, search, args):
             percent = success / total
 
         msg = None
-        outpost_id, outpost_url = outpost_map.get(uuid, (None, None))
+        op_info = outpost_map.get(uuid, {})
+        outpost_id = op_info.get("id")
+        outpost_url = op_info.get("url")
         usage = detail.get('usage')
         if args.output_file or args.output_csv:
             if active:

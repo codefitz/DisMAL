@@ -161,7 +161,7 @@ def test_show_runs_excavate_routes_to_define_csv(monkeypatch):
 
     assert recorded["header"] == ["DiscoveryRun.run_id", "DiscoveryRun.status"]
     assert recorded["data"] == [["1", "running"]]
-    expected_path = os.path.join(reporting_dir, defaults.current_scans_filename)
+    expected_path = os.path.join(reporting_dir, defaults.active_scans_filename)
     assert recorded["path"] == expected_path
 
 
@@ -181,7 +181,7 @@ def test_show_runs_excavate_default_dir(monkeypatch):
 
     show_runs(disco, args)
 
-    assert recorded["path"] == defaults.current_scans_filename
+    assert recorded["path"] == defaults.active_scans_filename
 
 
 def test_discovery_runs_emits_ints_and_headers(monkeypatch):

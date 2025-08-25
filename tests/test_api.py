@@ -88,6 +88,16 @@ def test_search_results_error_non_json():
     search = DummySearch(resp)
     assert search_results(search, {"query": "q"}) == {"error": "Internal Server Error"}
 
+
+def test_search_results_warns_on_server_error(capfd):
+    resp = DummyResponse(504, 'Gateway Timeout', reason='Gateway Timeout')
+    search = DummySearch(resp)
+    search_results(search, {"query": "q"})
+    out = capfd.readouterr().out
+    assert 'WARNING' in out
+    assert '504' in out
+    assert 'Results may be incomplete' in out
+
 def test_search_results_paginates(monkeypatch):
     """search_results should accumulate more than 500 rows when limit=0."""
 

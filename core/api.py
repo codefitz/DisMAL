@@ -1184,6 +1184,19 @@ def search_results(api_endpoint, query, limit=500, use_cache=True):
                         status_code,
                         getattr(results, "reason", ""),
                     )
+                    if status_code >= 500:
+                        reason = getattr(results, "reason", "") or "server error"
+                        # Highlight server-side failures so users know results may
+                        # not reflect the full dataset.
+                        if status_code == 504:
+                            msg_reason = "timed out"
+                        else:
+                            msg_reason = reason.lower()
+                        warning_msg = (
+                            f"*** WARNING: Search API {msg_reason} ({status_code}). "
+                            "Results may be incomplete. ***"
+                        )
+                        print(warning_msg)
                     try:
                         data = json.loads(results.text)
                     except Exception:
@@ -1204,6 +1217,9 @@ def search_results(api_endpoint, query, limit=500, use_cache=True):
                     print(msg)
                     logger.error(msg)
                     return []
+                if isinstance(data, dict) and isinstance(data.get("results"), list):
+                    data = dict(data)
+                    data["results"] = tools.list_table_to_json(data["results"])
             else:
                 data = results
             if logger.isEnabledFor(logging.DEBUG):

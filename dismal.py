@@ -212,9 +212,10 @@ if args.target:
         os.makedirs(reporting_dir)
     args.reporting_dir = reporting_dir
 
-logging.basicConfig(level=logging.INFO, filename=logfile, filemode='w', force=True)
+logging.basicConfig(level=logging.INFO, filename=logfile, filemode="w", force=True)
 logger = logging.getLogger("_dismal_")
-if args.debugging:
+debug_enabled = getattr(args, "debugging", False) or getattr(args, "debug", False)
+if debug_enabled:
     logging.getLogger().setLevel(logging.DEBUG)
     logger.setLevel(logging.DEBUG)
 

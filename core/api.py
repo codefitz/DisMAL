@@ -423,7 +423,6 @@ def show_runs(disco, args):
             output.define_csv(
                 args,
                 csv_headers,
-                header_hf,
                 run_csvs,
                 os.path.join(out_dir, defaults.current_scans_filename),
                 getattr(args, "output_file", None),
@@ -970,11 +969,10 @@ def search_results(api_endpoint, query):
                     pass
             status_code = getattr(results, "status_code", 200)
             if status_code >= 400:
-                logger.error(
-                    "Search API returned %s - %s",
-                    status_code,
-                    getattr(results, "reason", ""),
-                )
+                reason = getattr(results, "reason", "")
+                msg = f"Search API returned {status_code} - {reason}"
+                print(msg)
+                logger.error(msg)
                 try:
                     data = json.loads(results.text)
                 except Exception:
@@ -984,7 +982,9 @@ def search_results(api_endpoint, query):
                         logger.debug("Parsed error payload: %s", json.dumps(data))
                     except Exception:
                         pass
-                logger.error("Search failed: %s - %s", status_code, getattr(results, "reason", ""))
+                fail_msg = f"Search failed: {status_code} - {reason}"
+                print(fail_msg)
+                logger.error(fail_msg)
                 return data
             try:
                 data = results.json()

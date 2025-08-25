@@ -206,7 +206,9 @@ parser.set_defaults(
     f_token=config.get('token_file'),
     f_passwd=config.get('password_file'),
     noping=config.get('noping', False),
-    debugging=config.get('debugging', False),
+    # Support both ``debug`` and legacy ``debugging`` keys in the YAML config
+    # file so existing configurations continue to work.
+    debugging=config.get('debug', config.get('debugging', False)),
 )
 
 global args

@@ -130,14 +130,38 @@ def list_of_lists(ci,attr,list_to_append):
     return list_to_append
 
 def session_get(results):
+    """Convert a list of session result dictionaries into a mapping.
+
+    Previous implementations assumed ``results`` was always a list of
+    dictionaries returned from the search API.  When the API call failed (for
+    example with a 504 gateway timeout) a string or dictionary was supplied
+    instead which caused attribute errors when attempting to access ``get`` on
+    a non-dict object.  This helper now defensively checks input types and
+    gracefully skips any malformed entries.
+    """
+
     sessions = {}
+
+    if not isinstance(results, list):
+        logger.warning(
+            "session_get expected list of results, got %s", type(results).__name__
+        )
+        return sessions
+
     for result in results:
+        if not isinstance(result, dict):
+            logger.warning("session_get skipping non-dict result: %r", result)
+            continue
         # Cast count values to integers to ensure arithmetic works as expected
-        count = int(result.get('Count', 0))
-        uuid = result.get('SessionResult.slave_or_credential')
-        restype = result.get('SessionResult.session_type')
+        try:
+            count = int(result.get("Count", 0) or 0)
+        except (TypeError, ValueError):
+            count = 0
+        uuid = result.get("SessionResult.slave_or_credential")
+        restype = result.get("SessionResult.session_type")
         if uuid:
             sessions[uuid] = [restype, count]
+
     return sessions
 
 def ip_or_string(value):

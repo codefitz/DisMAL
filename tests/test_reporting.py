@@ -271,17 +271,17 @@ def test_successful_combines_query_results(monkeypatch):
     def fake_search_results(search, query):
         calls.append(query)
         if query is reporting.queries.credential_success:
-            return [{"SessionResult.slave_or_credential": "u1", "SessionResult.session_type": "ssh", "Count": 2}]
+            return [{"SessionResult.credential_or_slave": "u1", "SessionResult.session_type": "ssh", "Count": 2}]
         if query is reporting.queries.deviceinfo_success:
-            return [{"SessionResult.slave_or_credential": "u1", "SessionResult.session_type": "ssh", "Count": 3}]
+            return [{"SessionResult.credential_or_slave": "u1", "SessionResult.session_type": "ssh", "Count": 3}]
         if query is reporting.queries.credential_failure:
-            return [{"SessionResult.slave_or_credential": "u1", "SessionResult.session_type": "ssh", "Count": 4}]
+            return [{"SessionResult.credential_or_slave": "u1", "SessionResult.session_type": "ssh", "Count": 4}]
         if query is reporting.queries.credential_success_7d:
-            return [{"SessionResult.slave_or_credential": "u1", "SessionResult.session_type": "ssh", "Count": 1}]
+            return [{"SessionResult.credential_or_slave": "u1", "SessionResult.session_type": "ssh", "Count": 1}]
         if query is reporting.queries.deviceinfo_success_7d:
-            return [{"SessionResult.slave_or_credential": "u1", "SessionResult.session_type": "ssh", "Count": 1}]
+            return [{"SessionResult.credential_or_slave": "u1", "SessionResult.session_type": "ssh", "Count": 1}]
         if query is reporting.queries.credential_failure_7d:
-            return [{"SessionResult.slave_or_credential": "u1", "SessionResult.session_type": "ssh", "Count": 1}]
+            return [{"SessionResult.credential_or_slave": "u1", "SessionResult.session_type": "ssh", "Count": 1}]
         return []
 
     call = {"n": 0}
@@ -343,17 +343,17 @@ def test_successful_coerces_string_counts(monkeypatch):
 
     def fake_search_results(search, query):
         if query is reporting.queries.credential_success:
-            return [{"SessionResult.slave_or_credential": "u1", "SessionResult.session_type": "ssh", "Count": "2"}]
+            return [{"SessionResult.credential_or_slave": "u1", "SessionResult.session_type": "ssh", "Count": "2"}]
         if query is reporting.queries.deviceinfo_success:
-            return [{"SessionResult.slave_or_credential": "u1", "SessionResult.session_type": "ssh", "Count": "3"}]
+            return [{"SessionResult.credential_or_slave": "u1", "SessionResult.session_type": "ssh", "Count": "3"}]
         if query is reporting.queries.credential_failure:
-            return [{"SessionResult.slave_or_credential": "u1", "SessionResult.session_type": "ssh", "Count": "4"}]
+            return [{"SessionResult.credential_or_slave": "u1", "SessionResult.session_type": "ssh", "Count": "4"}]
         if query is reporting.queries.credential_success_7d:
-            return [{"SessionResult.slave_or_credential": "u1", "SessionResult.session_type": "ssh", "Count": "1"}]
+            return [{"SessionResult.credential_or_slave": "u1", "SessionResult.session_type": "ssh", "Count": "1"}]
         if query is reporting.queries.deviceinfo_success_7d:
-            return [{"SessionResult.slave_or_credential": "u1", "SessionResult.session_type": "ssh", "Count": "1"}]
+            return [{"SessionResult.credential_or_slave": "u1", "SessionResult.session_type": "ssh", "Count": "1"}]
         if query is reporting.queries.credential_failure_7d:
-            return [{"SessionResult.slave_or_credential": "u1", "SessionResult.session_type": "ssh", "Count": "1"}]
+            return [{"SessionResult.credential_or_slave": "u1", "SessionResult.session_type": "ssh", "Count": "1"}]
         return []
 
     call = {"n": 0}
@@ -424,7 +424,7 @@ def test_successful_emits_row_when_deviceinfo_7d_empty(monkeypatch):
         if query is reporting.queries.credential_failure_7d:
             return [
                 {
-                    "SessionResult.slave_or_credential": "u1",
+                    "SessionResult.credential_or_slave": "u1",
                     "SessionResult.session_type": "ssh",
                     "Count": 1,
                 }
@@ -553,7 +553,7 @@ def test_successful_includes_outpost_credentials(monkeypatch):
         if query is reporting.queries.credential_success:
             return [
                 {
-                    "SessionResult.slave_or_credential": "/prefix/u1",
+                    "SessionResult.credential_or_slave": "/prefix/u1",
                     "SessionResult.session_type": "ssh",
                     "Count": 2,
                 }
@@ -561,7 +561,7 @@ def test_successful_includes_outpost_credentials(monkeypatch):
         if query is reporting.queries.credential_failure:
             return [
                 {
-                    "SessionResult.slave_or_credential": "/prefix/u1",
+                    "SessionResult.credential_or_slave": "/prefix/u1",
                     "SessionResult.session_type": "ssh",
                     "Count": 1,
                 }
@@ -618,11 +618,11 @@ def test_successful_shows_zero_percent_when_no_success_7d(monkeypatch):
 
     def fake_search_results(search, query):
         if query is reporting.queries.credential_success:
-            return [{"SessionResult.slave_or_credential": "u1", "SessionResult.session_type": "ssh", "Count": 2}]
+            return [{"SessionResult.credential_or_slave": "u1", "SessionResult.session_type": "ssh", "Count": 2}]
         if query is reporting.queries.credential_failure:
-            return [{"SessionResult.slave_or_credential": "u1", "SessionResult.session_type": "ssh", "Count": 1}]
+            return [{"SessionResult.credential_or_slave": "u1", "SessionResult.session_type": "ssh", "Count": 1}]
         if query is reporting.queries.credential_failure_7d:
-            return [{"SessionResult.slave_or_credential": "u1", "SessionResult.session_type": "ssh", "Count": 1}]
+            return [{"SessionResult.credential_or_slave": "u1", "SessionResult.session_type": "ssh", "Count": 1}]
         return []
 
     monkeypatch.setattr(reporting.api, "search_results", fake_search_results)
@@ -662,7 +662,7 @@ def test_successful_handles_prefixed_and_mixed_case_credential_paths(monkeypatch
         if query is reporting.queries.credential_success:
             return [
                 {
-                    "SessionResult.slave_or_credential": "Credential/U1",
+                    "SessionResult.credential_or_slave": "Credential/U1",
                     "SessionResult.session_type": "ssh",
                     "Count": 2,
                 }
@@ -678,7 +678,7 @@ def test_successful_handles_prefixed_and_mixed_case_credential_paths(monkeypatch
         if query is reporting.queries.credential_failure:
             return [
                 {
-                    "SessionResult.slave_or_credential": "Credential/U1",
+                    "SessionResult.credential_or_slave": "Credential/U1",
                     "SessionResult.session_type": "ssh",
                     "Count": 4,
                 }
@@ -1051,6 +1051,79 @@ def test_outpost_creds_builds_rows(monkeypatch):
     ]
 
 
+def test_successful_handles_dict_results(monkeypatch):
+    cred = {
+        "uuid": "u1",
+        "index": 1,
+        "label": "cred1",
+        "username": "user1",
+        "enabled": True,
+        "types": "ssh",
+        "usage": "",
+        "ip_range": None,
+        "ip_exclusion": None,
+    }
+
+    creds = types.SimpleNamespace()
+    creds.get_vault_credentials = lambda: None
+
+    def fake_get_json(arg):
+        if arg == creds.get_vault_credentials:
+            return [cred]
+        return []
+
+    monkeypatch.setattr(reporting.api, "get_json", fake_get_json)
+
+    def fake_search_results(search, query):
+        if query == reporting.queries.credential_success:
+            return {
+                "results": [
+                    {
+                        "SessionResult.slave_or_credential": "credential/u1",
+                        "SessionResult.session_type": "ssh",
+                        "Count": 2,
+                    }
+                ]
+            }
+        if query == reporting.queries.deviceinfo_success:
+            return {
+                "results": [
+                    {
+                        "DeviceInfo.last_credential": "credential/u1",
+                        "DeviceInfo.access_method": "ssh",
+                        "Count": 1,
+                    }
+                ]
+            }
+        return {"results": []}
+
+    monkeypatch.setattr(reporting.api, "search_results", fake_search_results)
+
+    captured = {}
+
+    def fake_report(data, headers, args, name=None):
+        captured["data"] = data
+        captured["headers"] = headers
+
+    monkeypatch.setattr(reporting, "output", types.SimpleNamespace(report=fake_report))
+
+    args = types.SimpleNamespace(
+        output_csv=False,
+        output_file=None,
+        target=None,
+        include_endpoints=None,
+        endpoint_prefix=None,
+    )
+
+    reporting.successful(creds, DummySearch(), args)
+
+    headers = captured["headers"]
+    row = captured["data"][0]
+
+    assert row[headers.index("State")] == "Enabled"
+    assert row[headers.index("Successes")] == 3
+
+
 def test_successful_cli_parses_new_headers(monkeypatch):
     cred = {
         "uuid": "u1",
@@ -1069,8 +1142,8 @@ def test_successful_cli_parses_new_headers(monkeypatch):
             return json.dumps(cred)
         if reporting.queries.credential_success in cmd:
             return (
-                "SessionResult.slave_or_credential,SessionResult.session_type,Count\n"
-                "credential/u1,ssh,2\n"
+                "SessionResult.credential_or_slave,uuid,SessionResult.session_type,SessionResult.outpost,Count\n"
+                "credential/u1,credential/u1,ssh,op1,2\n"
             )
         if reporting.queries.deviceinfo_success in cmd:
             return (
@@ -1079,8 +1152,8 @@ def test_successful_cli_parses_new_headers(monkeypatch):
             )
         if reporting.queries.credential_failure in cmd:
             return (
-                "SessionResult.slave_or_credential,SessionResult.session_type,Count\n"
-                "credential/u1,ssh,4\n"
+                "SessionResult.credential_or_slave,uuid,SessionResult.session_type,SessionResult.outpost,Count\n"
+                "credential/u1,credential/u1,ssh,op1,4\n"
             )
         return ""
 

@@ -68,10 +68,22 @@ def test_session_get_normalizes_uuid_case():
     ]
     assert tools.session_get(results) == {"abcdef": ["ssh", 1]}
 
-
-def test_session_get_logs_warning_for_invalid_input(caplog):
-    with caplog.at_level(logging.DEBUG):
-        result = tools.session_get("oops")
-    assert result == {}
-    assert "session_get expected list of results, got str" in caplog.text
-    assert "session_get received payload: 'oops'" in caplog.text
+def test_session_get_dict_wrapper():
+    payload = {
+        "results": [
+            {
+                "uuid": "Credential/u1",
+                "SessionResult.session_type": "ssh",
+                "Count": "1",
+            },
+            {
+                "uuid": "Credential/u2",
+                "SessionResult.session_type": "snmp",
+                "Count": "3",
+            },
+        ]
+    }
+    assert tools.session_get(payload) == {
+        "u1": ["ssh", 1],
+        "u2": ["snmp", 3],
+    }

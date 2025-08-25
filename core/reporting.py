@@ -231,6 +231,7 @@ def successful(creds, search, args):
                 failCreds7,
             ]
         )
+        logger.debug("UUID %s -> active=%s", uuid, active)
 
         if sessions[0] and devinfos[0]:
             success_all = int(sessions[1]) + int(devinfos[1])
@@ -249,10 +250,17 @@ def successful(creds, search, args):
 
         if sessions7[0] and devinfos7[0]:
             success7 = int(sessions7[1]) + int(devinfos7[1])
+            logger.debug(
+                "UUID %s -> success7=%s (sessions7 + devinfos7)", uuid, success7
+            )
         elif sessions7[0]:
             success7 = int(sessions7[1])
+            logger.debug("UUID %s -> success7=%s (sessions7 only)", uuid, success7)
         elif devinfos7[0]:
             success7 = int(devinfos7[1])
+            logger.debug("UUID %s -> success7=%s (devinfos7 only)", uuid, success7)
+        else:
+            logger.debug("UUID %s -> success7=%s (no data)", uuid, success7)
 
         scheduled_scans = builder.get_scans(scan_ranges_results, list_of_ranges)
         logger.debug("Scheduled Scans List %s", scheduled_scans)

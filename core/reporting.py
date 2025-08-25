@@ -204,7 +204,9 @@ def successful(creds, search, args):
             percent = success / total
 
         msg = None
-        outpost_url = outpost_map.get(uuid)
+        op_info = outpost_map.get(uuid, {})
+        outpost_id = op_info.get("id")
+        outpost_url = op_info.get("url")
         usage = detail.get('usage')
         if args.output_file or args.output_csv:
             if active:
@@ -223,6 +225,7 @@ def successful(creds, search, args):
                     ip_exclude,
                     scheduled_scans if scheduled_scans else None,
                     excluded_scans if excluded_scans else None,
+                    outpost_id,
                     outpost_url,
                 ])
             else:
@@ -241,6 +244,7 @@ def successful(creds, search, args):
                     ip_exclude,
                     scheduled_scans if scheduled_scans else None,
                     excluded_scans if excluded_scans else None,
+                    outpost_id,
                     outpost_url,
                 ])
             headers = [
@@ -258,6 +262,7 @@ def successful(creds, search, args):
                 "Excludes",
                 "Scheduled Scans",
                 "Exclusion Lists",
+                "Outpost ID",
                 "Outpost URL",
             ]
         else:
@@ -273,6 +278,7 @@ def successful(creds, search, args):
                     percent,
                     status,
                     usage,
+                    outpost_id,
                     outpost_url,
                 ])
             else:
@@ -287,6 +293,7 @@ def successful(creds, search, args):
                     0.0,
                     "Credential appears to not be in use (%s)" % status,
                     usage,
+                    outpost_id,
                     outpost_url,
                 ])
             headers = [
@@ -300,6 +307,7 @@ def successful(creds, search, args):
                 "Success %",
                 "State",
                 "Usage",
+                "Outpost ID",
                 "Outpost URL",
             ]
     print(os.linesep,end="\r")

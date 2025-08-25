@@ -129,6 +129,58 @@ def test_successful_combines_query_results(monkeypatch):
     assert row[8] == pytest.approx(5 / 9)
 
 
+def test_successful_includes_outpost_fields(monkeypatch):
+    call = {"n": 0}
+
+    def fake_get_json(*a, **k):
+        call["n"] += 1
+        if call["n"] == 1:
+            return [
+                {
+                    "uuid": "u1",
+                    "label": "c",
+                    "index": 1,
+                    "enabled": True,
+                    "username": "user",
+                    "usage": "",
+                    "iprange": None,
+                    "exclusions": None,
+                }
+            ]
+        return []
+
+    monkeypatch.setattr(reporting.api, "get_json", fake_get_json)
+    monkeypatch.setattr(reporting.api, "search_results", lambda *a, **k: [])
+    monkeypatch.setattr(reporting.builder, "get_credentials", lambda entry: entry)
+    monkeypatch.setattr(reporting.builder, "get_scans", lambda *a, **k: [])
+    monkeypatch.setattr(
+        reporting.api,
+        "map_outpost_credentials",
+        lambda app: {"u1": {"id": "op1", "url": "http://op"}},
+    )
+    monkeypatch.setattr(
+        reporting.tideway, "appliance", lambda target, token: types.SimpleNamespace(), raising=False
+    )
+
+    captured = {}
+
+    def fake_report(data, headers, args, name=""):
+        captured["data"] = data
+        captured["headers"] = headers
+
+    monkeypatch.setattr(reporting, "output", types.SimpleNamespace(report=fake_report))
+
+    args = types.SimpleNamespace(output_csv=False, output_file=None, token=None, target="http://x")
+
+    reporting.successful(DummyCreds(), DummySearch(), args)
+
+    row = captured["data"][0]
+    assert "Outpost ID" in captured["headers"]
+    assert "Outpost URL" in captured["headers"]
+    assert row[-2] == "op1"
+    assert row[-1] == "http://op"
+
+
 def test_successful_uses_token_file(monkeypatch, tmp_path):
     file_path = tmp_path / "token.txt"
     file_path.write_text("abc")

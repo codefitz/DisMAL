@@ -291,7 +291,14 @@ def get_outposts(appliance):
 
 
 def map_outpost_credentials(appliance):
-    """Return mapping of credential UUIDs to outpost URLs."""
+    """Return mapping of credential UUIDs to outpost details.
+
+    The returned dictionary maps a credential UUID to a dictionary containing
+    the outpost ``id`` (if available) and ``url``.  This provides callers with
+    enough information to reference both the outpost identifier and its
+    location.
+    """
+
     mapping = {}
     outposts = get_outposts(appliance)
     if not isinstance(outposts, list):
@@ -319,7 +326,8 @@ def map_outpost_credentials(appliance):
                 if not uuid:
                     continue
                 get_json(creds_ep.get_vault_credential(uuid))
-                mapping[uuid] = url
+                outpost_id = outpost.get("id") or outpost.get("uuid")
+                mapping[uuid] = {"id": outpost_id, "url": url}
         except Exception as e:  # pragma: no cover - network errors
             logger.error("Error processing outpost %s: %s", url, e)
     return mapping

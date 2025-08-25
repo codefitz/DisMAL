@@ -89,6 +89,48 @@ def test_search_results_error_non_json():
     assert search_results(search, {"query": "q"}) == {"error": "Internal Server Error"}
 
 
+def test_search_results_normalizes_nested_results():
+    payload = {
+        "count": 1,
+        "results": [
+            [
+                "SessionResult.credential_or_slave",
+                "SessionResult.session_type",
+                "Count",
+            ],
+            ["abc", "ssh", 5],
+        ],
+    }
+    resp = DummyResponse(200, json.dumps(payload))
+    search = DummySearch(resp)
+    data = search_results(search, {"query": "q"})
+    assert data["count"] == 1
+    assert data["results"] == [
+        {
+            "SessionResult.credential_or_slave": "abc",
+            "SessionResult.session_type": "ssh",
+            "Count": 5,
+        }
+    ]
+
+
+def test_session_get_extracts_counts_from_normalized_results():
+    payload = {
+        "results": [
+            [
+                "SessionResult.credential_or_slave",
+                "SessionResult.session_type",
+                "Count",
+            ],
+            ["ABCDEF", "ssh", 2],
+        ]
+    }
+    resp = DummyResponse(200, json.dumps(payload))
+    search = DummySearch(resp)
+    data = search_results(search, {"query": "q"})
+    assert tools.session_get(data) == {"abcdef": ["ssh", 2]}
+
+
 def test_show_runs_handles_bad_response(capsys):
     resp = DummyResponse(401, 'not-json', reason="Unauthorized")
     disco = DummyDisco(resp)

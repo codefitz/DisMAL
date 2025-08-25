@@ -1155,6 +1155,14 @@ def search_results(api_endpoint, query):
                         logger.debug("Parsed results length: %s" % len(data))
                     except Exception:
                         pass
+                # Some API responses wrap tabular data inside a ``results``
+                # key where the value is a list-of-lists table. Normalise this
+                # structure so callers always receive a list of dictionaries.
+                if isinstance(data, dict):
+                    table = data.get("results")
+                    if isinstance(table, list) and table and isinstance(table[0], list):
+                        data["results"] = tools.list_table_to_json(table)
+                    return data
                 return tools.list_table_to_json(data)
         else:
             if logger.isEnabledFor(logging.DEBUG):
@@ -1162,6 +1170,11 @@ def search_results(api_endpoint, query):
                     logger.debug("Parsed results length: %s" % len(results))
                 except Exception:
                     pass
+            if isinstance(results, dict):
+                table = results.get("results")
+                if isinstance(table, list) and table and isinstance(table[0], list):
+                    results["results"] = tools.list_table_to_json(table)
+                return results
             return tools.list_table_to_json(results)
     except Exception as e:
         if logger.isEnabledFor(logging.DEBUG):

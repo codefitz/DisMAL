@@ -192,32 +192,29 @@ def successful(creds, search, args):
         percent7 = 0.0
 
         # Look up success/failure information for this credential
-        sessions = suxCreds.get(uuid)
-        devinfos = suxDev.get(uuid)
-        failure = failCreds.get(uuid)
-        sessions7 = suxCreds7.get(uuid)
-        devinfos7 = suxDev7.get(uuid)
-        failure7 = failCreds7.get(uuid)
+        sessions = suxCreds.get(uuid, [None, 0])
+        devinfos = suxDev.get(uuid, [None, 0])
+        failure = failCreds.get(uuid, [None, 0])
+        sessions7 = suxCreds7.get(uuid, [None, 0])
+        devinfos7 = suxDev7.get(uuid, [None, 0])
+        failure7 = failCreds7.get(uuid, [None, 0])
 
         # Determine if this credential was seen in any query results, even if
         # the count is zero
         active = any(
-            record is not None
-            for record in [sessions, devinfos, failure, sessions7, devinfos7, failure7]
+            uuid in mapping
+            for mapping in [
+                suxCreds,
+                suxDev,
+                failCreds,
+                suxCreds7,
+                suxDev7,
+                failCreds7,
+            ]
         )
 
-        # Replace missing entries with default zero counts for later math
-        sessions = sessions or [None, 0]
-        devinfos = devinfos or [None, 0]
-        failure = failure or [None, 0]
-        sessions7 = sessions7 or [None, 0]
-        devinfos7 = devinfos7 or [None, 0]
-        failure7 = failure7 or [None, 0]
-
         if sessions[0] and devinfos[0]:
-            seshcount = int(sessions[1])
-            devcount = int(devinfos[1])
-            success_all = seshcount + devcount
+            success_all = int(sessions[1]) + int(devinfos[1])
             session = sessions[0] or devinfos[0]
             msg = "Sessions and DevInfos: %s" % success_all
             logger.debug(msg)
@@ -235,9 +232,7 @@ def successful(creds, search, args):
             logger.debug(msg)
 
         if sessions7[0] and devinfos7[0]:
-            seshcount7 = int(sessions7[1])
-            devcount7 = int(devinfos7[1])
-            success7 = seshcount7 + devcount7
+            success7 = int(sessions7[1]) + int(devinfos7[1])
         elif sessions7[0]:
             success7 = int(sessions7[1])
         elif devinfos7[0]:
@@ -251,11 +246,10 @@ def successful(creds, search, args):
         msg = "Excluded Scans List" % excluded_scans
         logger.debug(msg)
 
-        if failure[1]:
-            fails_all = int(failure[1])
+        fails_all = int(failure[1])
+        if fails_all:
             logger.debug("Failures:%s" % fails_all)
-        if failure7[1]:
-            fails7 = int(failure7[1])
+        fails7 = int(failure7[1])
 
         # Mark credential as active when any failure data exists so the
         # reporting row is emitted with numeric zeros instead of being
@@ -269,13 +263,13 @@ def successful(creds, search, args):
         total = success_all + fails_all
         if total > 0:
             logger.debug("Success:%s\nTotal:%s" % (success_all, total))
-            percent_all = success_all / total
+            percent_all = success_all / float(total)
 
         success7 = int(success7)
         fails7 = int(fails7)
         total7 = success7 + fails7
         if total7 > 0:
-            percent7 = success7 / total7
+            percent7 = success7 / float(total7)
 
         msg = None
         outpost_url = cred_outposts.get(uuid)

@@ -918,7 +918,8 @@ def ipaddr(search, credentials, args):
 
     devResults = api.search_results(search,devices)
     accessResults = api.search_results(search,accesses)
-    dropped = api.search_results(search,queries.dropped_endpoints)
+    # Use cached dropped endpoint data if available
+    dropped = api.search_results(search, queries.dropped_endpoints)
 
     devices_found = []
     if len(devResults) == 1:
@@ -1053,6 +1054,7 @@ def _gather_discovery_data(twsearch, twcreds, args):
         twsearch, args.include_endpoints, args.endpoint_prefix
     )
     discos = api.search_results(twsearch, queries.last_disco)
+    # Reuse cached dropped endpoint results if previously fetched
     dropped = api.search_results(twsearch, queries.dropped_endpoints)
 
     disco_data = []

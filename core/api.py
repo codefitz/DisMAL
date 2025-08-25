@@ -18,6 +18,10 @@ import socket
 
 logger = logging.getLogger("_api_")
 
+# Cache for search_results to avoid duplicate API calls
+_SEARCH_CACHE = {}
+_CACHE_ENDPOINT = None
+
 def init_endpoints(api_target, args):
     try:
         logger.debug("Requesting discovery endpoint from %s", args.target)
@@ -1097,7 +1101,7 @@ def update_cred(appliance, uuid):
             active = True
     return active
 
-def search_results(api_endpoint, query, limit=500):
+def search_results(api_endpoint, query, limit=500, use_cache=True):
     """Execute a search query and return all results.
 
     The Discovery API defaults to returning a maximum of 500 rows per
@@ -1105,6 +1109,9 @@ def search_results(api_endpoint, query, limit=500):
     which meant callers could silently miss data when more than 500 rows were
     available.  The ``limit`` parameter allows callers to specify a custom
     limit or pass ``0`` to retrieve *all* available rows via pagination.
+
+    Results are cached based on the ``query`` and ``limit`` parameters.  Set
+    ``use_cache`` to ``False`` to bypass the cache and force a fresh API call.
     """
 
     try:
@@ -1118,6 +1125,18 @@ def search_results(api_endpoint, query, limit=500):
                 logger.debug("Search query: %s" % query)
             except Exception:
                 pass
+
+        # Reset cache when querying a different API endpoint
+        global _CACHE_ENDPOINT
+        if _CACHE_ENDPOINT is not api_endpoint:
+            _SEARCH_CACHE.clear()
+            _CACHE_ENDPOINT = api_endpoint
+
+        # Build a hashable cache key from the query and limit
+        key_query = json.dumps(query, sort_keys=True, default=str)
+        cache_key = (key_query, limit)
+        if use_cache and cache_key in _SEARCH_CACHE:
+            return _SEARCH_CACHE[cache_key]
 
         # Determine the page size for each request.  A limit of ``0`` denotes
         # no limit which we implement by requesting data in 500 row chunks
@@ -1196,6 +1215,15 @@ def search_results(api_endpoint, query, limit=500):
             # ``data`` is expected to be a list of rows.  If not, return it
             # directly so callers can handle error objects consistently.
             if not isinstance(data, list):
+                if isinstance(data, dict) and isinstance(data.get("results"), list):
+                    # Normalise embedded table results
+                    data = dict(data)
+                    data["results"] = tools.list_table_to_json(data["results"])
+                    if use_cache:
+                        _SEARCH_CACHE[cache_key] = data
+                    return data
+                if use_cache:
+                    _SEARCH_CACHE[cache_key] = data
                 return data
 
             results_all.extend(data)
@@ -1214,7 +1242,10 @@ def search_results(api_endpoint, query, limit=500):
                     break
                 page_limit = 500 if remaining > 500 else remaining
 
-        return tools.list_table_to_json(results_all)
+        result_json = tools.list_table_to_json(results_all)
+        if use_cache:
+            _SEARCH_CACHE[cache_key] = result_json
+        return result_json
     except Exception as e:
         if logger.isEnabledFor(logging.DEBUG):
             msg = (

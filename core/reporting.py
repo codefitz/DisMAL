@@ -171,7 +171,13 @@ def successful(creds, search, args):
         detail = builder.get_credentials(cred)
 
         uuid = detail.get('uuid')
-        logger.debug("Working UUID :%s", uuid)
+        if uuid is not None:
+            # Mirror the normalization performed in ``tools.session_get`` so
+            # that dictionary lookups are case-insensitive and unaffected by
+            # object-path prefixes such as "Credential/".
+            uuid = str(uuid).split('/')[-1].lower()
+        msg = "Working UUID :%s\n"%uuid
+        logger.debug(msg)
         # Ensure index is numeric for downstream calculations
         index = int(tools.getr(detail, 'index', 0) or 0)
         

@@ -55,3 +55,14 @@ def test_session_get_falls_back_to_uuid():
         }
     ]
     assert tools.session_get(results) == {"u1": ["ssh", 1]}
+
+
+def test_session_get_normalizes_uuid_case():
+    results = [
+        {
+            "uuid": "Credential/ABCDEF",
+            "SessionResult.session_type": "ssh",
+            "Count": "1",
+        }
+    ]
+    assert tools.session_get(results) == {"abcdef": ["ssh", 1]}

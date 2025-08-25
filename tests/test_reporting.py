@@ -41,6 +41,12 @@ def _run_with_patches(monkeypatch, func):
     assert "ran" in called
 
 
+def test_queries_prioritize_credential_over_slave():
+    """Ensure credential UUIDs are preferred over slave IDs in queries."""
+    assert "(credential or slave)" in reporting.queries.credential_success
+    assert "(credential or slave)" in reporting.queries.credential_failure
+
+
 def test_discovery_access_handles_bad_api(monkeypatch):
     _run_with_patches(monkeypatch, reporting.discovery_access)
 
@@ -128,10 +134,13 @@ def test_successful_combines_query_results(monkeypatch):
     assert row[7] == 4
     assert row[8] == pytest.approx(5 / 9)
 
-
-def test_successful_includes_outpost_fields(monkeypatch):
+def test_successful_flags_active_with_failures_only(monkeypatch):
     call = {"n": 0}
 
+    def fake_search_results(search, query):
+        if query is reporting.queries.credential_failure:
+            return [{"UUID": "u1", "Session_Type": "ssh", "Count": 1}]
+        return []
     def fake_get_json(*a, **k):
         call["n"] += 1
         if call["n"] == 1:
@@ -179,6 +188,16 @@ def test_successful_includes_outpost_fields(monkeypatch):
     assert "Outpost URL" in captured["headers"]
     assert row[-2] == "op1"
     assert row[-1] == "http://op"
+    assert row[5] == "ssh"
+    assert row[6] == 0
+    assert row[7] == 1
+    assert row[9] == "Enabled"
+
+
+def test_credential_queries_show_credential_first():
+    clause = "(credential or slave) as 'UUID'"
+    assert clause in reporting.queries.credential_success
+    assert clause in reporting.queries.credential_failure
 
 
 def test_successful_uses_token_file(monkeypatch, tmp_path):

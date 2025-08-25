@@ -129,6 +129,60 @@ def test_successful_combines_query_results(monkeypatch):
     assert row[8] == pytest.approx(5 / 9)
 
 
+def test_successful_flags_active_with_failures_only(monkeypatch):
+    call = {"n": 0}
+
+    def fake_search_results(search, query):
+        if query is reporting.queries.credential_failure:
+            return [{"UUID": "u1", "Session_Type": "ssh", "Count": 1}]
+        return []
+
+    def fake_get_json(*a, **k):
+        call["n"] += 1
+        if call["n"] == 1:
+            return [
+                {
+                    "uuid": "u1",
+                    "label": "c",
+                    "index": 1,
+                    "enabled": True,
+                    "username": "user",
+                    "usage": "",
+                    "iprange": None,
+                    "exclusions": None,
+                }
+            ]
+        return []
+
+    monkeypatch.setattr(reporting.api, "get_json", fake_get_json)
+    monkeypatch.setattr(reporting.api, "search_results", fake_search_results)
+    monkeypatch.setattr(reporting.builder, "get_credentials", lambda entry: entry)
+    monkeypatch.setattr(reporting.builder, "get_scans", lambda *a, **k: [])
+
+    captured = {}
+
+    def fake_report(data, headers, args, name=""):
+        captured["data"] = data
+
+    monkeypatch.setattr(reporting, "output", types.SimpleNamespace(report=fake_report))
+
+    args = types.SimpleNamespace(output_csv=False, output_file=None, token=None, target="http://x")
+
+    reporting.successful(DummyCreds(), DummySearch(), args)
+
+    row = captured["data"][0]
+    assert row[5] == "ssh"
+    assert row[6] == 0
+    assert row[7] == 1
+    assert row[9] == "Enabled"
+
+
+def test_credential_queries_show_credential_first():
+    clause = "(credential or slave) as 'UUID'"
+    assert clause in reporting.queries.credential_success
+    assert clause in reporting.queries.credential_failure
+
+
 def test_successful_uses_token_file(monkeypatch, tmp_path):
     file_path = tmp_path / "token.txt"
     file_path.write_text("abc")

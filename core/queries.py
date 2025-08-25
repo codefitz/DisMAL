@@ -13,7 +13,7 @@ credential_failure = """
                             processwith countUnique(1,0)
                         """
 deviceinfo_success = """
-                          search DeviceInfo where method_success and __had_inference
+                          search DeviceInfo where method_success
                           and nodecount(traverse DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess
                                             traverse DiscoveryAccess:Metadata:Detail:SessionResult) = 0
                           show (last_credential or last_slave) as 'DeviceInfo.last_credential',
@@ -33,7 +33,7 @@ credential_failure_7d = """
                             processwith countUnique(1,0)
                         """
 deviceinfo_success_7d = """
-                          search DeviceInfo where method_success and __had_inference
+                          search DeviceInfo where method_success
                           and nodecount(traverse DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess
                                             traverse DiscoveryAccess:Metadata:Detail:SessionResult) = 0
                           and time_index > (currentTime() - 7*24*3600*10000000)

@@ -1097,7 +1097,16 @@ def update_cred(appliance, uuid):
             active = True
     return active
 
-def search_results(api_endpoint, query):
+def search_results(api_endpoint, query, limit=500):
+    """Execute a search query and return all results.
+
+    The Discovery API defaults to returning a maximum of 500 rows per
+    request.  Older versions of :func:`search_results` mirrored this behaviour
+    which meant callers could silently miss data when more than 500 rows were
+    available.  The ``limit`` parameter allows callers to specify a custom
+    limit or pass ``0`` to retrieve *all* available rows via pagination.
+    """
+
     try:
         if isinstance(query, str):
             query = {"query": query}
@@ -1110,59 +1119,103 @@ def search_results(api_endpoint, query):
             except Exception:
                 pass
 
-        if hasattr(api_endpoint, "search_bulk"):
-            results = api_endpoint.search_bulk(query, format="object", limit=500)
-        else:
-            results = api_endpoint.search(query, format="object", limit=500)
-        # Depending on the version of the `tideway` library the call above may
-        # return either a `requests.Response` object or the decoded JSON
-        # directly.  Normalise the output so callers always get Python data
-        # structures.
-        if hasattr(results, "json"):
-            if logger.isEnabledFor(logging.DEBUG):
+        # Determine the page size for each request.  A limit of ``0`` denotes
+        # no limit which we implement by requesting data in 500 row chunks
+        # until the API stops returning additional results.
+        results_all = []
+        page_limit = 500 if not limit or limit > 500 else limit
+        offset = 0
+        remaining = limit
+
+        while True:
+            kwargs = {"format": "object", "limit": page_limit}
+            if offset:
+                kwargs["offset"] = offset
+
+            # Perform the search, favouring the bulk API when available
+            if hasattr(api_endpoint, "search_bulk"):
                 try:
-                    logger.debug("Raw search response: %s" % results.text)
-                except Exception:
-                    pass
-            status_code = getattr(results, "status_code", 200)
-            if status_code >= 400:
-                logger.error(
-                    "Search API returned %s - %s",
-                    status_code,
-                    getattr(results, "reason", ""),
-                )
-                try:
-                    data = json.loads(results.text)
-                except Exception:
-                    data = {"error": getattr(results, "text", "")}
-                if logger.isEnabledFor(logging.DEBUG):
-                    try:
-                        logger.debug("Parsed error payload: %s", json.dumps(data))
-                    except Exception:
-                        pass
-                logger.error("Search failed: %s - %s", status_code, getattr(results, "reason", ""))
-                return data
-            try:
-                data = results.json()
-            except Exception as e:
-                msg = "Error decoding JSON from search results: %s" % str(e)
-                print(msg)
-                logger.error(msg)
-                return []
+                    results = api_endpoint.search_bulk(query, **kwargs)
+                except TypeError:  # pragma: no cover - older libs lack offset
+                    kwargs.pop("offset", None)
+                    results = api_endpoint.search_bulk(query, **kwargs)
+                    offset = 0
             else:
+                try:
+                    results = api_endpoint.search(query, **kwargs)
+                except TypeError:  # pragma: no cover - older libs lack offset
+                    kwargs.pop("offset", None)
+                    results = api_endpoint.search(query, **kwargs)
+                    offset = 0
+
+            # Depending on the version of the `tideway` library the call above
+            # may return either a `requests.Response` object or the decoded
+            # JSON directly.  Normalise the output so callers always get Python
+            # data structures.
+            if hasattr(results, "json"):
                 if logger.isEnabledFor(logging.DEBUG):
                     try:
-                        logger.debug("Parsed results length: %s" % len(data))
+                        logger.debug("Raw search response: %s" % results.text)
                     except Exception:
                         pass
-                return tools.list_table_to_json(data)
-        else:
+                status_code = getattr(results, "status_code", 200)
+                if status_code >= 400:
+                    logger.error(
+                        "Search API returned %s - %s",
+                        status_code,
+                        getattr(results, "reason", ""),
+                    )
+                    try:
+                        data = json.loads(results.text)
+                    except Exception:
+                        data = {"error": getattr(results, "text", "")}
+                    if logger.isEnabledFor(logging.DEBUG):
+                        try:
+                            logger.debug("Parsed error payload: %s", json.dumps(data))
+                        except Exception:
+                            pass
+                    logger.error(
+                        "Search failed: %s - %s", status_code, getattr(results, "reason", "")
+                    )
+                    return data
+                try:
+                    data = results.json()
+                except Exception as e:
+                    msg = "Error decoding JSON from search results: %s" % str(e)
+                    print(msg)
+                    logger.error(msg)
+                    return []
+            else:
+                data = results
+
             if logger.isEnabledFor(logging.DEBUG):
                 try:
-                    logger.debug("Parsed results length: %s" % len(results))
+                    logger.debug("Parsed results length: %s" % len(data))
                 except Exception:
                     pass
-            return tools.list_table_to_json(results)
+
+            # ``data`` is expected to be a list of rows.  If not, return it
+            # directly so callers can handle error objects consistently.
+            if not isinstance(data, list):
+                return data
+
+            results_all.extend(data)
+
+            # Stop when we've retrieved the requested number of rows or when
+            # the API returns fewer rows than requested for a given page.
+            if limit and limit > 0 and len(results_all) >= limit:
+                results_all = results_all[:limit]
+                break
+            if len(data) < page_limit:
+                break
+            offset += page_limit
+            if limit and limit > 0:
+                remaining = limit - len(results_all)
+                if remaining <= 0:
+                    break
+                page_limit = 500 if remaining > 500 else remaining
+
+        return tools.list_table_to_json(results_all)
     except Exception as e:
         if logger.isEnabledFor(logging.DEBUG):
             msg = (

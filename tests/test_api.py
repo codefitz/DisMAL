@@ -89,6 +89,24 @@ def test_search_results_error_non_json():
     assert search_results(search, {"query": "q"}) == {"error": "Internal Server Error"}
 
 
+def test_search_results_paginates(monkeypatch):
+    """search_results should accumulate more than 500 rows when limit=0."""
+
+    total = 800
+
+    class PagingSearch:
+        def search(self, query, format="object", limit=500, offset=0):
+            data = [{"row": i} for i in range(offset, min(offset + limit, total))]
+            return DummyResponse(200, json.dumps(data))
+
+    # Simplify downstream processing
+    monkeypatch.setattr(api_mod.tools, "list_table_to_json", lambda x: x)
+
+    search = PagingSearch()
+    results = search_results(search, {"query": "q"}, limit=0)
+    assert len(results) == total
+
+
 def test_show_runs_handles_bad_response(capsys):
     resp = DummyResponse(401, 'not-json', reason="Unauthorized")
     disco = DummyDisco(resp)

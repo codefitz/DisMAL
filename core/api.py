@@ -1179,6 +1179,19 @@ def search_results(api_endpoint, query):
             )
         return []
 
+REPORT_QUERY_MAP = {
+    "credential_success": [
+        "credential_success",
+        "deviceinfo_success",
+        "credential_failure",
+        "credential_success_7d",
+        "deviceinfo_success_7d",
+        "credential_failure_7d",
+        "scanrange",
+        "excludes",
+    ]
+}
+
 def run_queries(search, args, dir):
     """Execute queries from :mod:`core.queries` without post-processing.
 
@@ -1190,25 +1203,26 @@ def run_queries(search, args, dir):
 
     names = getattr(args, "excavate", []) or []
     for name in names:
-        query = getattr(queries, name, None)
-        if query is None:
-            msg = f"Query '{name}' not found"
-            print(msg)
-            logger.error(msg)
-            continue
+        for qname in REPORT_QUERY_MAP.get(name, [name]):
+            query = getattr(queries, qname, None)
+            if query is None:
+                msg = f"Query '{qname}' not found"
+                print(msg)
+                logger.error(msg)
+                continue
 
-        filename = os.path.join(dir, f"qry_{name}.csv")
-        # Use the "query" output type so ``define_csv`` handles the API call
-        # and CSV conversion for us without additional processing.
-        output.define_csv(
-            args,
-            search,
-            query,
-            filename,
-            getattr(args, "output_file", None),
-            getattr(args, "target", None),
-            "query",
-        )
+            filename = os.path.join(dir, f"qry_{qname}.csv")
+            # Use the "query" output type so ``define_csv`` handles the API call
+            # and CSV conversion for us without additional processing.
+            output.define_csv(
+                args,
+                search,
+                query,
+                filename,
+                getattr(args, "output_file", None),
+                getattr(args, "target", None),
+                "query",
+            )
 
 def hostname(args,dir):
     output.define_txt(args,args.target,os.path.join(dir, defaults.hostname_filename),None)

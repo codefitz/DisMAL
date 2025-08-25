@@ -169,5 +169,6 @@ python3 dismal.py --access_method api -i <appliance> -u <user> -p <password> \
     --excavate credential_success --queries
 ```
 
-The example above writes `qry_credential_success.csv` to the output
+The example above writes one CSV for each underlying query (for example,
+`qry_credential_success.csv` and `qry_deviceinfo_success.csv`) to the output
 directory for further analysis.

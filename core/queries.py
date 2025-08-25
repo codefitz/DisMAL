@@ -197,6 +197,17 @@ ip_schedules = """search DiscoveryAccess
                     nodecount(traverse Member:List:List:DiscoveryRun where scan_type = 'Scheduled') as 'schedules'
                     process with unique()"""
 
+active_runs = """
+                    search DiscoveryRun where status != 'Finished'
+                    show run_id as 'DiscoveryRun.run_id',
+                         status as 'DiscoveryRun.status',
+                         range_id as 'DiscoveryRun.range_id',
+                         total as 'DiscoveryRun.total',
+                         scanning as 'DiscoveryRun.scanning',
+                         pre_scanning as 'DiscoveryRun.pre_scanning',
+                         done as 'DiscoveryRun.done'
+                """
+
 connections_unscanned = """
                     search Host
                     traverse InferredElement:Inference:Associate:DiscoveryAccess

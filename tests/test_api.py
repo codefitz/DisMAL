@@ -246,6 +246,28 @@ def test_run_queries_executes_named_query(monkeypatch, tmp_path):
     monkeypatch.setattr(api_mod.output, "define_csv", fake_define_csv)
 
     args = types.SimpleNamespace(
+        excavate=["active_runs"], output_file=None, target="appl"
+    )
+    search = object()
+    outdir = str(tmp_path)
+
+    api_mod.run_queries(search, args, outdir)
+
+    assert recorded["query"] == api_mod.queries.active_runs
+    expected = os.path.join(outdir, "qry_active_runs.csv")
+    assert recorded["path"] == expected
+    assert recorded["type"] == "query"
+
+
+def test_run_queries_executes_report_queries(monkeypatch, tmp_path):
+    captured = []
+
+    def fake_define_csv(args, search, query, path, file, target, typ):
+        captured.append((query, path, typ))
+
+    monkeypatch.setattr(api_mod.output, "define_csv", fake_define_csv)
+
+    args = types.SimpleNamespace(
         excavate=["credential_success"], output_file=None, target="appl"
     )
     search = object()
@@ -253,10 +275,22 @@ def test_run_queries_executes_named_query(monkeypatch, tmp_path):
 
     api_mod.run_queries(search, args, outdir)
 
-    assert recorded["query"] == api_mod.queries.credential_success
-    expected = os.path.join(outdir, "qry_credential_success.csv")
-    assert recorded["path"] == expected
-    assert recorded["type"] == "query"
+    expected_names = [
+        "credential_success",
+        "deviceinfo_success",
+        "credential_failure",
+        "credential_success_7d",
+        "deviceinfo_success_7d",
+        "credential_failure_7d",
+        "scanrange",
+        "excludes",
+    ]
+    expected_queries = [getattr(api_mod.queries, n) for n in expected_names]
+    assert [q for q, _, _ in captured] == expected_queries
+    assert [p for _, p, _ in captured] == [
+        os.path.join(outdir, f"qry_{n}.csv") for n in expected_names
+    ]
+    assert all(t == "query" for _, _, t in captured)
 
 
 def test_map_outpost_credentials_strips_scheme(monkeypatch):

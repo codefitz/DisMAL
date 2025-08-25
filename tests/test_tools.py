@@ -87,3 +87,38 @@ def test_session_get_dict_wrapper():
         "u1": ["ssh", 1],
         "u2": ["snmp", 3],
     }
+
+
+def test_session_get_parses_dict_results():
+    results = [
+        {
+            "SessionResult.credential_or_slave": "Credential/u1",
+            "SessionResult.session_type": "ssh",
+            "Count": "2",
+        },
+        {
+            "SessionResult.credential_or_slave": "Credential/u2",
+            "SessionResult.session_type": "snmp",
+            "Count": 5,
+        },
+    ]
+    assert tools.session_get(results) == {
+        "u1": ["ssh", 2],
+        "u2": ["snmp", 5],
+    }
+
+
+def test_session_get_parses_table_results():
+    rows = [
+        [
+            "SessionResult.credential_or_slave",
+            "SessionResult.session_type",
+            "Count",
+        ],
+        ["Credential/u1", "ssh", "2"],
+        ["Credential/u2", "snmp", 5],
+    ]
+    assert tools.session_get(rows) == {
+        "u1": ["ssh", 2],
+        "u2": ["snmp", 5],
+    }

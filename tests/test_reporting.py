@@ -41,6 +41,12 @@ def _run_with_patches(monkeypatch, func):
     assert "ran" in called
 
 
+def test_queries_prioritize_credential_over_slave():
+    """Ensure credential UUIDs are preferred over slave IDs in queries."""
+    assert "(credential or slave)" in reporting.queries.credential_success
+    assert "(credential or slave)" in reporting.queries.credential_failure
+
+
 def test_discovery_access_handles_bad_api(monkeypatch):
     _run_with_patches(monkeypatch, reporting.discovery_access)
 

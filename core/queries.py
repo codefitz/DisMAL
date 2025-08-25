@@ -2,13 +2,13 @@
 
 credential_success = """
                             search SessionResult where success
-                            show (slave or credential) as 'UUID',
+                            show (credential or slave) as 'UUID',
                             session_type as 'Session_Type'
                             processwith countUnique(1,0)
                         """
 credential_failure = """
                             search SessionResult where not success
-                            show (slave or credential) as 'UUID',
+                            show (credential or slave) as 'UUID',
                             session_type as 'Session_Type'
                             processwith countUnique(1,0)
                         """

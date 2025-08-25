@@ -264,7 +264,7 @@ def ordering(creds, search, args, apply):
         seshsux = api.search_results(search,"""
                                         search SessionResult where success
                                         and (slave = "%s" or credential = "%s")
-                                        show (slave or credential) as cred_uuid, session_type process with countUnique(0)
+                                        show (credential or slave) as cred_uuid, session_type process with countUnique(0)
                                         """ % (cred['uuid'],cred['uuid']))
         devinfosux = api.search_results(search,"""
                                         search DeviceInfo where method_success
@@ -277,7 +277,7 @@ def ordering(creds, search, args, apply):
         credfails = api.search_results(search,"""
                                         search SessionResult where not success
                                         and (slave = "%s" or credential = "%s")
-                                        show (slave or credential) as cred_uuid, session_type process with countUnique(0)
+                                        show (credential or slave) as cred_uuid, session_type process with countUnique(0)
                                     """ % (cred['uuid'],cred['uuid']))
         
         for credsux in seshsux:

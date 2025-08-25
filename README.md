@@ -141,7 +141,7 @@ compared to the total endpoints examined.
 
 The toolkit now offers a broad range of reports. Selected examples include:
 
-- **active_runs** – list active Discovery Runs; add `--queries` to run via search query.
+- **active_scans** – list active Discovery Runs; add `--queries` to run via search query.
 - **credential_success** – report on credential success with totals and success percentages.
 - **device_ids** – list unique device identities with a Guide % for each originating endpoint.
 - **devices** – summarize unique device profiles with last access and credential details.

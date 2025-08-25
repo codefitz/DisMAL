@@ -44,3 +44,14 @@ def test_json2csv_returns_headers_and_map():
         "Person.first_name": "Person.first_name",
         "Person.last_name": "Person.last_name",
     }
+
+
+def test_session_get_falls_back_to_uuid():
+    results = [
+        {
+            "uuid": "Credential/u1",
+            "SessionResult.session_type": "ssh",
+            "Count": "1",
+        }
+    ]
+    assert tools.session_get(results) == {"u1": ["ssh", 1]}

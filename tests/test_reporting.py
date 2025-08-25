@@ -1051,6 +1051,79 @@ def test_outpost_creds_builds_rows(monkeypatch):
     ]
 
 
+def test_successful_handles_dict_results(monkeypatch):
+    cred = {
+        "uuid": "u1",
+        "index": 1,
+        "label": "cred1",
+        "username": "user1",
+        "enabled": True,
+        "types": "ssh",
+        "usage": "",
+        "ip_range": None,
+        "ip_exclusion": None,
+    }
+
+    creds = types.SimpleNamespace()
+    creds.get_vault_credentials = lambda: None
+
+    def fake_get_json(arg):
+        if arg == creds.get_vault_credentials:
+            return [cred]
+        return []
+
+    monkeypatch.setattr(reporting.api, "get_json", fake_get_json)
+
+    def fake_search_results(search, query):
+        if query == reporting.queries.credential_success:
+            return {
+                "results": [
+                    {
+                        "SessionResult.slave_or_credential": "credential/u1",
+                        "SessionResult.session_type": "ssh",
+                        "Count": 2,
+                    }
+                ]
+            }
+        if query == reporting.queries.deviceinfo_success:
+            return {
+                "results": [
+                    {
+                        "DeviceInfo.last_credential": "credential/u1",
+                        "DeviceInfo.access_method": "ssh",
+                        "Count": 1,
+                    }
+                ]
+            }
+        return {"results": []}
+
+    monkeypatch.setattr(reporting.api, "search_results", fake_search_results)
+
+    captured = {}
+
+    def fake_report(data, headers, args, name=None):
+        captured["data"] = data
+        captured["headers"] = headers
+
+    monkeypatch.setattr(reporting, "output", types.SimpleNamespace(report=fake_report))
+
+    args = types.SimpleNamespace(
+        output_csv=False,
+        output_file=None,
+        target=None,
+        include_endpoints=None,
+        endpoint_prefix=None,
+    )
+
+    reporting.successful(creds, DummySearch(), args)
+
+    headers = captured["headers"]
+    row = captured["data"][0]
+
+    assert row[headers.index("State")] == "Enabled"
+    assert row[headers.index("Successes")] == 3
+
+
 def test_successful_cli_parses_new_headers(monkeypatch):
     cred = {
         "uuid": "u1",

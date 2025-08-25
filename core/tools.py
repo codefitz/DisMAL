@@ -148,6 +148,12 @@ def session_get(results):
 
     sessions = {}
 
+    # Some API endpoints return a dictionary with a top-level "results" key
+    # instead of a plain list.  Normalise this here so callers can supply the
+    # raw API payload without having to unwrap it first.
+    if isinstance(results, dict):
+        results = results.get("results", [])
+
     if not isinstance(results, list):
         logger.warning(
             "session_get expected list of results, got %s", type(results).__name__

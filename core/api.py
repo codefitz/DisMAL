@@ -453,7 +453,7 @@ def discovery_runs(disco, args, dir):
             args,
             header,
             rows,
-            os.path.join(dir, defaults.current_scans_filename),
+            os.path.join(dir, defaults.active_scans_filename),
             args.output_file,
             args.target,
             "csv_file",
@@ -509,7 +509,7 @@ def show_runs(disco, args):
     else:
         if getattr(args, "excavate", None):
             out_dir = getattr(args, "reporting_dir", "")
-            path = os.path.join(out_dir, defaults.current_scans_filename)
+            path = os.path.join(out_dir, defaults.active_scans_filename)
             output.define_csv(
                 args,
                 headers,

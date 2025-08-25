@@ -152,15 +152,30 @@ def session_get(results):
         if not isinstance(result, dict):
             logger.warning("session_get skipping non-dict result: %r", result)
             continue
+
         # Cast count values to integers to ensure arithmetic works as expected
         try:
             count = int(result.get("Count", 0) or 0)
         except (TypeError, ValueError):
             count = 0
-        uuid = result.get("SessionResult.slave_or_credential")
-        restype = result.get("SessionResult.session_type")
+
+        # Support both SessionResult and DeviceInfo style fields
+        uuid = (
+            result.get("SessionResult.slave_or_credential")
+            or result.get("DeviceInfo.last_credential")
+        )
+        restype = (
+            result.get("SessionResult.session_type")
+            or result.get("DeviceInfo.access_method")
+        )
+
+        if isinstance(uuid, str):
+            # Results may include object-path prefixes (e.g., "Credential/<uuid>")
+            # Split on '/' and take the last segment to extract the raw UUID.
+            uuid = uuid.split("/")[-1]
+
         if uuid:
-            sessions[uuid] = [restype, count]
+            sessions[str(uuid)] = [restype, count]
 
     return sessions
 

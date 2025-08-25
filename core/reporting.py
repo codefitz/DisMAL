@@ -68,6 +68,9 @@ def successful(creds, search, args):
             "credfail7_results": executor.submit(
                 api.search_results, search, queries.credential_failure_7d
             ),
+            "outpost_cred_results": executor.submit(
+                api.search_results, search, queries.outpost_credentials
+            ),
         }
 
         results = {}
@@ -84,6 +87,7 @@ def successful(creds, search, args):
     credsux7_results = results.get("credsux7_results", [])
     devinfosux7 = results.get("devinfosux7", [])
     credfail7_results = results.get("credfail7_results", [])
+    outpost_cred_results = results.get("outpost_cred_results", [])
 
     data = []
     headers = []
@@ -99,6 +103,29 @@ def successful(creds, search, args):
     suxCreds7 = tools.session_get(credsux7_results)
     suxDev7 = tools.session_get(devinfosux7)
     failCreds7 = tools.session_get(credfail7_results)
+
+    # Build mapping of credential UUIDs to outpost URLs.
+    cred_outposts = {}
+    if isinstance(outpost_map, dict):
+        for op_id, info in outpost_map.items():
+            if not isinstance(info, dict):
+                continue
+            url = info.get("url")
+            for cred in info.get("credentials", []) or []:
+                if url:
+                    cred_outposts[str(cred)] = url
+    if isinstance(outpost_cred_results, dict):
+        outpost_cred_results = outpost_cred_results.get("results", [])
+    if isinstance(outpost_cred_results, list):
+        for entry in outpost_cred_results:
+            if not isinstance(entry, dict):
+                continue
+            uuid = entry.get("credential")
+            op_id = entry.get("outpost")
+            if uuid and op_id and str(uuid) not in cred_outposts:
+                url = outpost_map.get(str(op_id), {}).get("url") if outpost_map else None
+                if url:
+                    cred_outposts[str(uuid)] = url
 
     # Include Scan Ranges and Excludes
     scan_resp = search.search(queries.scanrange, format="object", limit=500)
@@ -254,6 +281,9 @@ def successful(creds, search, args):
         if failure7[1]:
             fails7 = int(failure7[1])
 
+        if failure[1] or failure7[1]:
+            active = True
+
         # Coerce success/fail counts to ints and compute percentage as float
         success_all = int(success_all)
         fails_all = int(fails_all)
@@ -269,7 +299,7 @@ def successful(creds, search, args):
             percent7 = success7 / total7
 
         msg = None
-        outpost_url = outpost_map.get(uuid)
+        outpost_url = cred_outposts.get(uuid)
         usage = detail.get('usage')
         if args.output_file or args.output_csv:
             if active:

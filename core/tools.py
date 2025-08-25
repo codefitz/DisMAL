@@ -152,6 +152,13 @@ def session_get(results):
     if isinstance(results, dict):
         results = results.get("results", [])
 
+    # Some API endpoints return tabular data as a list of lists where the
+    # first row contains headers.  Normalize this format into a list of
+    # dictionaries before processing so the function can operate on either
+    # representation transparently.
+    if isinstance(results, list) and results and isinstance(results[0], list):
+        results = list_table_to_json(results)
+
     if not isinstance(results, list):
         logger.warning(
             "session_get expected list of results, got %s", type(results).__name__

@@ -1187,7 +1187,6 @@ def search_results(api_endpoint, query, limit=500):
                     return []
             else:
                 data = results
-
             if logger.isEnabledFor(logging.DEBUG):
                 try:
                     logger.debug("Parsed results length: %s" % len(data))

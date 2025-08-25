@@ -4,6 +4,7 @@ import types
 import pytest
 import core.builder as builder
 import core.output as output
+import json
 
 sys.modules.setdefault("pandas", types.SimpleNamespace())
 sys.modules.setdefault("tabulate", types.SimpleNamespace(tabulate=lambda *a, **k: ""))
@@ -915,3 +916,56 @@ def test_outpost_creds_builds_rows(monkeypatch):
         ["http://op1", "op1", "c1", "Cred1"],
         ["http://op1", "op1", "c2", "Cred2"],
     ]
+
+
+def test_successful_cli_parses_new_headers(monkeypatch):
+    cred = {
+        "uuid": "u1",
+        "label": "c",
+        "username": "user",
+        "iprange": None,
+        "exclusions": None,
+        "enabled": True,
+        "types": "ssh",
+        "usage": "",
+        "internal_store": "",
+    }
+
+    def fake_remote_cmd(cmd, client):
+        if cmd.startswith("tw_vault_control"):
+            return json.dumps(cred)
+        if reporting.queries.credential_success in cmd:
+            return (
+                "SessionResult.slave_or_credential,SessionResult.session_type,Count\n"
+                "credential/u1,ssh,2\n"
+            )
+        if reporting.queries.deviceinfo_success in cmd:
+            return (
+                "DeviceInfo.last_credential,DeviceInfo.access_method,Count\n"
+                "credential/u1,ssh,3\n"
+            )
+        if reporting.queries.credential_failure in cmd:
+            return (
+                "SessionResult.slave_or_credential,SessionResult.session_type,Count\n"
+                "credential/u1,ssh,4\n"
+            )
+        return ""
+
+    monkeypatch.setattr(reporting.access, "remote_cmd", fake_remote_cmd)
+    monkeypatch.setattr(reporting.tools, "extract_credential", lambda d: d)
+
+    captured = {}
+
+    def fake_csv_file(data, headers, filename):
+        captured["data"] = data
+        captured["headers"] = headers
+
+    monkeypatch.setattr(reporting.output, "csv_file", fake_csv_file)
+
+    args = types.SimpleNamespace(target="appl")
+
+    reporting.successful_cli("client", args, "user", "pass", ".")
+
+    row = captured["data"][0]
+    assert row[5] == 5  # successes
+    assert row[6] == 4  # failures

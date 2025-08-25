@@ -8,6 +8,7 @@ from collections import Counter, defaultdict
 import json
 import re
 from concurrent.futures import ThreadPoolExecutor
+import csv
 
 # PIP Packages
 import pandas as pd
@@ -425,34 +426,41 @@ def successful_cli(client, args, sysuser, passwd, reporting_dir):
         active = False
         success = 0
         failure = 0
-        sessions = 0
-        devinfos = 0
-        credsux = access.remote_cmd('tw_query -u %s -p %s --csv %s'%(sysuser,passwd,queries.credential_success),client)
-        devinfosux = access.remote_cmd('tw_query -u %s -p %s --csv %s'%(sysuser,passwd,queries.deviceinfo_success),client)
-        credfail = access.remote_cmd('tw_query -u %s -p %s --csv %s'%(sysuser,passwd,queries.credential_failure),client)
-        for line in devinfosux.split("\n"):
-            if uuid in line:
-                msg = "Successful UUID found in line: %s\n"%line
-                logger.debug(msg)
-                active = True
-                success += int(line.split(",")[2])
-        for line in credsux.split("\n"):
-            if uuid in line:
-                msg = "DevInfo UUID found in line: %s\n"%line
-                logger.debug(msg)
-                active = True
-                success += int(line.split(",")[2])
-        for line in credfail.split("\n"):
-            if uuid in line:
-                msg = "Failed UUID found in line: %s\n"%line
-                logger.debug(msg)
-                active = True
-                failure = int(line.split(",")[2])
-        
-        msg = "Sessions found, Active: %s" % devinfos
-        logger.debug(msg)
-        msg = "DeviceInfos found, Active: %s" % sessions
-        logger.debug(msg)
+
+        def _sum_for_uuid(csv_text, cred_uuid):
+            total = 0
+            reader = csv.DictReader(csv_text.splitlines())
+            for row in reader:
+                field = row.get("SessionResult.slave_or_credential") or row.get(
+                    "DeviceInfo.last_credential"
+                )
+                if field and field.split("/")[-1] == cred_uuid:
+                    try:
+                        total += int(row.get("Count", 0) or 0)
+                    except (TypeError, ValueError):
+                        continue
+            return total
+
+        credsux = access.remote_cmd(
+            'tw_query -u %s -p %s --csv %s'
+            % (sysuser, passwd, queries.credential_success),
+            client,
+        )
+        devinfosux = access.remote_cmd(
+            'tw_query -u %s -p %s --csv %s'
+            % (sysuser, passwd, queries.deviceinfo_success),
+            client,
+        )
+        credfail = access.remote_cmd(
+            'tw_query -u %s -p %s --csv %s'
+            % (sysuser, passwd, queries.credential_failure),
+            client,
+        )
+
+        success = _sum_for_uuid(credsux, uuid) + _sum_for_uuid(devinfosux, uuid)
+        failure = _sum_for_uuid(credfail, uuid)
+        active = success > 0 or failure > 0
+
         msg = "Failures found, Active: %s" % failure
         logger.debug(msg)
             

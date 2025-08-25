@@ -159,3 +159,15 @@ To flag hosts missing common agents:
 python3 dismal.py --access_method api -i <appliance> -u <user> -p <password> \
     --excavate expected_agents
 ```
+
+To inspect the raw output of a particular query without any post-processing,
+append the `--queries` flag.  Results are exported as CSV files prefixed with
+`qry_`:
+
+```bash
+python3 dismal.py --access_method api -i <appliance> -u <user> -p <password> \
+    --excavate credential_success --queries
+```
+
+The example above writes `qry_credential_success.csv` to the output
+directory for further analysis.

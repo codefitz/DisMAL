@@ -229,6 +229,12 @@ def successful(creds, search, args):
         if failure7[1]:
             fails7 = int(failure7[1])
 
+        # Mark credential as active when any failure data exists so the
+        # reporting row is emitted with numeric zeros instead of being
+        # considered unused.
+        if failure[1] or failure7[1]:
+            active = True
+
         # Coerce success/fail counts to ints and compute percentage as float
         success_all = int(success_all)
         fails_all = int(fails_all)

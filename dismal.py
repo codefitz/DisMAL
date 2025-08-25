@@ -184,7 +184,8 @@ excavation.add_argument(
     dest='queries',
     action='store_true',
     required=False,
-    help='Run specified --excavate items as raw queries and export CSV results without post-processing.',
+    help=('Run specified --excavate items as raw queries and export CSV results without '
+          'post-processing. Each query is saved to a separate file prefixed with qry_.'),
 )
 
 excavation.add_argument(

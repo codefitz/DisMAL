@@ -56,7 +56,7 @@ def test_api_tku_creates_csv_columns(tmp_path):
         output_cli=False,
     )
     api.tku(DummyKnowledge(resp), args, str(tmp_path))
-    csv_path = tmp_path / defaults.tku_filename.strip("/")
+    csv_path = tmp_path / defaults.tku_filename
     lines = csv_path.read_text().splitlines()
     assert lines[0].split(",") == ["Discovery Instance", "TKU"]
     first = lines[1].split(",")

@@ -159,10 +159,10 @@ def admin(disco,args,dir):
     os_version = result['versions']['os_updates']
     logger.info('OS Version:\n%s'%os_version)
     logger.info('Discovery Version:\n%s'%os_version)
-    output.define_txt(args,json.dumps(result['versions']),dir+defaults.api_filename,None)
+    output.define_txt(args,json.dumps(result['versions']),os.path.join(dir, defaults.api_filename),None)
 
 def audit(search,args,dir):
-    output.define_csv(args,search,queries.audit,dir+defaults.audit_filename,args.output_file,args.target,"query")
+    output.define_csv(args,search,queries.audit,os.path.join(dir, defaults.audit_filename),args.output_file,args.target,"query")
 
 def baseline(disco, args, dir):
     logger.debug("Calling disco.baseline() with no parameters")
@@ -196,7 +196,7 @@ def baseline(disco, args, dir):
                     args,
                     header,
                     rows,
-                    dir + defaults.baseline_filename,
+                    os.path.join(dir, defaults.baseline_filename),
                     args.output_file,
                     args.target,
                     "csv_file",
@@ -210,10 +210,10 @@ def baseline(disco, args, dir):
         output.txt_dump(last_message,dir+"/baseline_status.txt")
 
 def cmdb_config(search, args, dir):
-    output.define_csv(args,search,queries.cmdb_sync_config,dir+defaults.cmdbsync_filename,args.output_file,args.target,"query")
+    output.define_csv(args,search,queries.cmdb_sync_config,os.path.join(dir, defaults.cmdbsync_filename),args.output_file,args.target,"query")
 
 def modules(search, args, dir):
-    output.define_csv(args,search,queries.patterns,dir+defaults.tw_knowledge_filename,args.output_file,args.target,"query")
+    output.define_csv(args,search,queries.patterns,os.path.join(dir, defaults.tw_knowledge_filename),args.output_file,args.target,"query")
 
 def licensing(disco, args, dir):
     try:
@@ -226,7 +226,7 @@ def licensing(disco, args, dir):
             getattr(r, "status_code", "N/A"),
             getattr(r, "text", "N/A"),
         )
-        handle = open("%s%s"%(dir,defaults.tw_license_zip_filename), "wb")
+        handle = open(os.path.join(dir, defaults.tw_license_zip_filename), "wb")
         for chunk in r.iter_content(chunk_size=512):
             if chunk:  # filter out keep-alive new chunks
                 handle.write(chunk)
@@ -240,7 +240,7 @@ def licensing(disco, args, dir):
             getattr(r, "status_code", "N/A"),
             getattr(r, "text", "N/A"),
         )
-        handle = open("%s%s"%(dir,defaults.tw_license_raw_filename), "wb")
+        handle = open(os.path.join(dir, defaults.tw_license_raw_filename), "wb")
         for chunk in r.iter_content(chunk_size=512):
             if chunk:  # filter out keep-alive new chunks
                 handle.write(chunk)
@@ -415,14 +415,14 @@ def success(twcreds, twsearch, args, dir):
     #if args.output_file:
     #    df = pandas.read_csv(args.output_file)
     #    df.insert(0, "Discovery Instance", args.target)
-    #    df.to_csv(dir+defaults.success_filename, index=False)
+    #    df.to_csv(os.path.join(dir, defaults.success_filename), index=False)
     #    os.remove(args.output_file)
 
 def schedules(search, args, dir):
-    output.define_csv(args,search,queries.scan_ranges,dir+defaults.scan_ranges_filename,args.output_file,args.target,"query")
+    output.define_csv(args,search,queries.scan_ranges,os.path.join(dir, defaults.scan_ranges_filename),args.output_file,args.target,"query")
 
 def excludes(search, args, dir):
-    output.define_csv(args,search,queries.exclude_ranges,dir+defaults.exclude_ranges_filename,args.output_file,args.target,"query")
+    output.define_csv(args,search,queries.exclude_ranges,os.path.join(dir, defaults.exclude_ranges_filename),args.output_file,args.target,"query")
 
 def discovery_runs(disco, args, dir):
     logger.info("Checking Scan ranges...")
@@ -440,12 +440,7 @@ def discovery_runs(disco, args, dir):
         logger.debug('Runs:\n%s' % r)
         header, rows, _ = tools.json2csv(runs)
         header.insert(0, "Discovery Instance")
-        int_fields = {
-            "DiscoveryRun.done",
-            "DiscoveryRun.pre_scanning",
-            "DiscoveryRun.scanning",
-            "DiscoveryRun.total",
-        }
+        int_fields = {"done", "pre_scanning", "scanning", "total"}
         for row in rows:
             row.insert(0, args.target)
             for idx, field in enumerate(header[1:], start=1):
@@ -458,7 +453,7 @@ def discovery_runs(disco, args, dir):
             args,
             header,
             rows,
-            dir + defaults.current_scans_filename,
+            os.path.join(dir, defaults.current_scans_filename),
             args.output_file,
             args.target,
             "csv_file",
@@ -514,11 +509,12 @@ def show_runs(disco, args):
     else:
         if getattr(args, "excavate", None):
             out_dir = getattr(args, "reporting_dir", "")
+            path = os.path.join(out_dir, defaults.current_scans_filename)
             output.define_csv(
                 args,
                 headers,
                 run_csvs,
-                os.path.join(out_dir, defaults.current_scans_filename),
+                path,
                 getattr(args, "output_file", None),
                 getattr(args, "target", None),
                 "csv_file",
@@ -549,7 +545,7 @@ def sensitive(search, args, dir):
         args,
         header,
         rows,
-        dir + defaults.sensitive_data_filename,
+        os.path.join(dir, defaults.sensitive_data_filename),
         args.output_file,
         args.target,
         "csv_file",
@@ -584,7 +580,7 @@ def eca_errors(search, args, dir):
         args,
         header,
         rows,
-        dir + defaults.eca_errors_filename,
+        os.path.join(dir, defaults.eca_errors_filename),
         args.output_file,
         args.target,
         "csv_file",
@@ -608,7 +604,7 @@ def open_ports(search, args, dir):
         args,
         header,
         rows,
-        dir + defaults.open_ports_filename,
+        os.path.join(dir, defaults.open_ports_filename),
         args.output_file,
         args.target,
         "csv_file",
@@ -630,7 +626,7 @@ def device_capture_candidates(search, args, dir):
         args,
         header,
         rows,
-        dir + defaults.capture_candidates_filename,
+        os.path.join(dir, defaults.capture_candidates_filename),
         args.output_file,
         args.target,
         "csv_file",
@@ -666,7 +662,7 @@ def host_util(search, args, dir):
         args,
         header,
         rows,
-        dir + defaults.host_util_filename,
+        os.path.join(dir, defaults.host_util_filename),
         args.output_file,
         args.target,
         "csv_file",
@@ -680,7 +676,7 @@ def orphan_vms(search, args, dir):
             "Unexpected search results type for orphan_vms: %s",
             type(results).__name__,
         )
-        output.csv_file([], [], dir + defaults.orphan_vms_filename)
+        output.csv_file([], [], os.path.join(dir, defaults.orphan_vms_filename))
         return
 
     headers = []
@@ -692,7 +688,7 @@ def orphan_vms(search, args, dir):
     headers.insert(0, "Discovery Instance")
     for row in rows:
         row.insert(0, args.target)
-    output.csv_file(rows, headers, dir + defaults.orphan_vms_filename)
+    output.csv_file(rows, headers, os.path.join(dir, defaults.orphan_vms_filename))
 
 @output._timer("Missing VMs")
 def missing_vms(search, args, dir):
@@ -746,7 +742,7 @@ def missing_vms(search, args, dir):
                 args,
                 header,
                 data,
-                dir + defaults.missing_vms_filename,
+                os.path.join(dir, defaults.missing_vms_filename),
                 args.output_file,
                 args.target,
                 "csv_file",
@@ -756,7 +752,7 @@ def missing_vms(search, args, dir):
                 args,
                 search,
                 queries.missing_vms,
-                dir + defaults.missing_vms_filename,
+                os.path.join(dir, defaults.missing_vms_filename),
                 args.output_file,
                 args.target,
                 "query",
@@ -766,7 +762,7 @@ def missing_vms(search, args, dir):
             args,
             search,
             queries.missing_vms,
-            dir + defaults.missing_vms_filename,
+            os.path.join(dir, defaults.missing_vms_filename),
             args.output_file,
             args.target,
             "query",
@@ -774,27 +770,27 @@ def missing_vms(search, args, dir):
 
 @output._timer("Near Removal")
 def near_removal(search, args, dir):
-    output.define_csv(args,search,queries.near_removal,dir+defaults.near_removal_filename,args.output_file,args.target,"query")
+    output.define_csv(args,search,queries.near_removal,os.path.join(dir, defaults.near_removal_filename),args.output_file,args.target,"query")
 
 @output._timer("Removed")
 def removed(search, args, dir):
-    output.define_csv(args,search,queries.removed,dir+defaults.removed_filename,args.output_file,args.target,"query")
+    output.define_csv(args,search,queries.removed,os.path.join(dir, defaults.removed_filename),args.output_file,args.target,"query")
 
 @output._timer("OS Lifecycle")
 def oslc(search, args, dir):
-    output.define_csv(args,search,queries.os_lifecycle,dir+defaults.os_lifecycle_filename,args.output_file,args.target,"query")
+    output.define_csv(args,search,queries.os_lifecycle,os.path.join(dir, defaults.os_lifecycle_filename),args.output_file,args.target,"query")
 
 @output._timer("Software Lifecycle")
 def slc(search, args, dir):
-    output.define_csv(args,search,queries.software_lifecycle,dir+defaults.si_lifecycle_filename,args.output_file,args.target,"query")
+    output.define_csv(args,search,queries.software_lifecycle,os.path.join(dir, defaults.si_lifecycle_filename),args.output_file,args.target,"query")
 
 @output._timer("Database Lifecycle")
 def dblc(search, args, dir):
-    output.define_csv(args,search,queries.db_lifecycle,dir+defaults.db_lifecycle_filename,args.output_file,args.target,"query")
+    output.define_csv(args,search,queries.db_lifecycle,os.path.join(dir, defaults.db_lifecycle_filename),args.output_file,args.target,"query")
 
 @output._timer("SNMP Devices")
 def snmp(search, args, dir):
-    output.define_csv(args,search,queries.snmp_devices,dir+defaults.snmp_unrecognised_filename,args.output_file,args.target,"query")
+    output.define_csv(args,search,queries.snmp_devices,os.path.join(dir, defaults.snmp_unrecognised_filename),args.output_file,args.target,"query")
 
 @output._timer("Capture Candidates")
 def capture_candidates(search, args, dir):
@@ -817,7 +813,7 @@ def capture_candidates(search, args, dir):
         args,
         header,
         rows,
-        dir + defaults.capture_candidates_filename,
+        os.path.join(dir, defaults.capture_candidates_filename),
         args.output_file,
         args.target,
         "csv_file",
@@ -825,7 +821,7 @@ def capture_candidates(search, args, dir):
 
 @output._timer("Agents")
 def agents(search, args, dir):
-    output.define_csv(args,search,queries.agents,dir+defaults.installed_agents_filename,args.output_file,args.target,"query")
+    output.define_csv(args,search,queries.agents,os.path.join(dir, defaults.installed_agents_filename),args.output_file,args.target,"query")
 
 @output._timer("Expected Agents")
 def expected_agents(search, args, dir):
@@ -847,7 +843,7 @@ def expected_agents(search, args, dir):
 
 @output._timer("Software Users")
 def software_users(search, args, dir):
-    output.define_csv(args,search,queries.user_accounts,dir+defaults.si_user_accounts_filename,args.output_file,args.target,"query")
+    output.define_csv(args,search,queries.user_accounts,os.path.join(dir, defaults.si_user_accounts_filename),args.output_file,args.target,"query")
 
 def devices_lookup(search):
     """Return a mapping of IPs to their last discovery information."""
@@ -896,7 +892,7 @@ def tku(knowledge, args, dir):
             args,
             ["Discovery Instance", "TKU"],
             rows,
-            dir + defaults.tku_filename,
+            os.path.join(dir, defaults.tku_filename),
             args.output_file,
             args.target,
             "csv_file",
@@ -1027,7 +1023,7 @@ def vault(vault, args, dir):
                 vault_status = "Vault closed - Passphrase not saved"
         if not vset:
             vault_status = "Vault open - no passphrase set"
-        output.define_txt(args,vault_status,dir+defaults.vault_filename,None)
+        output.define_txt(args,vault_status,os.path.join(dir, defaults.vault_filename),None)
 
 def remove_cred(appliance, cred):
     logger.debug("Calling appliance.delete_vault_credential(%s)", cred)
@@ -1184,4 +1180,4 @@ def search_results(api_endpoint, query):
         return []
 
 def hostname(args,dir):
-    output.define_txt(args,args.target,dir+defaults.hostname_filename,None)
+    output.define_txt(args,args.target,os.path.join(dir, defaults.hostname_filename),None)

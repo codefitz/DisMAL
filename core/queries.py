@@ -3,12 +3,14 @@
 credential_success = """
                             search SessionResult where success
                             show (slave or credential) as 'SessionResult.slave_or_credential',
+                            (slave or credential) as 'uuid',
                             session_type as 'SessionResult.session_type'
                             processwith countUnique(1,0)
                         """
 credential_failure = """
                             search SessionResult where not success
                             show (slave or credential) as 'SessionResult.slave_or_credential',
+                            (slave or credential) as 'uuid',
                             session_type as 'SessionResult.session_type'
                             processwith countUnique(1,0)
                         """
@@ -17,18 +19,21 @@ deviceinfo_success = """
                           and nodecount(traverse DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess
                                             traverse DiscoveryAccess:Metadata:Detail:SessionResult) = 0
                           show (last_credential or last_slave) as 'DeviceInfo.last_credential',
+                          (last_credential or last_slave) as 'uuid',
                           access_method as 'DeviceInfo.access_method'
                           process with countUnique(1,0)
                        """
 credential_success_7d = """
                             search SessionResult where success and time_index > (currentTime() - 7*24*3600*10000000)
                             show (slave or credential) as 'SessionResult.slave_or_credential',
+                            (slave or credential) as 'uuid',
                             session_type as 'SessionResult.session_type'
                             processwith countUnique(1,0)
                         """
 credential_failure_7d = """
                             search SessionResult where not success and time_index > (currentTime() - 7*24*3600*10000000)
                             show (slave or credential) as 'SessionResult.slave_or_credential',
+                            (slave or credential) as 'uuid',
                             session_type as 'SessionResult.session_type'
                             processwith countUnique(1,0)
                         """
@@ -38,12 +43,15 @@ deviceinfo_success_7d = """
                                             traverse DiscoveryAccess:Metadata:Detail:SessionResult) = 0
                           and time_index > (currentTime() - 7*24*3600*10000000)
                           show (last_credential or last_slave) as 'DeviceInfo.last_credential',
+                          (last_credential or last_slave) as 'uuid',
                           access_method as 'DeviceInfo.access_method'
                           process with countUnique(1,0)
                        """
 outpost_credentials = """
                             search SessionResult
-                            show credential, outpost
+                            show credential,
+                            credential as 'uuid',
+                            outpost
                             process with unique(0)
                         """
 deviceInfo = {"query":

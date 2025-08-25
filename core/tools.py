@@ -179,9 +179,11 @@ def session_get(results):
         )
 
         if uuid:
-            # Remove any object-path prefixes and keep only the raw UUID
-            if isinstance(uuid, str):
-                uuid = uuid.split("/")[-1]
+            # Normalize credential identifiers: drop any object-path prefixes
+            # and perform case-insensitive comparisons by storing the UUID in
+            # lowercase. Casting to ``str`` also protects against UUID objects
+            # from third-party libraries.
+            uuid = str(uuid).split("/")[-1].lower()
             sessions[uuid] = [restype, count]
 
     return sessions

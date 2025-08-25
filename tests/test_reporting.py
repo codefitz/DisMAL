@@ -655,14 +655,14 @@ def test_successful_shows_zero_percent_when_no_success_7d(monkeypatch):
     assert row[headers.index("Success % 7 Days")] == 0
 
 
-def test_successful_handles_prefixed_credential_paths(monkeypatch):
-    """Query results may return object-path prefixes on credential fields."""
+def test_successful_handles_prefixed_and_mixed_case_credential_paths(monkeypatch):
+    """Query results may return object-path prefixes and mixed-case UUIDs."""
 
     def fake_search_results(search, query):
         if query is reporting.queries.credential_success:
             return [
                 {
-                    "SessionResult.slave_or_credential": "Credential/u1",
+                    "SessionResult.slave_or_credential": "Credential/U1",
                     "SessionResult.session_type": "ssh",
                     "Count": 2,
                 }
@@ -670,7 +670,7 @@ def test_successful_handles_prefixed_credential_paths(monkeypatch):
         if query is reporting.queries.deviceinfo_success:
             return [
                 {
-                    "DeviceInfo.last_credential": "Credential/u1",
+                    "DeviceInfo.last_credential": "Credential/U1",
                     "DeviceInfo.access_method": "ssh",
                     "Count": 3,
                 }
@@ -678,7 +678,7 @@ def test_successful_handles_prefixed_credential_paths(monkeypatch):
         if query is reporting.queries.credential_failure:
             return [
                 {
-                    "SessionResult.slave_or_credential": "Credential/u1",
+                    "SessionResult.slave_or_credential": "Credential/U1",
                     "SessionResult.session_type": "ssh",
                     "Count": 4,
                 }

@@ -1,6 +1,7 @@
 import os
 import sys
 import ipaddress
+import logging
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import core.tools as tools
@@ -66,7 +67,6 @@ def test_session_get_normalizes_uuid_case():
         }
     ]
     assert tools.session_get(results) == {"abcdef": ["ssh", 1]}
-
 
 def test_session_get_dict_wrapper():
     payload = {

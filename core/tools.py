@@ -156,6 +156,7 @@ def session_get(results):
         logger.warning(
             "session_get expected list of results, got %s", type(results).__name__
         )
+        logger.debug("session_get received payload: %r", results)
         return sessions
 
     for result in results:

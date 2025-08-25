@@ -132,10 +132,11 @@ def list_of_lists(ci,attr,list_to_append):
 def session_get(results):
     """Convert session/device info search results into a mapping.
 
-    Results may contain either ``SessionResult.slave_or_credential`` or
-    ``DeviceInfo.last_credential`` fields.  Any object path prefixes are
-    stripped so the returned dictionary uses raw credential UUIDs as keys.  The
-    stored value is a two-item list of the access method and lookup count.
+    Results may contain ``SessionResult.slave_or_credential``,
+    ``DeviceInfo.last_credential`` or a generic ``uuid`` field.  Any object
+    path prefixes are stripped so the returned dictionary uses raw credential
+    UUIDs as keys.  The stored value is a two-item list of the access method and
+    lookup count.
 
     Previous implementations assumed ``results`` was always a list of
     dictionaries returned from the search API.  When the API call failed (for
@@ -164,9 +165,12 @@ def session_get(results):
         except (TypeError, ValueError):
             count = 0
 
-        # Accept both SessionResult and DeviceInfo credential fields
-        uuid = result.get("SessionResult.slave_or_credential") or result.get(
-            "DeviceInfo.last_credential"
+        # Accept both SessionResult and DeviceInfo credential fields, falling
+        # back to a plain ``uuid`` field if neither is present.
+        uuid = (
+            result.get("SessionResult.slave_or_credential")
+            or result.get("DeviceInfo.last_credential")
+            or result.get("uuid")
         )
 
         # Pull the access/session type from whichever query populated the row

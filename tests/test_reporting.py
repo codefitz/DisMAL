@@ -682,6 +682,84 @@ def test_successful_handles_prefixed_credential_paths(monkeypatch):
     assert row[idx_f] == 4
 
 
+def test_successful_uses_uuid_for_failures(monkeypatch):
+    """Failure queries may only include a raw 'uuid' field."""
+
+    def fake_search_results(search, query):
+        if query is reporting.queries.credential_failure:
+            return [
+                {
+                    "uuid": "Credential/u1",
+                    "SessionResult.session_type": "ssh",
+                    "Count": 4,
+                }
+            ]
+        if query is reporting.queries.credential_failure_7d:
+            return [
+                {"uuid": "u1", "SessionResult.session_type": "ssh", "Count": 1}
+            ]
+        if query in {
+            reporting.queries.credential_success,
+            reporting.queries.deviceinfo_success,
+            reporting.queries.credential_success_7d,
+            reporting.queries.deviceinfo_success_7d,
+            reporting.queries.outpost_credentials,
+        }:
+            return []
+        return []
+
+    call = {"n": 0}
+
+    def fake_get_json(*a, **k):
+        call["n"] += 1
+        if call["n"] == 1:
+            return [
+                {
+                    "uuid": "u1",
+                    "label": "c",
+                    "index": 1,
+                    "enabled": True,
+                    "username": "user",
+                    "usage": "",
+                    "iprange": None,
+                    "exclusions": None,
+                }
+            ]
+        return []
+
+    monkeypatch.setattr(reporting.api, "get_json", fake_get_json)
+    monkeypatch.setattr(reporting.api, "search_results", fake_search_results)
+    monkeypatch.setattr(reporting.api, "get_outpost_credential_map", lambda *a, **k: {})
+    monkeypatch.setattr(reporting.builder, "get_credentials", lambda entry: entry)
+    monkeypatch.setattr(reporting.builder, "get_scans", lambda *a, **k: [])
+
+    captured = {}
+
+    def fake_report(data, headers, args, name=""):
+        captured["headers"] = headers
+        captured["row"] = data[0]
+
+    monkeypatch.setattr(reporting, "output", types.SimpleNamespace(report=fake_report))
+
+    args = types.SimpleNamespace(
+        output_csv=False,
+        output_file=None,
+        token=None,
+        target="http://x",
+        include_endpoints=None,
+        endpoint_prefix=None,
+    )
+
+    reporting.successful(DummyCreds(), DummySearch(), args)
+
+    headers = captured["headers"]
+    row = captured["row"]
+    idx_s = headers.index("Successes")
+    idx_f = headers.index("Failures")
+    assert row[idx_s] == 0
+    assert row[idx_f] == 4
+
+
 def test_successful_uses_token_file(monkeypatch, tmp_path):
     file_path = tmp_path / "token.txt"
     file_path.write_text("abc")

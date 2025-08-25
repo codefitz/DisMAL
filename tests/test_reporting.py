@@ -134,7 +134,6 @@ def test_successful_combines_query_results(monkeypatch):
     assert row[7] == 4
     assert row[8] == pytest.approx(5 / 9)
 
-
 def test_successful_flags_active_with_failures_only(monkeypatch):
     call = {"n": 0}
 
@@ -142,7 +141,6 @@ def test_successful_flags_active_with_failures_only(monkeypatch):
         if query is reporting.queries.credential_failure:
             return [{"UUID": "u1", "Session_Type": "ssh", "Count": 1}]
         return []
-
     def fake_get_json(*a, **k):
         call["n"] += 1
         if call["n"] == 1:
@@ -161,14 +159,23 @@ def test_successful_flags_active_with_failures_only(monkeypatch):
         return []
 
     monkeypatch.setattr(reporting.api, "get_json", fake_get_json)
-    monkeypatch.setattr(reporting.api, "search_results", fake_search_results)
+    monkeypatch.setattr(reporting.api, "search_results", lambda *a, **k: [])
     monkeypatch.setattr(reporting.builder, "get_credentials", lambda entry: entry)
     monkeypatch.setattr(reporting.builder, "get_scans", lambda *a, **k: [])
+    monkeypatch.setattr(
+        reporting.api,
+        "map_outpost_credentials",
+        lambda app: {"u1": {"id": "op1", "url": "http://op"}},
+    )
+    monkeypatch.setattr(
+        reporting.tideway, "appliance", lambda target, token: types.SimpleNamespace(), raising=False
+    )
 
     captured = {}
 
     def fake_report(data, headers, args, name=""):
         captured["data"] = data
+        captured["headers"] = headers
 
     monkeypatch.setattr(reporting, "output", types.SimpleNamespace(report=fake_report))
 
@@ -177,6 +184,10 @@ def test_successful_flags_active_with_failures_only(monkeypatch):
     reporting.successful(DummyCreds(), DummySearch(), args)
 
     row = captured["data"][0]
+    assert "Outpost ID" in captured["headers"]
+    assert "Outpost URL" in captured["headers"]
+    assert row[-2] == "op1"
+    assert row[-1] == "http://op"
     assert row[5] == "ssh"
     assert row[6] == 0
     assert row[7] == 1

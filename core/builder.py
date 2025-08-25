@@ -309,7 +309,13 @@ def ordering(creds, search, args, apply):
     if apply:
         for weighted_cred in weighted:
             logger.debug("Updating: %s" % (weighted_cred))
-            headers = ["New Index", "Credential", "Scope", "Outpost URL"]
+            headers = [
+                "New Index",
+                "Credential",
+                "Scope",
+                "Outpost ID",
+                "Outpost URL",
+            ]
             creds.update_cred(
                 weighted_cred.get("uuid"), {"index": weighted_cred.get("index")}
             )
@@ -320,6 +326,7 @@ def ordering(creds, search, args, apply):
             "Weighting",
             "New Index",
             "Scope",
+            "Outpost ID",
             "Outpost URL",
         ]
         for cred in credlist:
@@ -335,7 +342,9 @@ def ordering(creds, search, args, apply):
                     scope = cred.get("scopes") or []
                     if isinstance(scope, list):
                         scope = ", ".join(scope)
-                    url = outpost_map.get(cred.get("uuid"))
+                    op_info = outpost_map.get(cred.get("uuid"), {})
+                    op_id = op_info.get("id")
+                    url = op_info.get("url")
                     msg = "%s: Index: %s, Weight: %s, New Index: %s" % (
                         label,
                         index,
@@ -343,7 +352,7 @@ def ordering(creds, search, args, apply):
                         new_index,
                     )
                     logger.info(msg)
-                    data.append([label, index, weight, new_index, scope, url])
+                    data.append([label, index, weight, new_index, scope, op_id, url])
 
     # Refresh
     credlist = api.get_json(creds.get_vault_credentials)
@@ -358,8 +367,10 @@ def ordering(creds, search, args, apply):
         scope = cred.get("scopes") or []
         if isinstance(scope, list):
             scope = ", ".join(scope)
-        url = outpost_map.get(cred.get("uuid"))
-        data.append([index, label, scope, url])
+        op_info = outpost_map.get(cred.get("uuid"), {})
+        op_id = op_info.get("id")
+        url = op_info.get("url")
+        data.append([index, label, scope, op_id, url])
 
     if data:
         headers.insert(0, "Discovery Instance")

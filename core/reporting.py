@@ -200,22 +200,22 @@ def successful(creds, search, args):
         percent7 = 0.0
 
         # Look up success/failure information for this credential
-        sessions = suxCreds.get(uuid, [None, 0])
+        sessions = suxCreds.get(uuid, [None, None])
         logger.debug("UUID %s -> sessions=%s", uuid, sessions)
 
-        devinfos = suxDev.get(uuid, [None, 0])
+        devinfos = suxDev.get(uuid, [None, None])
         logger.debug("UUID %s -> devinfos=%s", uuid, devinfos)
 
-        failure = failCreds.get(uuid, [None, 0])
+        failure = failCreds.get(uuid, [None, None])
         logger.debug("UUID %s -> failure=%s", uuid, failure)
 
-        sessions7 = suxCreds7.get(uuid, [None, 0])
+        sessions7 = suxCreds7.get(uuid, [None, None])
         logger.debug("UUID %s -> sessions7=%s", uuid, sessions7)
 
-        devinfos7 = suxDev7.get(uuid, [None, 0])
+        devinfos7 = suxDev7.get(uuid, [None, None])
         logger.debug("UUID %s -> devinfos7=%s", uuid, devinfos7)
 
-        failure7 = failCreds7.get(uuid, [None, 0])
+        failure7 = failCreds7.get(uuid, [None, None])
         logger.debug("UUID %s -> failure7=%s", uuid, failure7)
 
         # Determine if this credential was seen in any query results, even if
@@ -229,6 +229,17 @@ def successful(creds, search, args):
                 suxCreds7,
                 suxDev7,
                 failCreds7,
+            ]
+        )
+        active = active or any(
+            count is not None
+            for _, count in [
+                sessions,
+                devinfos,
+                failure,
+                sessions7,
+                devinfos7,
+                failure7,
             ]
         )
         logger.debug("UUID %s -> active=%s", uuid, active)
@@ -268,10 +279,10 @@ def successful(creds, search, args):
         excluded_scans = builder.get_scans(excludes_results, list_of_ranges)
         logger.debug("Excluded Scans List %s", excluded_scans)
 
-        fails_all = int(failure[1])
+        fails_all = int(failure[1] or 0)
         if fails_all:
             logger.debug("Failures:%s", fails_all)
-        fails7 = int(failure7[1])
+        fails7 = int(failure7[1] or 0)
 
         # Mark credential as active when any failure data exists so the
         # reporting row is emitted with numeric zeros instead of being

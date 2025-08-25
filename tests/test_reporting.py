@@ -385,6 +385,7 @@ def test_successful_coerces_string_counts(monkeypatch):
 
     def fake_report(data, headers, args, name=""):
         captured["row"] = data[0]
+        captured["headers"] = headers
 
     monkeypatch.setattr(reporting, "output", types.SimpleNamespace(report=fake_report))
 
@@ -480,6 +481,60 @@ def test_successful_emits_row_when_deviceinfo_7d_empty(monkeypatch):
     assert row[headers.index("Successes")] == 0
     assert row[headers.index("Failures")] == 0
     assert row[headers.index("Success % 7 Days")] == 0
+
+
+@pytest.mark.parametrize("output_csv", [False, True])
+def test_successful_reports_zero_counts_for_inactive_credential(monkeypatch, output_csv):
+    cred = {
+        "uuid": "u1",
+        "label": "c",
+        "index": 1,
+        "enabled": True,
+        "username": "user",
+        "usage": "",
+        "iprange": None,
+        "exclusions": None,
+        "types": "ssh",
+    }
+
+    call = {"n": 0}
+
+    def fake_get_json(*a, **k):
+        call["n"] += 1
+        if call["n"] == 1:
+            return [cred]
+        return []
+
+    monkeypatch.setattr(reporting.api, "get_json", fake_get_json)
+    monkeypatch.setattr(reporting.api, "search_results", lambda *a, **k: [])
+    monkeypatch.setattr(reporting.api, "get_outpost_credential_map", lambda *a, **k: {})
+    monkeypatch.setattr(reporting.builder, "get_credentials", lambda entry: entry)
+    monkeypatch.setattr(reporting.builder, "get_scans", lambda *a, **k: [])
+    monkeypatch.setattr(reporting.tools, "completage", lambda *a, **k: 0)
+
+    captured = {}
+
+    def fake_report(data, headers, args, name=""):
+        captured["row"] = data[0]
+        captured["headers"] = headers
+
+    monkeypatch.setattr(reporting, "output", types.SimpleNamespace(report=fake_report))
+
+    args = types.SimpleNamespace(
+        output_csv=output_csv,
+        output_file=None,
+        token=None,
+        target="http://x",
+        include_endpoints=None,
+        endpoint_prefix=None,
+    )
+
+    reporting.successful(DummyCreds(), DummySearch(), args)
+
+    row = captured["row"]
+    headers = captured["headers"]
+    assert row[headers.index("Successes")] == 0
+    assert row[headers.index("Failures")] == 0
 
 
 def test_successful_includes_outpost_credentials(monkeypatch):

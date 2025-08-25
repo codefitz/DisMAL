@@ -170,6 +170,8 @@ def successful(creds, search, args):
         detail = builder.get_credentials(cred)
 
         uuid = detail.get('uuid')
+        msg = "Working UUID :%s\n"%uuid
+        logger.debug(msg)
         # Ensure index is numeric for downstream calculations
         index = int(tools.getr(detail, 'index', 0) or 0)
         
@@ -193,11 +195,22 @@ def successful(creds, search, args):
 
         # Look up success/failure information for this credential
         sessions = suxCreds.get(uuid, [None, 0])
+        logger.debug("UUID %s -> sessions=%s", uuid, sessions)
+
         devinfos = suxDev.get(uuid, [None, 0])
+        logger.debug("UUID %s -> devinfos=%s", uuid, devinfos)
+
         failure = failCreds.get(uuid, [None, 0])
+        logger.debug("UUID %s -> failure=%s", uuid, failure)
+
         sessions7 = suxCreds7.get(uuid, [None, 0])
+        logger.debug("UUID %s -> sessions7=%s", uuid, sessions7)
+
         devinfos7 = suxDev7.get(uuid, [None, 0])
+        logger.debug("UUID %s -> devinfos7=%s", uuid, devinfos7)
+
         failure7 = failCreds7.get(uuid, [None, 0])
+        logger.debug("UUID %s -> failure7=%s", uuid, failure7)
 
         # Determine if this credential was seen in any query results, even if
         # the count is zero

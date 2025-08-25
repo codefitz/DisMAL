@@ -2,16 +2,18 @@
 
 credential_success = """
                             search SessionResult where success
-                            show (slave or credential) as 'SessionResult.slave_or_credential',
-                            (slave or credential) as 'uuid',
-                            session_type as 'SessionResult.session_type'
+                            show (credential or slave) as 'SessionResult.credential_or_slave',
+                            (credential or slave) as 'uuid',
+                            session_type as 'SessionResult.session_type',
+                            outpost as 'SessionResult.outpost'
                             processwith countUnique(1,0)
                         """
 credential_failure = """
                             search SessionResult where not success
-                            show (slave or credential) as 'SessionResult.slave_or_credential',
-                            (slave or credential) as 'uuid',
-                            session_type as 'SessionResult.session_type'
+                            show (credential or slave) as 'SessionResult.credential_or_slave',
+                            (credential or slave) as 'uuid',
+                            session_type as 'SessionResult.session_type',
+                            outpost as 'SessionResult.outpost'
                             processwith countUnique(1,0)
                         """
 deviceinfo_success = """
@@ -25,16 +27,18 @@ deviceinfo_success = """
                        """
 credential_success_7d = """
                             search SessionResult where success and time_index > (currentTime() - 7*24*3600*10000000)
-                            show (slave or credential) as 'SessionResult.slave_or_credential',
-                            (slave or credential) as 'uuid',
-                            session_type as 'SessionResult.session_type'
+                            show (credential or slave) as 'SessionResult.credential_or_slave',
+                            (credential or slave) as 'uuid',
+                            session_type as 'SessionResult.session_type',
+                            outpost as 'SessionResult.outpost'
                             processwith countUnique(1,0)
                         """
 credential_failure_7d = """
                             search SessionResult where not success and time_index > (currentTime() - 7*24*3600*10000000)
-                            show (slave or credential) as 'SessionResult.slave_or_credential',
-                            (slave or credential) as 'uuid',
-                            session_type as 'SessionResult.session_type'
+                            show (credential or slave) as 'SessionResult.credential_or_slave',
+                            (credential or slave) as 'uuid',
+                            session_type as 'SessionResult.session_type',
+                            outpost as 'SessionResult.outpost'
                             processwith countUnique(1,0)
                         """
 deviceinfo_success_7d = """

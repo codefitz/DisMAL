@@ -105,7 +105,7 @@ def successful(creds, search, args):
     suxDev7 = tools.session_get(devinfosux7)
     failCreds7 = tools.session_get(credfail7_results)
 
-    # Build mapping of credential UUIDs to outpost URLs.
+    # Build mapping of credential UUIDs to outpost IDs and URLs.
     cred_outposts = {}
     if isinstance(outpost_map, dict):
         for op_id, info in outpost_map.items():
@@ -113,8 +113,9 @@ def successful(creds, search, args):
                 continue
             url = info.get("url")
             for cred in info.get("credentials", []) or []:
+                cred_outposts.setdefault(str(cred), {})["id"] = str(op_id)
                 if url:
-                    cred_outposts[str(cred)] = url
+                    cred_outposts[str(cred)]["url"] = url
     if isinstance(outpost_cred_results, dict):
         outpost_cred_results = outpost_cred_results.get("results", [])
     if isinstance(outpost_cred_results, list):
@@ -123,10 +124,13 @@ def successful(creds, search, args):
                 continue
             uuid = entry.get("credential")
             op_id = entry.get("outpost")
-            if uuid and op_id and str(uuid) not in cred_outposts:
-                url = outpost_map.get(str(op_id), {}).get("url") if outpost_map else None
-                if url:
-                    cred_outposts[str(uuid)] = url
+            if uuid and op_id:
+                info = cred_outposts.setdefault(str(uuid), {})
+                info.setdefault("id", str(op_id))
+                if outpost_map:
+                    url = outpost_map.get(str(op_id), {}).get("url")
+                    if url and not info.get("url"):
+                        info["url"] = url
 
     # Include Scan Ranges and Excludes
     scan_resp = search.search(queries.scanrange, format="object", limit=500)
@@ -294,7 +298,9 @@ def successful(creds, search, args):
             percent7 = success7 / float(total7)
 
         msg = None
-        outpost_url = cred_outposts.get(uuid)
+        outpost_info = cred_outposts.get(uuid, {})
+        outpost_id = outpost_info.get("id")
+        outpost_url = outpost_info.get("url")
         usage = detail.get('usage')
         if args.output_file or args.output_csv:
             if active:
@@ -314,6 +320,7 @@ def successful(creds, search, args):
                     ip_exclude,
                     scheduled_scans if scheduled_scans else None,
                     excluded_scans if excluded_scans else None,
+                    outpost_id,
                     outpost_url,
                 ])
             else:
@@ -333,6 +340,7 @@ def successful(creds, search, args):
                     ip_exclude,
                     scheduled_scans if scheduled_scans else None,
                     excluded_scans if excluded_scans else None,
+                    outpost_id,
                     outpost_url,
                 ])
             headers = [
@@ -351,6 +359,7 @@ def successful(creds, search, args):
                 "Excludes",
                 "Scheduled Scans",
                 "Exclusion Lists",
+                "Outpost",
                 "Outpost URL",
             ]
         else:
@@ -367,6 +376,7 @@ def successful(creds, search, args):
                     percent7,
                     status,
                     usage,
+                    outpost_id,
                     outpost_url,
                 ])
             else:
@@ -382,6 +392,7 @@ def successful(creds, search, args):
                     0.0,
                     "Credential appears to not be in use (%s)" % status,
                     usage,
+                    outpost_id,
                     outpost_url,
                 ])
             headers = [
@@ -396,6 +407,7 @@ def successful(creds, search, args):
                 "Success % 7 Days",
                 "State",
                 "Usage",
+                "Outpost",
                 "Outpost URL",
             ]
     print(os.linesep,end="\r")
@@ -446,9 +458,9 @@ def successful_cli(client, args, sysuser, passwd, reporting_dir):
             total = 0
             reader = csv.DictReader(csv_text.splitlines())
             for row in reader:
-                field = row.get("SessionResult.slave_or_credential") or row.get(
-                    "DeviceInfo.last_credential"
-                )
+                field = row.get("SessionResult.credential_or_slave") or row.get(
+                    "SessionResult.slave_or_credential"
+                ) or row.get("DeviceInfo.last_credential")
                 if field and field.split("/")[-1] == cred_uuid:
                     try:
                         total += int(row.get("Count", 0) or 0)

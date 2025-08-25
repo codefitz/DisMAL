@@ -18,7 +18,7 @@ from core.api import (
     get_outpost_credential_map,
 )
 import core.api as api_mod
-from core import queries, tools
+from core import queries, tools, defaults
 import core.access as access
 
 class DummyResponse:
@@ -148,15 +148,40 @@ def test_show_runs_excavate_routes_to_define_csv(monkeypatch):
     def fake_define_csv(args, header, data, path, file, target, typ):
         recorded["header"] = header
         recorded["data"] = data
+        recorded["path"] = path
 
     monkeypatch.setattr(api_mod.output, "define_csv", fake_define_csv)
 
-    args = types.SimpleNamespace(excavate=["active_runs"], reporting_dir="/tmp", target="appl")
+    reporting_dir = "/tmp"
+    args = types.SimpleNamespace(
+        excavate=["active_runs"], reporting_dir=reporting_dir, target="appl"
+    )
 
     show_runs(disco, args)
 
     assert recorded["header"] == ["DiscoveryRun.run_id", "DiscoveryRun.status"]
     assert recorded["data"] == [["1", "running"]]
+    expected_path = os.path.join(reporting_dir, defaults.current_scans_filename)
+    assert recorded["path"] == expected_path
+
+
+def test_show_runs_excavate_default_dir(monkeypatch):
+    resp = DummyResponse(
+        200, '[{"DiscoveryRun.run_id": "1", "DiscoveryRun.status": "running"}]'
+    )
+    disco = DummyDisco(resp)
+    recorded = {}
+
+    def fake_define_csv(args, header, data, path, file, target, typ):
+        recorded["path"] = path
+
+    monkeypatch.setattr(api_mod.output, "define_csv", fake_define_csv)
+
+    args = types.SimpleNamespace(excavate=["active_runs"])
+
+    show_runs(disco, args)
+
+    assert recorded["path"] == defaults.current_scans_filename
 
 
 def test_discovery_runs_emits_ints_and_headers(monkeypatch):

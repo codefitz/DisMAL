@@ -58,6 +58,24 @@ outpost_credentials = """
                             outpost
                             process with unique(0)
                         """
+deviceInfo_base = {"query":
+                        """
+                            search DeviceInfo
+                            ORDER BY hostname
+                            show
+                            hostname as 'DeviceInfo.hostname',
+                            os_type as 'DeviceInfo.os_type',
+                            sysname as 'DeviceInfo.sysname',
+                            device_type as 'DeviceInfo.device_type',
+                            fqdn as 'DeviceInfo.fqdn',
+                            kind as 'DeviceInfo.kind',
+                            method_success as 'DeviceInfo.method_success',
+                            method_failure as 'DeviceInfo.method_failure',
+                            (last_credential or last_slave or __preserved_last_credential) as 'DeviceInfo.last_credential',
+                            (last_access_method or __preserved_last_access_method) as 'DeviceInfo.last_access_method'
+                            process with unique()
+                        """
+                }
 deviceInfo = {"query":
                         """
                             search DeviceInfo
@@ -111,6 +129,27 @@ deviceInfo_network = {
                                 process with unique()
                             """
                 }
+
+deviceInfo_access = {
+                    "query":
+                        """
+                            search DeviceInfo
+                            show
+                            hostname as 'DeviceInfo.hostname',
+                            friendlyTime(#DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.starttime) as 'DiscoveryAccess.starttime',
+                            friendlyTime(#DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.endtime) as 'DiscoveryAccess.endtime',
+                            #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.result as 'DiscoveryAccess.result',
+                            #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.endpoint as 'DiscoveryAccess.endpoint',
+                            #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.end_state as 'DiscoveryAccess.end_state',
+                            #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess._last_marker as 'DiscoveryAccess._last_marker',
+                            #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess._first_marker as 'DiscoveryAccess._first_marker',
+                            #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess._last_interesting as 'DiscoveryAccess._last_interesting',
+                            #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.#Member:List:List:DiscoveryRun.label as 'DiscoveryRun.label',
+                            #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.__had_inference as 'DiscoveryAccess.__had_inference'
+                            process with unique()
+                        """
+                    }
+
 da_ip_lookup = {
                     "query":
                             """

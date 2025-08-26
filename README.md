@@ -122,6 +122,16 @@ python3 dismal.py --config config.yaml --sysadmin audit
 CLI flags override YAML values, so `--access_method cli` on the command line
 would replace any `access_method` defined in the file.
 
+### Caching
+
+API query results can be cached to disk so subsequent runs or offline
+reporting do not require live API calls.  Use `--cache-dir <path>` to specify
+where JSON cache files are stored.  When the `--queries` option is used, the
+retrieved results are written to this cache and later reused by reports such as
+`--excavate credential_success`.  Supply `--no-cache` to bypass the cache and
+force fresh API calls.  The `cache_dir` and `no_cache` options may also be set
+in the YAML configuration file.
+
 ### Endpoint filtering
 
 Device-centric reports can now be limited to a subset of endpoints.  Supplying

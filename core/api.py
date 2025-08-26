@@ -13,7 +13,17 @@ import pandas
 import tideway
 
 # Local
-from . import tools, output, builder, queries, defaults, reporting, access, common_agents
+from . import (
+    tools,
+    output,
+    builder,
+    queries,
+    defaults,
+    reporting,
+    access,
+    common_agents,
+    cache,
+)
 import socket
 
 logger = logging.getLogger("_api_")
@@ -1101,7 +1111,7 @@ def update_cred(appliance, uuid):
             active = True
     return active
 
-def search_results(api_endpoint, query, limit=500, use_cache=True):
+def search_results(api_endpoint, query, limit=500, use_cache=True, cache_name=None):
     """Execute a search query and return all results.
 
     The Discovery API defaults to returning a maximum of 500 rows per
@@ -1115,11 +1125,11 @@ def search_results(api_endpoint, query, limit=500, use_cache=True):
     """
 
     try:
-        if isinstance(query, str):
-            query = {"query": query}
+        use_cache = use_cache and cache.is_enabled()
+        query = cache.canonical_query(query)
         if isinstance(query, dict) and isinstance(query.get("query"), str):
+            # ``canonical_query`` returns a shallow copy so it is safe to mutate
             query = dict(query)
-            query["query"] = query["query"].replace("\n", " ").replace("\r", " ")
         if logger.isEnabledFor(logging.DEBUG):
             try:
                 logger.debug("Search query: %s" % query)
@@ -1137,6 +1147,11 @@ def search_results(api_endpoint, query, limit=500, use_cache=True):
         cache_key = (key_query, limit)
         if use_cache and cache_key in _SEARCH_CACHE:
             return _SEARCH_CACHE[cache_key]
+        if use_cache:
+            cached = cache.load(cache_name or "query", query, limit)
+            if cached is not None:
+                _SEARCH_CACHE[cache_key] = cached
+                return cached
 
         # Determine the page size for each request.  A limit of ``0`` denotes
         # no limit which we implement by requesting data in 500 row chunks
@@ -1209,6 +1224,9 @@ def search_results(api_endpoint, query, limit=500, use_cache=True):
                     logger.error(
                         "Search failed: %s - %s", status_code, getattr(results, "reason", "")
                     )
+                    if use_cache:
+                        cache.save(cache_name or "query", query, limit, data)
+                        _SEARCH_CACHE[cache_key] = data
                     return data
                 try:
                     data = results.json()
@@ -1236,9 +1254,11 @@ def search_results(api_endpoint, query, limit=500, use_cache=True):
                     data = dict(data)
                     data["results"] = tools.list_table_to_json(data["results"])
                     if use_cache:
+                        cache.save(cache_name or "query", query, limit, data)
                         _SEARCH_CACHE[cache_key] = data
                     return data
                 if use_cache:
+                    cache.save(cache_name or "query", query, limit, data)
                     _SEARCH_CACHE[cache_key] = data
                 return data
 
@@ -1261,6 +1281,7 @@ def search_results(api_endpoint, query, limit=500, use_cache=True):
         result_json = tools.list_table_to_json(results_all)
         if use_cache:
             _SEARCH_CACHE[cache_key] = result_json
+            cache.save(cache_name or "query", query, limit, result_json)
         return result_json
     except Exception as e:
         if logger.isEnabledFor(logging.DEBUG):
@@ -1288,6 +1309,7 @@ REPORT_QUERY_MAP = {
         "credential_failure_7d",
         "scanrange",
         "excludes",
+        "outpost_credentials",
     ]
 }
 
@@ -1321,6 +1343,7 @@ def run_queries(search, args, dir):
                 getattr(args, "output_file", None),
                 getattr(args, "target", None),
                 "query",
+                query_name=qname,
             )
 
 def hostname(args,dir):

@@ -15,7 +15,7 @@ import sys
 import yaml
 from argparse import RawTextHelpFormatter
 
-from core import access, api, builder, cli, curl, output, reporting, tools
+from core import access, api, builder, cli, curl, output, reporting, tools, cache
 
 logfile = 'dismal_%s.log'%( str(datetime.date.today() ))
 
@@ -65,6 +65,24 @@ outputs.add_argument('-f', '--file',    dest='output_file', type=str, required=F
 outputs.add_argument('-s', '--path',    dest='output_path', type=str, required=False, help='Path to save bulk files (default=pwd).\n\n',metavar='<path>')
 outputs.add_argument('--null',          dest='output_null',  action='store_true', required=False, help='Run report functions but do not output data (used for debugging).\n\n')
 outputs.add_argument('--stdout',       dest='output_cli', action='store_true', required=False, help='Print results to CLI instead of writing to output directory.\n\n')
+
+# Cache Options
+cache_opts = parser.add_argument_group("Cache Options")
+cache_opts.add_argument(
+    '--cache-dir',
+    dest='cache_dir',
+    type=str,
+    required=False,
+    help='Directory to store cached API query results.\n\n',
+    metavar='<path>',
+)
+cache_opts.add_argument(
+    '--no-cache',
+    dest='no_cache',
+    action='store_true',
+    required=False,
+    help='Force fresh API calls without reading or writing cache.\n\n',
+)
 
 # Hidden Options
 parser.add_argument('-k', '--keep-awake',   dest='wakey', action='store_true', required=False, help=argparse.SUPPRESS)
@@ -220,11 +238,14 @@ parser.set_defaults(
     # Support both ``debug`` and legacy ``debugging`` keys in the YAML config
     # file so existing configurations continue to work.
     debugging=config.get('debug', config.get('debugging', False)),
+    cache_dir=config.get('cache_dir'),
+    no_cache=config.get('no_cache', False),
     max_threads=config.get('max_threads', 2),
 )
 
 global args
 args = parser.parse_args(remaining_argv)
+cache.configure(getattr(args, "cache_dir", None), enabled=not getattr(args, "no_cache", False))
 
 def run_for_args(args):
     start_time = time.time()

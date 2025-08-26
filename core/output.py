@@ -238,8 +238,8 @@ def cmd2csv(header,result,seperator,filename,appliance):
                 txt_dump(result,filename)
     csv_file(data, header, filename)
 
-def query2csv(search, query, filename, appliance):
-    response = api.search_results(search, query)
+def query2csv(search, query, filename, appliance, query_name=None):
+    response = api.search_results(search, query, limit=0, cache_name=query_name)
     if type(response) == list and len(response) > 0:
         header, data, _ = tools.json2csv(response)
         header.insert(0, "Discovery Instance")
@@ -271,7 +271,7 @@ def define_txt(args,result,path,filename):
         else:
             txt_dump(result,path)
 
-def define_csv(args, head_ep, data, path, file, target, type, tku=None):
+def define_csv(args, head_ep, data, path, file, target, type, tku=None, query_name=None):
     """Manage CSV-based output options.
 
     When ``tku`` is provided, it is inserted as the second column after the
@@ -306,7 +306,7 @@ def define_csv(args, head_ep, data, path, file, target, type, tku=None):
                 save2csv(data, path, target, tku)
     elif type == "query":
         if args.output_file:
-            query2csv(head_ep, data, file, target)
+            query2csv(head_ep, data, file, target, query_name)
         elif args.output_csv:
             msg ="DisMAL: Output cannot be export to CLI."
             logger.warning(msg)
@@ -319,7 +319,7 @@ def define_csv(args, head_ep, data, path, file, target, type, tku=None):
                 logger.warning(msg)
                 print(msg)
             else:
-                query2csv(head_ep, data, path, target)
+                query2csv(head_ep, data, path, target, query_name)
     elif type == "csv_file":
         if args.output_file:
             csv_file(data, head_ep, file)

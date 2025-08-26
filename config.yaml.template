@@ -13,3 +13,5 @@ appliances:
 access_method: <api_or_cli>
 noping: false
 debug: false
+cache_dir: <cache_directory>
+no_cache: false

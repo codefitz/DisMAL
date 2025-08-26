@@ -115,7 +115,6 @@ def test_search_results_paginates(monkeypatch):
     results = search_results(search, {"query": "q"}, limit=0)
     assert len(results) == total
 
-
 def test_search_results_breaks_on_overlimit(monkeypatch):
     """If API returns more rows than requested, only one request should be made."""
 
@@ -131,11 +130,10 @@ def test_search_results_breaks_on_overlimit(monkeypatch):
 
     monkeypatch.setattr(api_mod.tools, "list_table_to_json", lambda x: x)
 
-    search = OverLimitSearch()
+    search = OverPagingSearch()
     results = search_results(search, {"query": "q"}, limit=0)
-
-    assert len(results) == 600
-    assert search.calls == [(500, 0)]
+    assert len(results) == 750
+    assert search.calls == 1
 
 def test_search_results_normalizes_nested_results():
     payload = {

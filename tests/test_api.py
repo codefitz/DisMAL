@@ -134,6 +134,26 @@ def test_search_results_handles_overfetch(monkeypatch):
     # Only the initial request should be made (offset=0)
     assert search.offsets == [0]
 
+
+def test_search_results_handles_overfetch_with_limit(monkeypatch):
+    """Stop paginating if the server returns more rows than the requested limit."""
+
+    class OverfetchSearch:
+        def __init__(self):
+            self.offsets = []
+
+        def search(self, query, format="object", limit=500, offset=0):
+            self.offsets.append(offset)
+            data = [{"row": i} for i in range(300)]
+            return DummyResponse(200, json.dumps(data))
+
+    monkeypatch.setattr(api_mod.tools, "list_table_to_json", lambda x: x)
+    search = OverfetchSearch()
+    results = search_results(search, {"query": "q"}, limit=100)
+    assert len(results) == 100
+    # Only the initial request should be made (offset=0)
+    assert search.offsets == [0]
+
 def test_search_results_normalizes_nested_results():
     payload = {
         "count": 1,

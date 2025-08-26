@@ -575,101 +575,80 @@ def unique_identities(search):
     devices = api.search_results(search, queries.deviceInfo, page_size=1000)
     da_results = api.search_results(search, queries.da_ip_lookup, page_size=1000)
 
-    ### list of unique endpoints
-    unique_endpoints = []
-    timer_count = 0
-    for da in da_results:
-        timer_count = tools.completage("Getting Unique IPs", len(da_results), timer_count)
-        endpoint = da.get('ip')
-        if endpoint not in unique_endpoints:
-            logger.debug("Unique Endpoint: %s"%endpoint)
-            unique_endpoints.append(endpoint)
-
-    # Generate combined record of hostnames and endpoints
-    identities = []
-    unique_identities = []
-
-    print(os.linesep,end="\r")
-    timer_count = 0
+    # list of unique endpoints
+    unique_endpoints = {da.get('ip') for da in da_results if da.get('ip')}
     for endpoint in unique_endpoints:
-        timer_count = tools.completage("Processing", len(unique_endpoints), timer_count)
-        logger.debug("Processing Unique Endpoint: %s"%endpoint)
-        for device in devices:
-            if endpoint == device.get('DA_Endpoint'):
-                logger.debug("Found DA for %s"%endpoint)
-                list_of_ips = []
-                list_of_names = []
-                list_of_ips.append(endpoint)
-                list_of_ips = tools.list_of_lists(device,'Chosen_Endpoint',list_of_ips)
-                list_of_ips = tools.list_of_lists(device,'Discovered_IP_Addrs',list_of_ips)
-                list_of_ips = tools.list_of_lists(device,'Inferred_All_IP_Addrs',list_of_ips)
-                list_of_ips = tools.list_of_lists(device,'NIC_IPs',list_of_ips)
-                list_of_names = tools.list_of_lists(device,'Device_Sysname',list_of_names)
-                list_of_names = tools.list_of_lists(device,'Device_Hostname',list_of_names)
-                list_of_names = tools.list_of_lists(device,'Device_FQDN',list_of_names)
-                list_of_names = tools.list_of_lists(device,'Inferred_Name',list_of_names)
-                list_of_names = tools.list_of_lists(device,'Inferred_Hostname',list_of_names)
-                list_of_names = tools.list_of_lists(device,'Inferred_FQDN',list_of_names)
-                list_of_names = tools.list_of_lists(device,'Inferred_Sysname',list_of_names)
-                list_of_names = tools.list_of_lists(device,'NIC_FQDNs',list_of_names)
-                msg = "endpoint %s, list_of_names: %s, list_of_ips: %s"%(endpoint,list_of_names,list_of_ips)
-                logger.debug(msg)
+        logger.debug("Unique Endpoint: %s" % endpoint)
 
-                if type(list_of_ips) is list:
-                    try:
-                        if len(list_of_ips) > 0:
-                            list_of_ips = tools.sortlist(list_of_ips)
-                        if len(list_of_names) > 0:
-                            list_of_names = tools.sortlist(list_of_names)
+    # map of endpoint to sets of ips and names
+    endpoint_map = {ep: {"ips": set(), "names": set()} for ep in unique_endpoints}
 
-                        identities.append({
-                                        "list_of_names":list_of_names,
-                                        "list_of_ips":list_of_ips
-                                        })
-                        logger.debug("Appended identity for %s"%endpoint)
-                    except TypeError as e:
-                        msg = "TypeError: list_of_ips can't be hashed\n%s" % str(e)
-                        print("__endpoint__",endpoint)
-                        print("list_of_ips",list_of_ips)
-                        print(msg)
-                        logger.error(msg)
-                    except Exception as e:
-                        msg = "Error: list_of_ips could not be processed\n%s" % str(e)
-                        print("__endpoint__",endpoint)
-                        print("list_of_ips",list_of_ips)
-                        print(msg)
-                        logger.error(msg)
-                else:
-                    msg = "Warning: list_of_ips is not a list type - can't be hashed\n%s" % list_of_ips
-                    print(msg)
-                    logger.warning(msg)
+    print(os.linesep, end="\r")
+    timer_count = 0
+    for device in devices:
+        timer_count = tools.completage("Processing", len(devices), timer_count)
+        endpoint = device.get('DA_Endpoint')
+        if endpoint not in unique_endpoints:
+            continue
 
-        # 2nd loop
-        new_ip_list = []
-        new_name_list = []
-        count=0
-        for identity in identities:
-            count+=1
-            if endpoint in identity.get('list_of_ips'):
-                logger.debug("ipcheck %s, list_of_names: %s, list_of_ips: %s"%(endpoint,list_of_names,list_of_ips))
-                for ips in identity.get('list_of_ips'):
-                    new_ip_list.append(ips)
-                    logger.debug("Appending IP: %s to new list: %s"%(ips,new_ip_list))
-                for names in identity.get('list_of_names'):
-                    new_name_list.append(names)
-                    logger.debug("Appending Name: %s to new list: %s"%(names,new_name_list))
-        if len(new_ip_list) > 0:
-            new_ip_list = tools.sortlist(new_ip_list,"None")
-            logger.debug("Sorted IP List: %s"%new_ip_list)
-        if len(new_name_list) > 0:
-            new_name_list = tools.sortlist(new_name_list,"None")
-            logger.debug("Sorted Name List: %s"%new_name_list)
+        list_of_ips = [endpoint]
+        list_of_ips = tools.list_of_lists(device, 'Chosen_Endpoint', list_of_ips)
+        list_of_ips = tools.list_of_lists(device, 'Discovered_IP_Addrs', list_of_ips)
+        list_of_ips = tools.list_of_lists(device, 'Inferred_All_IP_Addrs', list_of_ips)
+        list_of_ips = tools.list_of_lists(device, 'NIC_IPs', list_of_ips)
 
+        list_of_names = []
+        list_of_names = tools.list_of_lists(device, 'Device_Sysname', list_of_names)
+        list_of_names = tools.list_of_lists(device, 'Device_Hostname', list_of_names)
+        list_of_names = tools.list_of_lists(device, 'Device_FQDN', list_of_names)
+        list_of_names = tools.list_of_lists(device, 'Inferred_Name', list_of_names)
+        list_of_names = tools.list_of_lists(device, 'Inferred_Hostname', list_of_names)
+        list_of_names = tools.list_of_lists(device, 'Inferred_FQDN', list_of_names)
+        list_of_names = tools.list_of_lists(device, 'Inferred_Sysname', list_of_names)
+        list_of_names = tools.list_of_lists(device, 'NIC_FQDNs', list_of_names)
+
+        msg = "endpoint %s, list_of_names: %s, list_of_ips: %s" % (endpoint, list_of_names, list_of_ips)
+        logger.debug(msg)
+
+        try:
+            if len(list_of_ips) > 0:
+                list_of_ips = tools.sortlist(list_of_ips)
+            if len(list_of_names) > 0:
+                list_of_names = tools.sortlist(list_of_names)
+
+            for ip in list_of_ips:
+                if ip in endpoint_map:
+                    endpoint_map[ip]["ips"].update(list_of_ips)
+                    endpoint_map[ip]["names"].update(list_of_names)
+                    logger.debug("Updated mapping for %s" % ip)
+        except TypeError as e:
+            msg = "TypeError: list_of_ips can't be hashed\n%s" % str(e)
+            print("__endpoint__", endpoint)
+            print("list_of_ips", list_of_ips)
+            print(msg)
+            logger.error(msg)
+        except Exception as e:
+            msg = "Error: list_of_ips could not be processed\n%s" % str(e)
+            print("__endpoint__", endpoint)
+            print("list_of_ips", list_of_ips)
+            print(msg)
+            logger.error(msg)
+
+    unique_identities = []
+    for endpoint in sorted(endpoint_map.keys()):
+        ip_list = list(endpoint_map[endpoint]["ips"])
+        name_list = list(endpoint_map[endpoint]["names"])
+        if len(ip_list) > 0:
+            ip_list = tools.sortlist(ip_list, "None")
+            logger.debug("Sorted IP List: %s" % ip_list)
+        if len(name_list) > 0:
+            name_list = tools.sortlist(name_list, "None")
+            logger.debug("Sorted Name List: %s" % name_list)
         unique_identities.append({
-                                "originating_endpoint":endpoint,
-                                "list_of_ips":new_ip_list,
-                                "list_of_names":new_name_list
-                                })
+            "originating_endpoint": endpoint,
+            "list_of_ips": ip_list,
+            "list_of_names": name_list,
+        })
     print(os.linesep)
     return unique_identities
 

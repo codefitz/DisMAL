@@ -49,7 +49,6 @@ def test_search_results_fallback():
     search = DummySearch(resp)
     assert search_results(search, {"query": "q"}) == [{"ok": True}]
 
-
 def test_search_results_respects_page_size():
     resp = DummyResponse(200, '[{"ok": true}]')
     search = DummySearch(resp)

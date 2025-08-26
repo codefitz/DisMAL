@@ -336,7 +336,7 @@ def run_for_args(args):
         system_user, system_passwd = access.login_target(cli_target, args)
 
     identities = None
-    if api_target and (
+    if api_target and not getattr(args, "queries", False) and (
         args.access_method == "all"
         or excavate_default
         or (args.excavate and args.excavate[0] in ("devices", "device_ids"))

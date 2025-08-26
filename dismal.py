@@ -224,6 +224,14 @@ excavation.add_argument(
     help='Limit device related reports to endpoints beginning with this prefix.',
     metavar='<prefix>',
 )
+excavation.add_argument(
+    '--max-identities',
+    dest='max_identities',
+    type=int,
+    required=False,
+    help='Limit the number of unique identities processed for device reports.',
+    metavar='<num>',
+)
 
 # Apply configuration defaults before final parsing so CLI overrides them
 parser.set_defaults(
@@ -334,7 +342,10 @@ def run_for_args(args):
         or (args.excavate and args.excavate[0] in ("devices", "device_ids"))
     ):
         identities = builder.unique_identities(
-            search, args.include_endpoints, args.endpoint_prefix
+            search,
+            args.include_endpoints,
+            args.endpoint_prefix,
+            getattr(args, "max_identities", None),
         )
 
     if getattr(args, "queries", False):
@@ -701,7 +712,10 @@ def run_for_args(args):
         if excavate_default or (args.excavate and args.excavate[0] == "device_ids"):
             if identities is None:
                 identities = builder.unique_identities(
-                    search, args.include_endpoints, args.endpoint_prefix
+                    search,
+                    args.include_endpoints,
+                    args.endpoint_prefix,
+                    getattr(args, "max_identities", None),
                 )
             data = []
             for identity in identities:

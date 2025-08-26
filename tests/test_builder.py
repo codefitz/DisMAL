@@ -425,13 +425,7 @@ def test_unique_identities_merges_device_data(monkeypatch):
             "DeviceInfo.sysname": "host2",
         },
     ]
-    da_results = [
-        {"DiscoveryAccess.endpoint": "10.0.0.1"},
-        {"DiscoveryAccess.endpoint": "10.0.0.2"},
-    ]
-
-    seq = iter([devices, da_results])
-    monkeypatch.setattr(builder.api, "search_results", lambda *a, **k: next(seq))
+    monkeypatch.setattr(builder.api, "search_results", lambda *a, **k: devices)
 
     result = builder.unique_identities(None)
     assert result == [
@@ -448,6 +442,29 @@ def test_unique_identities_merges_device_data(monkeypatch):
             "coverage_pct": pytest.approx(100.0),
         },
     ]
+
+
+def test_unique_identities_limits_endpoints(monkeypatch):
+    monkeypatch.setattr(builder.tools, "completage", lambda *a, **k: 0)
+    monkeypatch.setattr(builder.tools, "sortlist", lambda l, dv=None: sorted(set(l)))
+
+    devices = [
+        {
+            "DiscoveryAccess.endpoint": "10.0.0.1",
+            "InferredElement.__all_ip_addrs": ["10.0.0.1"],
+            "DeviceInfo.sysname": "host1",
+        },
+        {
+            "DiscoveryAccess.endpoint": "10.0.0.2",
+            "InferredElement.__all_ip_addrs": ["10.0.0.2"],
+            "DeviceInfo.sysname": "host2",
+        },
+    ]
+
+    monkeypatch.setattr(builder.api, "search_results", lambda *a, **k: devices)
+
+    result = builder.unique_identities(None, max_endpoints=1)
+    assert len(result) == 1
 
 def test_get_scans_uses_networks(monkeypatch):
     import ipaddress

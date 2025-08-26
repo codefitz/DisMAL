@@ -150,6 +150,11 @@ The resulting device-IDs report includes a **Guide %** column indicating
 the proportion of unique IP addresses seen for each originating endpoint
 compared to the total endpoints examined.
 
+When only a rough sample is required, ``--max-identities <N>`` can be used
+to stop processing after ``N`` originating endpoints have been collected.
+This acts as a hard limit on the unique identities gathered and can
+significantly reduce execution time on large appliances.
+
 ## Reports
 
 The toolkit now offers a broad range of reports. Selected examples include:

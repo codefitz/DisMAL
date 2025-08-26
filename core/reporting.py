@@ -19,7 +19,16 @@ import tideway
 
 logger = logging.getLogger("_reporting_")
 
-def chunked_search(search, base_query, chunks, *, limit=0, use_cache=True, cache_name="chunk"):
+def chunked_search(
+    search,
+    base_query,
+    chunks,
+    *,
+    limit=0,
+    use_cache=True,
+    cache_name="chunk",
+    page_size=500,
+):
     """Public wrapper for :func:`api.search_in_chunks`.
 
     This helper is exposed for CLI consumers that need to execute the same
@@ -34,6 +43,7 @@ def chunked_search(search, base_query, chunks, *, limit=0, use_cache=True, cache
         limit=limit,
         use_cache=use_cache,
         cache_name=cache_name,
+        page_size=page_size,
     )
 
 @output._timer("Success Report")

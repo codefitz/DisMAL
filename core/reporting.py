@@ -52,25 +52,60 @@ def successful(creds, search, args):
     with ThreadPoolExecutor() as executor:
         futures = {
             "credsux_results": executor.submit(
-                api.search_results, search, queries.credential_success, limit=0
+                api.search_results,
+                search,
+                queries.credential_success,
+                0,
+                True,
+                "credential_success",
             ),
             "devinfosux": executor.submit(
-                api.search_results, search, queries.deviceinfo_success, limit=0
+                api.search_results,
+                search,
+                queries.deviceinfo_success,
+                0,
+                True,
+                "deviceinfo_success",
             ),
             "credfail_results": executor.submit(
-                api.search_results, search, queries.credential_failure, limit=0
+                api.search_results,
+                search,
+                queries.credential_failure,
+                0,
+                True,
+                "credential_failure",
             ),
             "credsux7_results": executor.submit(
-                api.search_results, search, queries.credential_success_7d, limit=0
+                api.search_results,
+                search,
+                queries.credential_success_7d,
+                0,
+                True,
+                "credential_success_7d",
             ),
             "devinfosux7": executor.submit(
-                api.search_results, search, queries.deviceinfo_success_7d, limit=0
+                api.search_results,
+                search,
+                queries.deviceinfo_success_7d,
+                0,
+                True,
+                "deviceinfo_success_7d",
             ),
             "credfail7_results": executor.submit(
-                api.search_results, search, queries.credential_failure_7d, limit=0
+                api.search_results,
+                search,
+                queries.credential_failure_7d,
+                0,
+                True,
+                "credential_failure_7d",
             ),
             "outpost_cred_results": executor.submit(
-                api.search_results, search, queries.outpost_credentials, limit=0
+                api.search_results,
+                search,
+                queries.outpost_credentials,
+                0,
+                True,
+                "outpost_credentials",
             ),
         }
 
@@ -133,36 +168,21 @@ def successful(creds, search, args):
                         info["url"] = url
 
     # Include Scan Ranges and Excludes
-    scan_resp = search.search(queries.scanrange, format="object", limit=500)
-    scan_ranges = api.get_json(scan_resp)
-    excludes_resp = search.search(queries.excludes, format="object", limit=500)
-    excludes = api.get_json(excludes_resp)
-
-    if not scan_ranges or not isinstance(scan_ranges, list):
-        logger.warning("Failed to retrieve scan ranges; column will be blank")
-        scan_ranges_results = []
-    elif len(scan_ranges) == 0:
-        logger.warning("No scan ranges returned; column will be blank")
-        scan_ranges_results = []
+    scan_ranges = api.search_results(
+        search, queries.scanrange, limit=0, cache_name="scanrange"
+    )
+    if isinstance(scan_ranges, dict):
+        scan_ranges_results = scan_ranges.get("results", [])
     else:
-        first = scan_ranges[0]
-        if isinstance(first, dict) and "results" in first:
-            scan_ranges_results = first.get("results", [])
-        else:
-            scan_ranges_results = scan_ranges
+        scan_ranges_results = scan_ranges or []
 
-    if not excludes or not isinstance(excludes, list):
-        logger.warning("Failed to retrieve excludes; column will be blank")
-        excludes_results = []
-    elif len(excludes) == 0:
-        logger.warning("No exclude data returned; column will be blank")
-        excludes_results = []
+    excludes = api.search_results(
+        search, queries.excludes, limit=0, cache_name="excludes"
+    )
+    if isinstance(excludes, dict):
+        excludes_results = excludes.get("results", [])
     else:
-        first = excludes[0]
-        if isinstance(first, dict) and "results" in first:
-            excludes_results = first.get("results", [])
-        else:
-            excludes_results = excludes
+        excludes_results = excludes or []
 
     timer_count = 0
     for cred in vaultcreds:

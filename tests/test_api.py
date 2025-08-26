@@ -304,7 +304,7 @@ def test_get_outposts_uses_deleted_false():
 def test_run_queries_executes_named_query(monkeypatch, tmp_path):
     recorded = {}
 
-    def fake_define_csv(args, search, query, path, file, target, typ):
+    def fake_define_csv(args, search, query, path, file, target, typ, **kwargs):
         recorded["search"] = search
         recorded["query"] = query
         recorded["path"] = path
@@ -329,7 +329,7 @@ def test_run_queries_executes_named_query(monkeypatch, tmp_path):
 def test_run_queries_executes_report_queries(monkeypatch, tmp_path):
     captured = []
 
-    def fake_define_csv(args, search, query, path, file, target, typ):
+    def fake_define_csv(args, search, query, path, file, target, typ, **kwargs):
         captured.append((query, path, typ))
 
     monkeypatch.setattr(api_mod.output, "define_csv", fake_define_csv)
@@ -351,6 +351,7 @@ def test_run_queries_executes_report_queries(monkeypatch, tmp_path):
         "credential_failure_7d",
         "scanrange",
         "excludes",
+        "outpost_credentials",
     ]
     expected_queries = [getattr(api_mod.queries, n) for n in expected_names]
     assert [q for q, _, _ in captured] == expected_queries

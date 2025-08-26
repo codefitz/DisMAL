@@ -1234,37 +1234,16 @@ def _gather_discovery_data(twsearch, twcreds, args):
         args.endpoint_prefix,
         getattr(args, "max_identities", None),
     )
-
-    def _detail_query(disco_id):
-        """Build a detailed last_disco query for a single DiscoveryAccess."""
-        base = queries.last_disco["query"]
-        query = base.replace(
-            "search DiscoveryAccess where endtime",
-            f"search DiscoveryAccess where #id = {disco_id}",
-        )
-        return {"query": query}
-
-    if getattr(args, "use_export", False):
-        basic_discos = api.export_search(twsearch, queries.last_disco_basic)
+    # Retrieve discovery access information using chunked queries.  The
+    # :func:`chunked_last_disco` helper returns a ``DataFrame`` containing the
+    # merged facts from several smaller extracts.  Converting that frame into a
+    # list of dictionaries keeps the remainder of this function compatible with
+    # the previous implementation which operated on raw search results.
+    df = chunked_last_disco(twsearch)
+    if df.empty:
+        discos = []
     else:
-        basic_discos = api.search_results(twsearch, queries.last_disco_basic)
-    discos = []
-    seen_ids = set()
-    for entry in basic_discos:
-        if not isinstance(entry, dict):
-            logger.warning("Unexpected discovery access entry: %r", entry)
-            continue
-        disco_id = tools.getr(entry, "DiscoveryAccess.id")
-        if not disco_id or disco_id in seen_ids:
-            continue
-        seen_ids.add(disco_id)
-        detail = api.search_results(
-            twsearch,
-            _detail_query(disco_id),
-            limit=1,
-            cache_name=f"last_disco_{disco_id}",
-        )
-        discos.extend(detail)
+        discos = df.to_dict(orient="records")
 
     # Reuse cached dropped endpoint results if previously fetched
     dropped = api.search_results(twsearch, queries.dropped_endpoints)
@@ -1276,7 +1255,7 @@ def _gather_discovery_data(twsearch, twcreds, args):
         if not isinstance(result, dict):
             logger.warning("Unexpected discovery access entry: %r", result)
             continue
-        endpoint = result.get("Endpoint")
+        endpoint = result.get("DiscoveryAccess.endpoint")
         if endpoint is None:
             continue
         disco_by_endpoint[endpoint]["discos"].append(result)
@@ -1323,9 +1302,9 @@ def _gather_discovery_data(twsearch, twcreds, args):
         records = disco_by_endpoint[endpoint]
 
         end_states = [
-            tools.getr(r, "End_State", None)
-            for r in records["discos"] + records["dropped"]
-        ]
+            tools.getr(r, "DiscoveryAccess.end_state", None)
+            for r in records["discos"]
+        ] + [tools.getr(r, "End_State", None) for r in records["dropped"]]
         consistency = None
         if end_states:
             total = len(end_states)
@@ -1356,18 +1335,18 @@ def _gather_discovery_data(twsearch, twcreds, args):
 
         for result in records["discos"]:
             ep_record = {"endpoint": endpoint}
-            hostname = tools.getr(result, "Hostname", None)
+            hostname = tools.getr(result, "DeviceInfo.hostname", None)
             if not hostname and list_of_names:
                 # Fall back to the first identity name when hostname is absent
                 hostname = list_of_names[0]
-            os_type = tools.getr(result, "OS_Type", None)
-            os_class = tools.getr(result, "OS_Class", None)
+            os_type = tools.getr(result, "DeviceInfo.os_type", None)
+            os_class = tools.getr(result, "DeviceInfo.os_class", None)
             disco_run = tools.getr(result, "DiscoveryRun.label", None)
-            run_start = tools.getr(result, "Run_Starttime", None)
-            run_end = tools.getr(result, "Run_Endtime", None)
-            scan_start = tools.getr(result, "Scan_Starttime", None)
-            scan_end = tools.getr(result, "Scan_Endtime")
-            scan_end_raw = tools.getr(result, "Scan_Endtime_Raw", None)
+            run_start = tools.getr(result, "DiscoveryRun.starttime", None)
+            run_end = tools.getr(result, "DiscoveryRun.endtime", None)
+            scan_start = tools.getr(result, "DiscoveryAccess.scan_starttime", None)
+            scan_end = tools.getr(result, "DiscoveryAccess.scan_endtime")
+            scan_end_raw = tools.getr(result, "DiscoveryAccess.scan_endtime_raw", None)
             ep_timestamp = None
             if scan_end_raw:
                 try:
@@ -1392,16 +1371,16 @@ def _gather_discovery_data(twsearch, twcreds, args):
             )
             when = whenData.to_dict().get("when")
             whenWasThat = when.get(0)
-            current_access = tools.getr(result, "Current_Access", None)
-            os_version = tools.getr(result, "OS_Version", None)
-            node_updated = tools.getr(result, "Host_Node_Updated", None)
-            end_state = tools.getr(result, "End_State", None)
-            prev_end_state = tools.getr(result, "Previous_End_State", None)
-            reason_not_updated = tools.getr(result, "Reason_Not_Updated", None)
+            current_access = tools.getr(result, "DiscoveryAccess.current_access", None)
+            os_version = tools.getr(result, "DeviceInfo.os_version", None)
+            node_updated = tools.getr(result, "DiscoveryAccess.host_node_updated", None)
+            end_state = tools.getr(result, "DiscoveryAccess.end_state", None)
+            prev_end_state = tools.getr(result, "DiscoveryAccess.previous_end_state", None)
+            reason_not_updated = tools.getr(result, "DiscoveryAccess.reason_not_updated", None)
             session_results_logged = tools.getr(
-                result, "Session_Results_Logged", None
+                result, "DiscoveryAccess.session_results_logged", None
             )
-            node_kind = result.get("Node_Kind")
+            node_kind = result.get("DeviceInfo.kind") or result.get("DeviceInfo.inferred_kind")
             if isinstance(node_kind, list):
                 node_kind = tools.sortlist(node_kind)
             last_credential = tools.getr(result, "DeviceInfo.last_credential", None)
@@ -1411,9 +1390,9 @@ def _gather_discovery_data(twsearch, twcreds, args):
                 cred_det = tools.get_credential(vaultcreds, last_credential)
                 credential_name = tools.getr(cred_det, "label", "Not Found")
                 credential_login = tools.getr(cred_det, "username", "Not Found")
-            node_id = result.get("DA_ID")
-            prev_node_id = result.get("Previous_DA_ID")
-            next_node_id = result.get("Next_DA_ID")
+            node_id = result.get("DiscoveryAccess.id")
+            prev_node_id = result.get("DiscoveryAccess.previous_id")
+            next_node_id = result.get("DiscoveryAccess.next_id")
             last_marker = result.get("DiscoveryAccess._last_marker")
 
             ep_record.update(

@@ -26,7 +26,6 @@ def test_excavate_devices_and_ids_calls_unique_once(monkeypatch):
                 "originating_endpoint": "1.1.1.1",
                 "list_of_ips": ["1.1.1.1"],
                 "list_of_names": ["h1"],
-                "coverage_pct": 100.0,
             }
         ]
 

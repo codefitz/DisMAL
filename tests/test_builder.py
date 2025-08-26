@@ -447,13 +447,11 @@ def test_unique_identities_merges_device_data(monkeypatch):
             "originating_endpoint": "10.0.0.1",
             "list_of_ips": ["10.0.0.1", "10.0.0.2"],
             "list_of_names": ["host1"],
-            "coverage_pct": pytest.approx(100.0),
         },
         {
             "originating_endpoint": "10.0.0.2",
             "list_of_ips": ["10.0.0.1", "10.0.0.2"],
             "list_of_names": ["host1", "host2"],
-            "coverage_pct": pytest.approx(100.0),
         },
     ]
 

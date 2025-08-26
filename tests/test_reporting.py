@@ -206,13 +206,12 @@ def test_successful_writes_all_credentials(tmp_path, monkeypatch):
     assert len(lines) == total + 1  # header + data
     assert all(l == 0 for l in called_limits)
 
-def test_device_ids_report_includes_coverage(monkeypatch):
+def test_device_ids_report_outputs_expected_fields(monkeypatch):
     sample = [
         {
             "originating_endpoint": "10.0.0.1",
             "list_of_ips": ["10.0.0.1"],
             "list_of_names": ["h1"],
-            "coverage_pct": 50.0,
         }
     ]
     monkeypatch.setattr(builder, "unique_identities", lambda *a, **k: sample)
@@ -241,20 +240,18 @@ def test_device_ids_report_includes_coverage(monkeypatch):
                 identity["originating_endpoint"],
                 identity["list_of_ips"],
                 identity["list_of_names"],
-                identity["coverage_pct"],
             ]
         )
 
     output.report(
         data,
-        ["Origating Endpoint", "List of IPs", "List of Names", "Coverage %"],
+        ["Origating Endpoint", "List of IPs", "List of Names"],
         args,
         name="device_ids",
     )
 
     assert captured["data"]
-    assert captured["headers"][-1] == "Coverage %"
-    assert captured["data"][0][-1] == 50.0
+    assert captured["headers"] == ["Origating Endpoint", "List of IPs", "List of Names"]
 
 
 def test_unique_identities_returns_empty_when_no_devices(monkeypatch):

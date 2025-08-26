@@ -1264,6 +1264,11 @@ def search_results(api_endpoint, query, limit=500, use_cache=True, cache_name=No
 
             results_all.extend(data)
 
+            # If limit==0 and the server already returned more rows than requested,
+            # treat this as the complete result set and exit.
+            if not limit and offset == 0 and len(data) > page_limit:
+                break
+
             # Stop when we've retrieved the requested number of rows or when
             # the API returns fewer rows than requested for a given page.
             if limit and limit > 0 and len(results_all) >= limit:

@@ -24,8 +24,10 @@ def test_dismal_iterates_over_config(monkeypatch, multi_appliance_config):
     assert first.token == "tok1"
     assert getattr(first, "f_token", None) is None
     assert getattr(first, "password", None) is None
+    assert first.max_threads == 2
 
     assert second.target == "app2"
     assert second.token is None
     assert second.f_token == token_file_path
     assert second.password == "pw2"
+    assert second.max_threads == 2

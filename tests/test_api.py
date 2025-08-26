@@ -443,6 +443,29 @@ def test_run_queries_executes_device_ids_query(monkeypatch, tmp_path):
     ]
 
 
+def test_run_queries_executes_devices_report(monkeypatch, tmp_path):
+    captured = []
+
+    def fake_define_csv(args, search, query, path, file, target, typ, **kwargs):
+        captured.append((query, path, typ))
+
+    monkeypatch.setattr(api_mod.output, "define_csv", fake_define_csv)
+
+    args = types.SimpleNamespace(
+        excavate=["devices"], output_file=None, target="appl"
+    )
+    search = object()
+    outdir = str(tmp_path)
+
+    api_mod.run_queries(search, args, outdir)
+
+    assert [q for q, _, _ in captured] == [api_mod.queries.deviceInfo]
+    assert [p for _, p, _ in captured] == [
+        os.path.join(outdir, "qry_deviceInfo.csv"),
+    ]
+    assert [t for _, _, t in captured] == ["query"]
+
+
 def test_map_outpost_credentials_strips_scheme(monkeypatch):
     """Outpost targets should not include protocol."""
 

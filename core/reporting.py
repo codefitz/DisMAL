@@ -1159,6 +1159,71 @@ def ipaddr(search, credentials, args):
 
 
 
+
+def chunked_last_disco(twsearch):
+    """Return discovery access data by joining smaller query extracts.
+
+    The historic :data:`core.queries.last_disco` query collected a very wide set
+    of facts in a single TWQL statement.  That query is convenient but can be
+    expensive for large environments.  This helper issues a series of more
+    focused queries and stitches the results together using :mod:`pandas`.
+
+    Parameters
+    ----------
+    twsearch : object
+        Tideway search endpoint used for executing queries.
+
+    Returns
+    -------
+    pandas.DataFrame
+        DataFrame containing the merged discovery access information.
+    """
+
+    key_df = pd.DataFrame(api.search_results(twsearch, queries.last_disco_functional_key))
+    if key_df.empty:
+        return key_df
+
+    access_df = pd.DataFrame(api.search_results(twsearch, queries.last_disco_access))
+    device_df = pd.DataFrame(api.search_results(twsearch, queries.last_disco_deviceinfo))
+    run_df = pd.DataFrame(api.search_results(twsearch, queries.last_disco_run))
+    session_df = pd.DataFrame(api.search_results(twsearch, queries.last_disco_session))
+    inferred_df = pd.DataFrame(api.search_results(twsearch, queries.last_disco_inferred))
+    interface_df = pd.DataFrame(api.search_results(twsearch, queries.last_disco_interface))
+
+    merged = key_df.merge(access_df, how="left", on="DiscoveryAccess.id")
+    merged = merged.merge(device_df, how="left", on="DeviceInfo.id")
+    merged = merged.merge(run_df, how="left", on="DiscoveryRun.id")
+    merged = merged.merge(session_df, how="left", on="SessionResult.id")
+    merged = merged.merge(inferred_df, how="left", on="InferredElement.id")
+    merged = merged.merge(interface_df, how="left", on="NetworkInterface.id")
+
+    session_logged = merged.groupby("DiscoveryAccess.id")["SessionResult.provider"].transform(
+        lambda s: s.isna().any()
+    )
+    merged["DiscoveryAccess.session_results_logged"] = session_logged
+
+    prev_map = access_df.set_index("DiscoveryAccess.id")["DiscoveryAccess.end_state"]
+    merged["DiscoveryAccess.previous_end_state"] = merged["DiscoveryAccess.previous_id"].map(prev_map)
+
+    merged["DiscoveryAccess.access_method"] = merged[
+        "DeviceInfo.last_access_method"
+    ].fillna(merged["SessionResult.session_type"])
+
+    def _current_access(row):
+        method = row.get("DeviceInfo.last_access_method")
+        slave = row.get("DeviceInfo.last_slave")
+        probed = row.get("DeviceInfo.probed_os")
+        if method in ["windows", "rcmd"] and slave:
+            return method
+        if probed:
+            return "Probe"
+        return method
+
+    merged["DiscoveryAccess.current_access"] = merged.apply(_current_access, axis=1)
+
+    return merged
+
+
 def _gather_discovery_data(twsearch, twcreds, args):
     """Return discovery access records without change analysis."""
 

@@ -278,7 +278,7 @@ last_disco = {
 }
 
 last_disco_basic = {
-            "query": """
+            "query": """ 
                     search DiscoveryAccess where endtime
                     ORDER BY discovery_endtime DESC
                     show
@@ -288,6 +288,128 @@ last_disco_basic = {
                     discovery_endtime as 'DiscoveryAccess.discovery_endtime'
                     process with unique()
             """
+}
+
+# Simplified "last_disco" retrieval using multiple smaller queries.  The
+# ``last_disco`` query above pulls together information across a large number of
+# node types which can be expensive to execute.  The following queries break the
+# data gathering into individual tables that can be stitched together client
+# side using :mod:`pandas`.
+
+# 0) Functional Key extraction used for joins
+last_disco_functional_key = {
+    "query": """
+            search DiscoveryAccess where endtime
+            show
+            #id as "DiscoveryAccess.id",
+            #Next:Sequential:Previous:DiscoveryAccess.#id as "DiscoveryAccess.previous_id",
+            #Previous:Sequential:Next:DiscoveryAccess.#id as "DiscoveryAccess.next_id",
+            #DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.#id as "DeviceInfo.id",
+            #Member:List:List:DiscoveryRun.#id as "DiscoveryRun.id",
+            #::InferredElement:.#id as "InferredElement.id",
+            #DiscoveryAccess:Metadata:Detail:SessionResult.#id as "SessionResult.id",
+            explode #::InferredElement:.#DeviceWithInterface:DeviceInterface:InterfaceOfDevice:NetworkInterface.#id as "NetworkInterface.id"
+            processwith unique()
+            """,
+}
+
+# A) DiscoveryAccess — all core facts
+last_disco_access = {
+    "query": """
+            search DiscoveryAccess where endtime
+            ORDER BY discovery_endtime DESC
+            show
+            #id as "DiscoveryAccess.id",
+            #Next:Sequential:Previous:DiscoveryAccess.#id as "DiscoveryAccess.previous_id",
+            #Previous:Sequential:Next:DiscoveryAccess.#id as "DiscoveryAccess.next_id",
+            endpoint as 'DiscoveryAccess.endpoint',
+            friendlyTime(discovery_starttime) as 'DiscoveryAccess.scan_starttime',
+            friendlyTime(discovery_endtime) as 'DiscoveryAccess.scan_endtime',
+            discovery_endtime as 'DiscoveryAccess.scan_endtime_raw',
+            discovery_endtime as 'DiscoveryAccess.discovery_endtime',
+            whenWasThat(discovery_endtime) as 'DiscoveryAccess.when_last_scan',
+            end_state as 'DiscoveryAccess.end_state',
+            reason as 'DiscoveryAccess.reason_not_updated',
+            result as 'DiscoveryAccess.result',
+            _last_marker as 'DiscoveryAccess._last_marker',
+            _first_marker as 'DiscoveryAccess._first_marker',
+            _last_interesting as 'DiscoveryAccess._last_interesting',
+            __had_inference as 'DiscoveryAccess.__had_inference',
+            best_ip_score as 'DiscoveryAccess.best_ip_score',
+            (#DiscoveryAccess:Metadata:Detail:SessionResult.success or access_success) as 'DiscoveryAccess.access_success',
+            access_failure as 'DiscoveryAccess.access_failure',
+            message as 'DiscoveryAccess.message'
+            process with unique()
+            """,
+}
+
+# B) DeviceInfo — OS/identity/credential fields
+last_disco_deviceinfo = {
+    "query": """
+            search DeviceInfo
+            show
+            #id as "DeviceInfo.id",
+            hostname as 'DeviceInfo.hostname',
+            os_type as 'DeviceInfo.os_type',
+            os_class as 'DeviceInfo.os_class',
+            os_version as 'DeviceInfo.os_version',
+            kind as 'DeviceInfo.kind',
+            inferred_kind as 'DeviceInfo.inferred_kind',
+            last_access_method as 'DeviceInfo.last_access_method',
+            probed_os as 'DeviceInfo.probed_os',
+            last_credential as 'DeviceInfo.last_credential',
+            last_slave as 'DeviceInfo.last_slave',
+            __preserved_last_credential as 'DeviceInfo.__preserved_last_credential'
+            process with unique()
+            """,
+}
+
+# C) DiscoveryRun — labels & times
+last_disco_run = {
+    "query": """
+            search DiscoveryRun
+            show
+            #id as "DiscoveryRun.id",
+            label as 'DiscoveryRun.label',
+            friendlyTime(starttime) as 'DiscoveryRun.starttime',
+            friendlyTime(endtime) as 'DiscoveryRun.endtime'
+            process with unique()
+            """,
+}
+
+# D) SessionResult — success/type/provider
+last_disco_session = {
+    "query": """
+            search SessionResult
+            show
+            #id as "SessionResult.id",
+            success as "SessionResult.success",
+            session_type as "SessionResult.session_type",
+            provider as "SessionResult.provider"
+            process with unique()
+            """,
+}
+
+# E) InferredElement — IP aggregates
+last_disco_inferred = {
+    "query": """
+            search InferredElement
+            show
+            #id as "InferredElement.id",
+            __all_ip_addrs as 'InferredElement.__all_ip_addrs'
+            process with unique()
+            """,
+}
+
+# F) NetworkInterface — per-interface IPs
+last_disco_interface = {
+    "query": """
+            search NetworkInterface
+            show
+            #id as "NetworkInterface.id",
+            ip_addr as 'NetworkInterface.ip_addr'
+            process with unique()
+            """,
 }
 ip_schedules = """search DiscoveryAccess
                     show endpoint,

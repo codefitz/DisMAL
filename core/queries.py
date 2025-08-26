@@ -273,7 +273,7 @@ last_disco = {
                             or #DiscoveryAccess:Metadata:Detail:SessionResult.session_type) as 'DiscoveryAccess.access_method',
                     #::InferredElement:__all_ip_addrs as 'InferredElement.__all_ip_addrs',
                     #::InferredElement:.#DeviceWithInterface:DeviceInterface:InterfaceOfDevice:NetworkInterface.ip_addr as 'NetworkInterface.ip_addr'
-                    process with unique(endpoint)
+                    process with unique()
 """
 }
 ip_schedules = """search DiscoveryAccess

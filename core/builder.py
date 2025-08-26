@@ -672,6 +672,14 @@ def unique_identities(
 ):
     """Return a list of unique device identities.
 
+    This routine now queries the appliance using the granular
+    ``deviceInfo_*`` lookups instead of the former monolithic
+    ``deviceInfo`` request.  ``deviceInfo_access`` seeds the list of
+    devices/endpoints, ``deviceInfo_base`` contributes identity details,
+    and ``deviceInfo_network`` merges any network metadata.  The combined
+    results replicate the original behaviour while reducing the payload
+    size and allowing the network query to be skipped when not required.
+
     Parameters
     ----------
     search: object

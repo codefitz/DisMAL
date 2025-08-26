@@ -437,15 +437,15 @@ def test_run_queries_executes_device_ids_query(monkeypatch, tmp_path):
 
     expected = [
         api_mod.queries.deviceInfo_base,
-        api_mod.queries.deviceInfo_network,
         api_mod.queries.deviceInfo_access,
+        api_mod.queries.deviceInfo_network,
     ]
     assert [q for q, _, _ in captured] == expected
     assert [t for _, _, t in captured] == ["query", "query", "query"]
     assert [p for _, p, _ in captured] == [
         os.path.join(outdir, "qry_deviceInfo_base.csv"),
-        os.path.join(outdir, "qry_deviceInfo_network.csv"),
         os.path.join(outdir, "qry_deviceInfo_access.csv"),
+        os.path.join(outdir, "qry_deviceInfo_network.csv"),
     ]
 
 

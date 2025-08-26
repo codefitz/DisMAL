@@ -462,7 +462,7 @@ def test_unique_identities_uses_cache(monkeypatch, tmp_path):
     monkeypatch.setattr(builder.api, "search_results", fake_search)
 
     first = builder.unique_identities(None)
-    assert calls["count"] == 2
+    assert calls["count"] == 1
 
     def fail_search(*a, **k):
         raise AssertionError("cache not used")

@@ -1303,7 +1303,6 @@ def test_discovery_analysis_includes_raw_timestamp(monkeypatch):
     ]:
         assert q in called
 
-
 def test_gather_discovery_data_calls_chunked_queries(monkeypatch):
     called = []
 
@@ -1345,7 +1344,6 @@ def test_gather_discovery_data_calls_chunked_queries(monkeypatch):
         reporting.queries.dropped_endpoints,
     ]:
         assert q in called
-
 
 def test_discovery_analysis_merges_latest_fields(monkeypatch):
     """Fields missing from the chosen record are populated from the latest."""

@@ -13,16 +13,12 @@ def _setup_pandas(monkeypatch, when_values):
     class DummyDF(dict):
         def __init__(self, data):
             self.data = data
-            self.value = None
         def __getitem__(self, key):
             return self.data[key]
         def __setitem__(self, key, value):
-            if key == "when":
-                self.value = value
-            else:
-                self.data[key] = value
+            self.data[key] = value
         def to_dict(self):
-            return {"when": {0: self.value}}
+            return {k: {0: v} for k, v in self.data.items()}
     counter = {"i": 0}
     def fake_df(data):
         return DummyDF(data)
@@ -34,26 +30,21 @@ def _setup_pandas(monkeypatch, when_values):
     monkeypatch.setattr(reporting.pd, "cut", fake_cut, raising=False)
 
 def _run(monkeypatch, discos, dropped, when_values):
-    id_map = {}
+    def fake_chunked(_search):
+        class DummyChunkDF(dict):
+            def __init__(self, records):
+                self.records = records
+                self.empty = not bool(records)
+            def to_dict(self, orient="records"):
+                return self.records
+        return DummyChunkDF(discos)
 
     def fake_search_results(search, query, *args, **kwargs):
-        if query is reporting.queries.last_disco_basic:
-            results = []
-            for idx, rec in enumerate(discos, 1):
-                id_map[str(idx)] = rec
-                results.append(
-                    {
-                        "DiscoveryAccess.id": idx,
-                        "Endpoint": rec.get("Endpoint"),
-                    }
-                )
-            return results
-        if isinstance(query, dict) and "#id =" in query.get("query", ""):
-            disco_id = query["query"].split("#id =", 1)[1].split()[0]
-            return [id_map[disco_id]]
         if query is reporting.queries.dropped_endpoints:
             return dropped
         return []
+
+    monkeypatch.setattr(reporting, "chunked_last_disco", fake_chunked)
     monkeypatch.setattr(reporting.api, "search_results", fake_search_results)
     monkeypatch.setattr(reporting.api, "get_json", lambda *a, **k: [{"uuid": "c1", "label": "cred1", "username": "u"}])
     monkeypatch.setattr(reporting.tools, "get_credential", lambda creds, uuid: creds[0])
@@ -64,25 +55,25 @@ def _run(monkeypatch, discos, dropped, when_values):
 
 def test_prefers_named_and_updates_timestamp(monkeypatch):
     older = {
-        "Endpoint": "1.2.3.4",
-        "Hostname": "h1",
-        "Scan_Endtime": "2024-01-01 00:05:00 +0000",
-        "Run_Endtime": "2024-01-01 00:05:00 +0000",
-        "Run_Starttime": "2024-01-01 00:00:00 +0000",
-        "Scan_Starttime": "2024-01-01 00:00:00 +0000",
+        "DiscoveryAccess.endpoint": "1.2.3.4",
+        "DeviceInfo.hostname": "h1",
+        "DiscoveryAccess.scan_endtime": "2024-01-01 00:05:00 +0000",
+        "DiscoveryRun.endtime": "2024-01-01 00:05:00 +0000",
+        "DiscoveryRun.starttime": "2024-01-01 00:00:00 +0000",
+        "DiscoveryAccess.scan_starttime": "2024-01-01 00:00:00 +0000",
         "DiscoveryRun.label": "r1",
-        "End_State": "Complete",
-        "Previous_End_State": "DarkSpace",
+        "DiscoveryAccess.end_state": "Complete",
+        "DiscoveryAccess.previous_end_state": "DarkSpace",
         "DeviceInfo.last_credential": "c1",
     }
     newer = dict(older)
     newer.update({
-        "Hostname": None,
+        "DeviceInfo.hostname": None,
         "DeviceInfo.last_credential": None,
-        "Scan_Endtime": "2024-02-01 00:05:00 +0000",
-        "Run_Endtime": "2024-02-01 00:05:00 +0000",
-        "Run_Starttime": "2024-02-01 00:00:00 +0000",
-        "Scan_Starttime": "2024-02-01 00:00:00 +0000",
+        "DiscoveryAccess.scan_endtime": "2024-02-01 00:05:00 +0000",
+        "DiscoveryRun.endtime": "2024-02-01 00:05:00 +0000",
+        "DiscoveryRun.starttime": "2024-02-01 00:00:00 +0000",
+        "DiscoveryAccess.scan_starttime": "2024-02-01 00:00:00 +0000",
     })
     result = _run(monkeypatch, [older, newer], [], ["old", "new"])
     assert len(result) == 1
@@ -95,23 +86,23 @@ def test_prefers_named_and_updates_timestamp(monkeypatch):
 
 def test_picks_latest_when_no_names(monkeypatch):
     older = {
-        "Endpoint": "1.2.3.4",
-        "Hostname": None,
-        "Scan_Endtime": "2024-01-01 00:05:00 +0000",
-        "Run_Endtime": "2024-01-01 00:05:00 +0000",
-        "Run_Starttime": "2024-01-01 00:00:00 +0000",
-        "Scan_Starttime": "2024-01-01 00:00:00 +0000",
+        "DiscoveryAccess.endpoint": "1.2.3.4",
+        "DeviceInfo.hostname": None,
+        "DiscoveryAccess.scan_endtime": "2024-01-01 00:05:00 +0000",
+        "DiscoveryRun.endtime": "2024-01-01 00:05:00 +0000",
+        "DiscoveryRun.starttime": "2024-01-01 00:00:00 +0000",
+        "DiscoveryAccess.scan_starttime": "2024-01-01 00:00:00 +0000",
         "DiscoveryRun.label": "r1",
-        "End_State": "Complete",
-        "Previous_End_State": "DarkSpace",
+        "DiscoveryAccess.end_state": "Complete",
+        "DiscoveryAccess.previous_end_state": "DarkSpace",
         "DeviceInfo.last_credential": None,
     }
     newer = dict(older)
     newer.update({
-        "Scan_Endtime": "2024-02-01 00:05:00 +0000",
-        "Run_Endtime": "2024-02-01 00:05:00 +0000",
-        "Run_Starttime": "2024-02-01 00:00:00 +0000",
-        "Scan_Starttime": "2024-02-01 00:00:00 +0000",
+        "DiscoveryAccess.scan_endtime": "2024-02-01 00:05:00 +0000",
+        "DiscoveryRun.endtime": "2024-02-01 00:05:00 +0000",
+        "DiscoveryRun.starttime": "2024-02-01 00:00:00 +0000",
+        "DiscoveryAccess.scan_starttime": "2024-02-01 00:00:00 +0000",
     })
     result = _run(monkeypatch, [older, newer], [], ["old", "new"])
     assert len(result) == 1

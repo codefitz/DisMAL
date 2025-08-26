@@ -1379,6 +1379,66 @@ def search_results(api_endpoint, query, limit=500, use_cache=True, cache_name=No
             )
         return []
 
+def search_in_chunks(api_endpoint, base_query, chunks, *, limit=0, use_cache=True, cache_name="chunk"):
+    """Run a query multiple times using a chunking strategy.
+
+    Parameters
+    ----------
+    api_endpoint
+        The search endpoint object used for API calls.
+    base_query : str | dict
+        Query template applied to each chunk.  If a dictionary is supplied
+        the ``"query"`` key is formatted.
+    chunks : iterable
+        Sequence of values used to tailor the query for each iteration.  Each
+        element is passed to :func:`str.format` on ``base_query``.  When an
+        element is a mapping the values are expanded as named fields.
+    limit : int, optional
+        Passed directly to :func:`search_results`.  Defaults to ``0`` which
+        retrieves all results for each chunk.
+    use_cache : bool, optional
+        Whether to utilise the on-disk cache.
+    cache_name : str, optional
+        Prefix for cache entries.  A unique suffix is appended for every
+        chunk so results are stored separately.
+
+    Returns
+    -------
+    list
+        Combined results from all chunks.  Non-list responses from
+        ``search_results`` are appended as-is allowing callers to inspect
+        error payloads.
+    """
+
+    combined = []
+    for idx, chunk in enumerate(chunks):
+        if isinstance(base_query, dict):
+            query = dict(base_query)
+            qstring = query.get("query", "")
+            if isinstance(chunk, dict):
+                query["query"] = qstring.format(**chunk)
+            else:
+                query["query"] = qstring.format(chunk)
+        else:
+            if isinstance(chunk, dict):
+                query = base_query.format(**chunk)
+            else:
+                query = base_query.format(chunk)
+
+        chunk_cache = f"{cache_name}-{idx}"
+        result = search_results(
+            api_endpoint,
+            query,
+            limit=limit,
+            use_cache=use_cache,
+            cache_name=chunk_cache,
+        )
+        if isinstance(result, list):
+            combined.extend(result)
+        else:
+            combined.append(result)
+    return combined
+
 REPORT_QUERY_MAP = {
     "credential_success": [
         "credential_success",

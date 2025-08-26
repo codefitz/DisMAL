@@ -1393,8 +1393,13 @@ REPORT_QUERY_MAP = {
     ],
     # The device_ids report uses a dedicated query
     "device_ids": ["device_ids"],
-    # The devices report uses deviceInfo_* queries
-    "devices": ["deviceInfo_base", "deviceInfo_access", "deviceInfo_network"],
+  
+    # The devices report uses granular deviceInfo queries
+    "devices": [
+        "deviceInfo_base",
+        "deviceInfo_access",
+        "deviceInfo_network",
+    ],
 }
 
 def run_queries(search, args, dir):

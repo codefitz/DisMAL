@@ -186,6 +186,21 @@ da_ip_lookup = {
                                 #::InferredElement:.#DeviceWithInterface:DeviceInterface:InterfaceOfDevice:NetworkInterface.ip_addr as 'NetworkInterface.ip_addr'
                             """
                 }
+device_ids = """
+search DiscoveryAccess
+show
+#::InferredElement:.name as 'InferredElement.name',
+#::InferredElement:.hostname as 'InferredElement.hostname',
+#::InferredElement:.local_fqdn as 'InferredElement.local_fqdn',
+#::InferredElement:.sysname as 'InferredElement.sysname',
+endpoint as 'DiscoveryAccess.endpoint',
+#DiscoveryAccess:Endpoint:Endpoint:Endpoint.endpoint as 'Endpoint.endpoint',
+#DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DiscoveredIPAddressList.#List:List:Member:DiscoveredIPAddress.ip_addr as 'DiscoveredIPAddress.ip_addr',
+#::InferredElement:.__all_ip_addrs as 'InferredElement.__all_ip_addrs',
+#::InferredElement:.#DeviceWithInterface:DeviceInterface:InterfaceOfDevice:NetworkInterface.ip_addr as 'NetworkInterface.ip_addr',
+#::InferredElement:.#DeviceWithInterface:DeviceInterface:InterfaceOfDevice:NetworkInterface.fqdns as 'NetworkInterface.fqdns'
+process with unique()
+"""
 excludes = {"query": """search in '_System' ExcludeRange
                             show
                             exrange_id as 'ID',

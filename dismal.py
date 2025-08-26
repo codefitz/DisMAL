@@ -88,6 +88,8 @@ cache_opts.add_argument(
 parser.add_argument('-k', '--keep-awake',   dest='wakey', action='store_true', required=False, help=argparse.SUPPRESS)
 parser.add_argument('--debug',              dest='debugging',  action='store_true', required=False,
                     help='Enable debug logging including full API responses.\n\n')
+parser.add_argument('--max-threads', dest='max_threads', type=int, required=False,
+                    help='Maximum worker threads for concurrent API queries.\n\n')
 
 # CLI Appliance Management
 cli_management = parser.add_argument_group("CLI Appliance Management")
@@ -238,6 +240,7 @@ parser.set_defaults(
     debugging=config.get('debug', config.get('debugging', False)),
     cache_dir=config.get('cache_dir'),
     no_cache=config.get('no_cache', False),
+    max_threads=config.get('max_threads', 2),
 )
 
 global args

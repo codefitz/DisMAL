@@ -20,7 +20,20 @@ import tideway
 logger = logging.getLogger("_reporting_")
 
 @output._timer("Success Report")
-def successful(creds, search, args):
+def successful(creds, search, args, max_workers=None):
+    """Generate the credential success report.
+
+    Parameters
+    ----------
+    creds, search, args
+        Standard API helper objects passed in by ``dismal``.
+    max_workers : int, optional
+        Maximum number of worker threads for concurrent API queries.  When
+        ``None`` (the default) this value is read from ``args.max_threads`` and
+        falls back to ``2`` if unspecified.  A small default keeps load on the
+        appliance conservative.
+    """
+
     msg = "Running: Success Report )"
     logger.info(msg)
 
@@ -49,7 +62,16 @@ def successful(creds, search, args):
     devinfosux7 = {}
     credfail7_results = {}
 
-    with ThreadPoolExecutor() as executor:
+    # Determine thread pool size.  Limit to at least one worker to avoid
+    # runtime errors if an invalid value is supplied.
+    if max_workers is None:
+        max_workers = getattr(args, "max_threads", 2)
+    try:
+        max_workers = max(1, int(max_workers))
+    except (TypeError, ValueError):  # pragma: no cover - defensive
+        max_workers = 2
+
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = {
             "credsux_results": executor.submit(
                 api.search_results,

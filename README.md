@@ -83,6 +83,9 @@ The options `-P`, `-T` and `-W` can be used to read the UI password, API token a
 
 By default, reports are saved to an `output_<appliance>` directory in the current working directory.
 Use the `--stdout` option to suppress file output and print results directly to the terminal.
+Use `--max-threads <N>` to limit the number of worker threads used for API
+requests. The default is a conservative `2` and can also be set in
+`config.yaml` via `max_threads`.
 
 ### YAML configuration
 

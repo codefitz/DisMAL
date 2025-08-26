@@ -420,12 +420,10 @@ def test_run_queries_executes_report_queries(monkeypatch, tmp_path):
 
 
 def test_run_queries_executes_device_ids_query(monkeypatch, tmp_path):
-    captured = {}
+    captured = []
 
     def fake_define_csv(args, search, query, path, file, target, typ, **kwargs):
-        captured["query"] = query
-        captured["path"] = path
-        captured["type"] = typ
+        captured.append((query, path, typ))
 
     monkeypatch.setattr(api_mod.output, "define_csv", fake_define_csv)
 
@@ -437,10 +435,18 @@ def test_run_queries_executes_device_ids_query(monkeypatch, tmp_path):
 
     api_mod.run_queries(search, args, outdir)
 
-    assert captured["query"] == api_mod.queries.deviceInfo
-    expected = os.path.join(outdir, "qry_deviceInfo.csv")
-    assert captured["path"] == expected
-    assert captured["type"] == "query"
+    expected = [
+        api_mod.queries.deviceInfo_base,
+        api_mod.queries.deviceInfo_network,
+        api_mod.queries.deviceInfo_access,
+    ]
+    assert [q for q, _, _ in captured] == expected
+    assert [t for _, _, t in captured] == ["query", "query", "query"]
+    assert [p for _, p, _ in captured] == [
+        os.path.join(outdir, "qry_deviceInfo_base.csv"),
+        os.path.join(outdir, "qry_deviceInfo_network.csv"),
+        os.path.join(outdir, "qry_deviceInfo_access.csv"),
+    ]
 
 
 def test_map_outpost_credentials_strips_scheme(monkeypatch):

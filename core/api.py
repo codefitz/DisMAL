@@ -1269,6 +1269,13 @@ def search_results(api_endpoint, query, limit=500, use_cache=True, cache_name=No
             if not limit and offset == 0 and len(data) > page_limit:
                 break
 
+            # If the server returns more rows than requested on the first page,
+            # treat it as the complete result set and stop paginating. Some
+            # appliances ignore the ``limit`` parameter and return every row in
+            # one response which otherwise causes an endless loop.
+            if not limit and offset == 0 and len(data) > page_limit:
+                break
+
             # Stop when we've retrieved the requested number of rows or when
             # the API returns fewer rows than requested for a given page.
             if limit and limit > 0 and len(results_all) >= limit:

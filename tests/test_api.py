@@ -115,25 +115,24 @@ def test_search_results_paginates(monkeypatch):
     results = search_results(search, {"query": "q"}, limit=0)
     assert len(results) == total
 
-def test_search_results_breaks_on_overlimit(monkeypatch):
-    """If API returns more rows than requested, only one request should be made."""
+def test_search_results_handles_overfetch(monkeypatch):
+    """Stop paginating if the first page contains more rows than requested."""
 
-    class OverLimitSearch:
+    class OverfetchSearch:
         def __init__(self):
-            self.calls = []
+            self.offsets = []
 
         def search(self, query, format="object", limit=500, offset=0):
-            self.calls.append((limit, offset))
-            assert offset == 0  # Ensure pagination does not occur
-            data = [{"row": i} for i in range(600)]
+            self.offsets.append(offset)
+            data = [{"row": i} for i in range(713)]
             return DummyResponse(200, json.dumps(data))
 
     monkeypatch.setattr(api_mod.tools, "list_table_to_json", lambda x: x)
-
-    search = OverPagingSearch()
+    search = OverfetchSearch()
     results = search_results(search, {"query": "q"}, limit=0)
-    assert len(results) == 750
-    assert search.calls == 1
+    assert len(results) == 713
+    # Only the initial request should be made (offset=0)
+    assert search.offsets == [0]
 
 def test_search_results_normalizes_nested_results():
     payload = {

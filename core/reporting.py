@@ -1170,11 +1170,6 @@ def _gather_discovery_data(twsearch, twcreds, args):
         getattr(args, "max_identities", None),
     )
 
-    if getattr(args, "use_export", False):
-        discos = api.export_search(twsearch, queries.last_disco)
-    else:
-        discos = api.search_results(twsearch, queries.last_disco)
-
     def _detail_query(disco_id):
         """Build a detailed last_disco query for a single DiscoveryAccess."""
         base = queries.last_disco["query"]
@@ -1184,7 +1179,10 @@ def _gather_discovery_data(twsearch, twcreds, args):
         )
         return {"query": query}
 
-    basic_discos = api.search_results(twsearch, queries.last_disco_basic)
+    if getattr(args, "use_export", False):
+        basic_discos = api.export_search(twsearch, queries.last_disco_basic)
+    else:
+        basic_discos = api.search_results(twsearch, queries.last_disco_basic)
     discos = []
     seen_ids = set()
     for entry in basic_discos:

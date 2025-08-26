@@ -12,6 +12,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from core.api import (
     get_json,
     search_results,
+    export_search,
     show_runs,
     get_outposts,
     map_outpost_credentials,
@@ -851,6 +852,48 @@ def test_search_results_list_table():
     search = DummySearch([["A", "B"], [1, 2]])
     result = search_results(search, {"query": "q"})
     assert result == [{"A": 1, "B": 2}]
+
+
+def test_export_search_parses_csv(monkeypatch):
+    class DummyExport:
+        def __init__(self):
+            self.calls = 0
+
+        def export(self, payload):
+            return DummyResponse(200, '{"export_id": "1"}')
+
+        def export_status(self, export_id):
+            self.calls += 1
+            status = "running" if self.calls == 1 else "completed"
+            return DummyResponse(200, f'{{"status": "{status}"}}')
+
+        def export_download(self, export_id):
+            return types.SimpleNamespace(text="a,b\n1,2\n")
+
+    monkeypatch.setattr(api_mod.time, "sleep", lambda x: None)
+    rows = export_search(DummyExport(), {"query": "q"})
+    assert rows == [{"a": "1", "b": "2"}]
+
+
+def test_export_search_parses_json(monkeypatch):
+    class DummyExport:
+        def __init__(self):
+            self.calls = 0
+
+        def export(self, payload):
+            return DummyResponse(200, '{"export_id": "1"}')
+
+        def export_status(self, export_id):
+            self.calls += 1
+            status = "running" if self.calls == 1 else "completed"
+            return DummyResponse(200, f'{{"status": "{status}"}}')
+
+        def export_download(self, export_id):
+            return types.SimpleNamespace(text="[{\"x\": 1}]")
+
+    monkeypatch.setattr(api_mod.time, "sleep", lambda x: None)
+    rows = export_search(DummyExport(), {"query": "q"})
+    assert rows == [{"x": 1}]
 
 
 def test_capture_candidates_writes_csv(monkeypatch):

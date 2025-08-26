@@ -1159,7 +1159,10 @@ def _gather_discovery_data(twsearch, twcreds, args):
         args.endpoint_prefix,
         getattr(args, "max_identities", None),
     )
-    discos = api.search_results(twsearch, queries.last_disco)
+    if getattr(args, "use_export", False):
+        discos = api.export_search(twsearch, queries.last_disco)
+    else:
+        discos = api.search_results(twsearch, queries.last_disco)
     # Reuse cached dropped endpoint results if previously fetched
     dropped = api.search_results(twsearch, queries.dropped_endpoints)
 

@@ -6,6 +6,7 @@ import csv
 import json
 import os
 import time
+import io
 from urllib.parse import urlparse
 
 # PIP Modules
@@ -1438,6 +1439,76 @@ def search_in_chunks(api_endpoint, base_query, chunks, *, limit=0, use_cache=Tru
         else:
             combined.append(result)
     return combined
+
+
+def _parse_export_data(data):
+    """Return rows from exported search data.
+
+    The ``data`` parameter may be a response object or a plain string.  The
+    content is inspected and parsed as JSON when possible, otherwise treated as
+    CSV.  A list of row dictionaries is returned in all cases.
+    """
+
+    text = getattr(data, "text", data)
+    if isinstance(text, bytes):
+        text = text.decode()
+    if not isinstance(text, str):
+        return []
+
+    text = text.strip()
+    if not text:
+        return []
+
+    try:
+        parsed = json.loads(text)
+        if isinstance(parsed, dict) and isinstance(parsed.get("results"), list):
+            return parsed["results"]
+        if isinstance(parsed, list):
+            return parsed
+    except Exception:
+        pass
+
+    reader = csv.DictReader(io.StringIO(text))
+    return [row for row in reader]
+
+
+def export_search(api_endpoint, query, *, poll_interval=2, timeout=300):
+    """Execute a search export and return the resulting rows.
+
+    This function uses the asynchronous export API to retrieve data for heavy
+    queries.  The search job is polled until completion before downloading and
+    parsing the results.
+    """
+
+    payload = query if isinstance(query, dict) else {"query": query}
+    job = api_endpoint.export(payload)
+    info = get_json(job)
+    export_id = (
+        info.get("export_id")
+        or info.get("job_id")
+        or info.get("id")
+    )
+    if not export_id:
+        logger.error("Export response missing job identifier: %s", info)
+        return []
+
+    start = time.time()
+    while True:
+        status_resp = api_endpoint.export_status(export_id)
+        status = get_json(status_resp)
+        state = str(status.get("status") or status.get("state") or "").lower()
+        if state in {"completed", "complete", "done", "finished", "success", "succeeded"}:
+            break
+        if state in {"failed", "error"}:
+            logger.error("Export job failed: %s", status)
+            return []
+        if time.time() - start > timeout:
+            logger.error("Export job timed out after %s seconds", timeout)
+            return []
+        time.sleep(poll_interval)
+
+    file_resp = api_endpoint.export_download(export_id)
+    return _parse_export_data(file_resp)
 
 REPORT_QUERY_MAP = {
     "credential_success": [

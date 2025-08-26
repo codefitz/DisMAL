@@ -1169,6 +1169,12 @@ def _gather_discovery_data(twsearch, twcreds, args):
         args.endpoint_prefix,
         getattr(args, "max_identities", None),
     )
+
+    if getattr(args, "use_export", False):
+        discos = api.export_search(twsearch, queries.last_disco)
+    else:
+        discos = api.search_results(twsearch, queries.last_disco)
+
     def _detail_query(disco_id):
         """Build a detailed last_disco query for a single DiscoveryAccess."""
         base = queries.last_disco["query"]
@@ -1196,6 +1202,7 @@ def _gather_discovery_data(twsearch, twcreds, args):
             cache_name=f"last_disco_{disco_id}",
         )
         discos.extend(detail)
+
     # Reuse cached dropped endpoint results if previously fetched
     dropped = api.search_results(twsearch, queries.dropped_endpoints)
 

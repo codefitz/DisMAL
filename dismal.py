@@ -83,6 +83,13 @@ cache_opts.add_argument(
     required=False,
     help='Force fresh API calls without reading or writing cache.\n\n',
 )
+cache_opts.add_argument(
+    '--use-export',
+    dest='use_export',
+    action='store_true',
+    required=False,
+    help='Use asynchronous export API for heavy queries.\n\n',
+)
 
 # Hidden Options
 parser.add_argument('-k', '--keep-awake',   dest='wakey', action='store_true', required=False, help=argparse.SUPPRESS)

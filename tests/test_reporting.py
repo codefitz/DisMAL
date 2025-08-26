@@ -1269,6 +1269,26 @@ def test_discovery_analysis_includes_raw_timestamp(monkeypatch):
     assert dropped_row[idx] == "2024-01-02T00:00:00+00:00"
 
 
+def test_gather_discovery_data_uses_export(monkeypatch):
+    calls = {"export": 0, "search": 0}
+
+    def fake_export_search(api_endpoint, query):
+        calls["export"] += 1
+        return []
+
+    def fake_search_results(api_endpoint, query, *a, **k):
+        calls["search"] += 1
+        return []
+
+    monkeypatch.setattr(reporting.api, "export_search", fake_export_search)
+    monkeypatch.setattr(reporting.api, "search_results", fake_search_results)
+    monkeypatch.setattr(reporting.builder, "unique_identities", lambda *a, **k: [])
+    args = types.SimpleNamespace(use_export=True, include_endpoints=None, endpoint_prefix=None)
+    reporting._gather_discovery_data(DummySearch(), DummyCreds(), args)
+    assert calls["export"] == 1
+    assert calls["search"] == 1
+
+
 def test_discovery_analysis_merges_latest_fields(monkeypatch):
     """Fields missing from the chosen record are populated from the latest."""
 

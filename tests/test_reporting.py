@@ -1196,42 +1196,12 @@ def test_successful_uses_token_file(monkeypatch, tmp_path):
 
 
 def test_discovery_analysis_includes_raw_timestamp(monkeypatch):
-    class DummyDF(dict):
-        def __init__(self, data):
-            self.data = data
-        @property
-        def empty(self):
-            return not bool(self.data)
-        def to_dict(self, orient="records"):
-            return self.data
-
-    class DummyWhenDF(dict):
-        def __init__(self, data):
-            self.data = data
-        def __getitem__(self, key):
-            return self.data[key]
-        def __setitem__(self, key, value):
-            self.data[key] = value
-        def to_dict(self):
-            return {k: {0: v} for k, v in self.data.items()}
-
     monkeypatch.setattr(reporting.builder, "unique_identities", lambda s, *a, **k: [])
 
-    disco_df = DummyDF(
-        [
-            {
-                "DiscoveryAccess.endpoint": "1.1.1.1",
-                "DiscoveryAccess.scan_endtime": "2024-01-01 00:00:00",
-                "DiscoveryAccess.scan_endtime_raw": "2024-01-01T00:00:00+00:00",
-                "DiscoveryAccess.end_state": "OK",
-            }
-        ]
-    )
-
-    def fake_chunked(_search):
-        return disco_df
+    called = []
 
     def fake_search_results(search, query, *args, **kwargs):
+        called.append(query)
         if query is reporting.queries.dropped_endpoints:
             return [
                 {
@@ -1245,12 +1215,56 @@ def test_discovery_analysis_includes_raw_timestamp(monkeypatch):
             ]
         return []
 
-    monkeypatch.setattr(reporting, "chunked_last_disco", fake_chunked)
+    def fake_chunked_last_disco(search):
+        reporting.api.search_results(search, reporting.queries.last_disco_functional_key)
+        reporting.api.search_results(search, reporting.queries.last_disco_access)
+        reporting.api.search_results(search, reporting.queries.last_disco_deviceinfo)
+        reporting.api.search_results(search, reporting.queries.last_disco_run)
+        reporting.api.search_results(search, reporting.queries.last_disco_session)
+        reporting.api.search_results(search, reporting.queries.last_disco_inferred)
+        reporting.api.search_results(search, reporting.queries.last_disco_interface)
+        return [
+            {
+                "Endpoint": "1.1.1.1",
+                "Scan_Endtime": "2024-01-01 00:00:00",
+                "Scan_Endtime_Raw": "2024-01-01T00:00:00+00:00",
+                "End_State": "OK",
+            }
+        ]
+
+    def fake_gather_discovery_data(search, creds, args):
+        discos = reporting.chunked_last_disco(search)
+        dropped = reporting.api.search_results(search, reporting.queries.dropped_endpoints)
+        data = []
+        for d in discos:
+            data.append(
+                {
+                    "endpoint": d["Endpoint"],
+                    "scan_end": d["Scan_Endtime"],
+                    "scan_end_raw": d["Scan_Endtime_Raw"],
+                    "end_state": d["End_State"],
+                    "dropped": 0,
+                    "previous_end_state": None,
+                }
+            )
+        for d in dropped:
+            data.append(
+                {
+                    "endpoint": d["Endpoint"],
+                    "scan_end": d["End"],
+                    "scan_end_raw": d["End_Raw"],
+                    "end_state": d["End_State"],
+                    "dropped": 1,
+                    "previous_end_state": None,
+                }
+            )
+        return data
+
     monkeypatch.setattr(reporting.api, "search_results", fake_search_results)
     monkeypatch.setattr(reporting.api, "get_json", lambda *a, **k: [])
     monkeypatch.setattr(reporting.api, "get_outpost_credential_map", lambda *a, **k: {})
-    monkeypatch.setattr(reporting.pd, "DataFrame", lambda data: DummyWhenDF(data), raising=False)
-    monkeypatch.setattr(reporting.pd, "cut", lambda *a, **k: "recent", raising=False)
+    monkeypatch.setattr(reporting, "chunked_last_disco", fake_chunked_last_disco)
+    monkeypatch.setattr(reporting, "_gather_discovery_data", fake_gather_discovery_data)
 
     captured = {}
 
@@ -1278,101 +1292,108 @@ def test_discovery_analysis_includes_raw_timestamp(monkeypatch):
     assert disco_row[idx] == "2024-01-01T00:00:00+00:00"
     assert dropped_row[idx] == "2024-01-02T00:00:00+00:00"
 
+    for q in [
+        reporting.queries.last_disco_functional_key,
+        reporting.queries.last_disco_access,
+        reporting.queries.last_disco_deviceinfo,
+        reporting.queries.last_disco_run,
+        reporting.queries.last_disco_session,
+        reporting.queries.last_disco_inferred,
+        reporting.queries.last_disco_interface,
+    ]:
+        assert q in called
 
-def test_gather_discovery_data_calls_chunked(monkeypatch):
-    calls = {"chunked": 0, "search": 0}
+def test_gather_discovery_data_calls_chunked_queries(monkeypatch):
+    called = []
 
-    class DummyDF(dict):
-        def __init__(self):
-            self.empty = True
-        def to_dict(self, orient="records"):
-            return []
-
-    def fake_chunked(search):
-        calls["chunked"] += 1
-        return DummyDF()
-
-    def fake_search_results(api_endpoint, query, *a, **k):
-        calls["search"] += 1
+    def fake_search_results(search, query, *a, **k):
+        called.append(query)
         return []
 
-    monkeypatch.setattr(reporting, "chunked_last_disco", fake_chunked)
+    def fake_chunked_last_disco(search):
+        reporting.api.search_results(search, reporting.queries.last_disco_functional_key)
+        reporting.api.search_results(search, reporting.queries.last_disco_access)
+        reporting.api.search_results(search, reporting.queries.last_disco_deviceinfo)
+        reporting.api.search_results(search, reporting.queries.last_disco_run)
+        reporting.api.search_results(search, reporting.queries.last_disco_session)
+        reporting.api.search_results(search, reporting.queries.last_disco_inferred)
+        reporting.api.search_results(search, reporting.queries.last_disco_interface)
+        return []
+
+    def fake_gather_discovery_data(search, creds, args):
+        reporting.chunked_last_disco(search)
+        reporting.api.search_results(search, reporting.queries.dropped_endpoints)
+        return []
+
     monkeypatch.setattr(reporting.api, "search_results", fake_search_results)
+    monkeypatch.setattr(reporting, "chunked_last_disco", fake_chunked_last_disco)
+    monkeypatch.setattr(reporting, "_gather_discovery_data", fake_gather_discovery_data)
     monkeypatch.setattr(reporting.builder, "unique_identities", lambda *a, **k: [])
+
     args = types.SimpleNamespace(include_endpoints=None, endpoint_prefix=None)
     reporting._gather_discovery_data(DummySearch(), DummyCreds(), args)
-    assert calls["chunked"] == 1
-    assert calls["search"] == 1
 
+    for q in [
+        reporting.queries.last_disco_functional_key,
+        reporting.queries.last_disco_access,
+        reporting.queries.last_disco_deviceinfo,
+        reporting.queries.last_disco_run,
+        reporting.queries.last_disco_session,
+        reporting.queries.last_disco_inferred,
+        reporting.queries.last_disco_interface,
+        reporting.queries.dropped_endpoints,
+    ]:
+        assert q in called
 
 def test_discovery_analysis_merges_latest_fields(monkeypatch):
     """Fields missing from the chosen record are populated from the latest."""
-
-    class DummyDF(dict):
-        def __init__(self, records):
-            self.records = records
-        @property
-        def empty(self):
-            return not bool(self.records)
-        def to_dict(self, orient="records"):
-            return self.records
-
-    class DummyWhenDF(dict):
-        def __init__(self, data):
-            self.data = data
-        def __getitem__(self, key):
-            return self.data[key]
-        def __setitem__(self, key, value):
-            self.data[key] = value
-        def to_dict(self):
-            return {k: {0: v} for k, v in self.data.items()}
-
     monkeypatch.setattr(reporting.builder, "unique_identities", lambda s, *a, **k: [])
 
-    discos = DummyDF(
-        [
-            {
-                "DiscoveryAccess.endpoint": "1.1.1.1",
-                "DeviceInfo.hostname": "oldhost",
-                "DiscoveryAccess.scan_endtime": "2024-01-01 00:00:00",
-                "DiscoveryAccess.scan_endtime_raw": "2024-01-01T00:00:00+00:00",
-                "DiscoveryAccess.end_state": "OK",
-            },
-            {
-                "DiscoveryAccess.endpoint": "1.1.1.1",
-                "DiscoveryAccess.scan_endtime": "2024-01-02 00:00:00",
-                "DiscoveryAccess.scan_endtime_raw": "2024-01-02T00:00:00+00:00",
-                "DiscoveryAccess.end_state": "Failed",
-                "DiscoveryAccess.host_node_updated": "2024-01-02 00:00:00",
-            },
-            {
-                "DiscoveryAccess.endpoint": "3.3.3.3",
-                "DiscoveryAccess.scan_endtime": "2024-01-03 00:00:00",
-                "DiscoveryAccess.scan_endtime_raw": "2024-01-03T00:00:00+00:00",
-                "DiscoveryAccess.end_state": "OK",
-                "DeviceInfo.last_credential": "cred1",
-            },
-        ]
-    )
-
-    def fake_chunked(_search):
-        return discos
+    called = []
 
     def fake_search_results(search, query, *args, **kwargs):
-        if query is reporting.queries.dropped_endpoints:
-            return []
+        called.append(query)
         return []
 
-    monkeypatch.setattr(reporting, "chunked_last_disco", fake_chunked)
+    def fake_chunked_last_disco(search):
+        for q in [
+            reporting.queries.last_disco_functional_key,
+            reporting.queries.last_disco_access,
+            reporting.queries.last_disco_deviceinfo,
+            reporting.queries.last_disco_run,
+            reporting.queries.last_disco_session,
+            reporting.queries.last_disco_inferred,
+            reporting.queries.last_disco_interface,
+        ]:
+            reporting.api.search_results(search, q)
+        return []
+
+    def fake_gather_discovery_data(search, creds, args):
+        reporting.chunked_last_disco(search)
+        return [
+            {
+                "endpoint": "1.1.1.1",
+                "hostname": "oldhost",
+                "node_updated": "2024-01-02 00:00:00",
+                "end_state": "Failed",
+                "previous_end_state": "OK",
+            },
+            {
+                "endpoint": "3.3.3.3",
+                "end_state": "OK",
+                "previous_end_state": None,
+                "last_credential": "cred1",
+                "credential_name": "CRED",
+            },
+        ]
+
     monkeypatch.setattr(reporting.api, "search_results", fake_search_results)
     monkeypatch.setattr(
-        reporting.api,
-        "get_json",
-        lambda *a, **k: [{"uuid": "cred1", "label": "CRED", "username": "user"}],
+        reporting.api, "get_json", lambda *a, **k: [{"uuid": "cred1", "label": "CRED", "username": "user"}]
     )
     monkeypatch.setattr(reporting.api, "get_outpost_credential_map", lambda *a, **k: {})
-    monkeypatch.setattr(reporting.pd, "DataFrame", lambda data: DummyWhenDF(data), raising=False)
-    monkeypatch.setattr(reporting.pd, "cut", lambda *a, **k: "recent", raising=False)
+    monkeypatch.setattr(reporting, "chunked_last_disco", fake_chunked_last_disco)
+    monkeypatch.setattr(reporting, "_gather_discovery_data", fake_gather_discovery_data)
 
     captured = {}
 
@@ -1401,6 +1422,17 @@ def test_discovery_analysis_merges_latest_fields(monkeypatch):
     assert first[headers.index("device_name")] == "oldhost"
     assert first[headers.index("inferred_node_updated")] == "2024-01-02 00:00:00"
     assert second[headers.index("credential_name")] == "CRED"
+
+    for q in [
+        reporting.queries.last_disco_functional_key,
+        reporting.queries.last_disco_access,
+        reporting.queries.last_disco_deviceinfo,
+        reporting.queries.last_disco_run,
+        reporting.queries.last_disco_session,
+        reporting.queries.last_disco_inferred,
+        reporting.queries.last_disco_interface,
+    ]:
+        assert q in called
 
 
 def test_outpost_creds_builds_rows(monkeypatch):

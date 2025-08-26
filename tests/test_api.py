@@ -1004,3 +1004,40 @@ def test_outpost_creds_passes_endpoint_as_appliance(monkeypatch):
     monkeypatch.setattr(api_mod.reporting, 'outpost_creds', fake_outpost)
     api_mod.outpost_creds(dummy_creds, dummy_search, args, '/tmp')
     assert recorded['appliance'] is dummy_creds
+
+
+def test_search_in_chunks_merges_results_and_uses_unique_cache(monkeypatch):
+    calls = []
+
+    def fake_search_results(api_endpoint, query, limit=0, use_cache=True, cache_name=None):
+        calls.append((query, cache_name))
+        return [{"cache": cache_name}]
+
+    monkeypatch.setattr(api_mod, "search_results", fake_search_results)
+
+    base_query = "query {}"
+    chunks = ["A", "B"]
+    results = api_mod.search_in_chunks(None, base_query, chunks, cache_name="base")
+
+    assert results == [{"cache": "base-0"}, {"cache": "base-1"}]
+    assert calls == [("query A", "base-0"), ("query B", "base-1")]
+
+
+def test_search_in_chunks_formats_dict_queries(monkeypatch):
+    captured = []
+
+    def fake_search_results(api_endpoint, query, limit=0, use_cache=True, cache_name=None):
+        captured.append(query["query"])
+        return []
+
+    monkeypatch.setattr(api_mod, "search_results", fake_search_results)
+
+    base = {"query": "search foo where start>={start} and end<{end}"}
+    windows = [{"start": 0, "end": 10}, {"start": 10, "end": 20}]
+
+    api_mod.search_in_chunks(None, base, windows)
+
+    assert captured == [
+        "search foo where start>=0 and end<10",
+        "search foo where start>=10 and end<20",
+    ]

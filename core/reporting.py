@@ -19,6 +19,23 @@ import tideway
 
 logger = logging.getLogger("_reporting_")
 
+def chunked_search(search, base_query, chunks, *, limit=0, use_cache=True, cache_name="chunk"):
+    """Public wrapper for :func:`api.search_in_chunks`.
+
+    This helper is exposed for CLI consumers that need to execute the same
+    query repeatedly across multiple time windows or endpoint groups and
+    receive a single merged result set.
+    """
+
+    return api.search_in_chunks(
+        search,
+        base_query,
+        chunks,
+        limit=limit,
+        use_cache=use_cache,
+        cache_name=cache_name,
+    )
+
 @output._timer("Success Report")
 def successful(creds, search, args, max_workers=None):
     """Generate the credential success report.

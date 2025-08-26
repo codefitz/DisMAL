@@ -146,10 +146,6 @@ python3 dismal.py --access_method api -i <appliance_host> -u <username> -p <pass
 
 Only the two specified endpoints are queried and reported on.
 
-The resulting device-IDs report includes a **Guide %** column indicating
-the proportion of unique IP addresses seen for each originating endpoint
-compared to the total endpoints examined.
-
 When only a rough sample is required, ``--max-identities <N>`` can be used
 to stop processing after ``N`` originating endpoints have been collected.
 This acts as a hard limit on the unique identities gathered and can
@@ -161,7 +157,7 @@ The toolkit now offers a broad range of reports. Selected examples include:
 
 - **active_scans** – list active Discovery Runs; add `--queries` to run via search query.
 - **credential_success** – report on credential success with totals and success percentages.
-- **device_ids** – list unique device identities with a Guide % for each originating endpoint.
+- **device_ids** – list unique device identities for each originating endpoint.
 - **devices** – summarize unique device profiles with last access and credential details.
 - **discovery_analysis** – export latest access details for each endpoint and compare consecutive runs to highlight state changes.
 - **discovery_run_analysis** – summarises DiscoveryRun details including ranges, endpoint totals, and scan kinds.

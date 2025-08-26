@@ -578,7 +578,10 @@ def devices(twsearch, twcreds, args, identities=None):
     # gathering the identities here when not provided.
     if identities is None:
         identities = builder.unique_identities(
-            twsearch, args.include_endpoints, args.endpoint_prefix
+            twsearch,
+            args.include_endpoints,
+            args.endpoint_prefix,
+            getattr(args, "max_identities", None),
         )
 
     results = api.search_results(twsearch, queries.deviceInfo)
@@ -998,7 +1001,10 @@ def ipaddr(search, credentials, args):
 
     id_list = []
     unique_ids = builder.unique_identities(
-        search, args.include_endpoints, args.endpoint_prefix
+        search,
+        args.include_endpoints,
+        args.endpoint_prefix,
+        getattr(args, "max_identities", None),
     )
     for identity in unique_ids:
         logger.debug("Checking IP address %s in Identity %s", ipaddr, identity)
@@ -1093,7 +1099,10 @@ def _gather_discovery_data(twsearch, twcreds, args):
 
     vaultcreds = api.get_json(twcreds.get_vault_credentials)
     identities = builder.unique_identities(
-        twsearch, args.include_endpoints, args.endpoint_prefix
+        twsearch,
+        args.include_endpoints,
+        args.endpoint_prefix,
+        getattr(args, "max_identities", None),
     )
     discos = api.search_results(twsearch, queries.last_disco)
     # Reuse cached dropped endpoint results if previously fetched

@@ -17,7 +17,9 @@ def test_excavate_devices_and_ids_calls_unique_once(monkeypatch):
 
     calls = {"count": 0}
 
-    def fake_unique(search, include_endpoints=None, endpoint_prefix=None):
+    def fake_unique(
+        search, include_endpoints=None, endpoint_prefix=None, max_endpoints=None
+    ):
         calls["count"] += 1
         return [
             {

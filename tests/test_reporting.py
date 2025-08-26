@@ -257,21 +257,13 @@ def test_device_ids_report_includes_coverage(monkeypatch):
     assert captured["data"][0][-1] == 50.0
 
 
-def test_unique_identities_uses_da_endpoint(monkeypatch):
+def test_unique_identities_returns_empty_when_no_devices(monkeypatch):
     monkeypatch.setattr(builder.tools, "completage", lambda *a, **k: 0)
-    seq = iter([[], [{"DiscoveryAccess.endpoint": "10.0.0.1"}]])
-    monkeypatch.setattr(builder.api, "search_results", lambda *a, **k: next(seq))
+    monkeypatch.setattr(builder.api, "search_results", lambda *a, **k: [])
 
     result = builder.unique_identities(None)
 
-    assert result == [
-        {
-            "originating_endpoint": "10.0.0.1",
-            "list_of_ips": [],
-            "list_of_names": [],
-            "coverage_pct": 0.0,
-        }
-    ]
+    assert result == []
 
 
 def test_devices_report_contains_data(monkeypatch):

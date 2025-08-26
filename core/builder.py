@@ -664,7 +664,12 @@ def scheduling(vault, search, args):
 
     output.report(data, heads, args, name="schedules")
 
-def unique_identities(search, include_endpoints=None, endpoint_prefix=None):
+def unique_identities(
+    search,
+    include_endpoints=None,
+    endpoint_prefix=None,
+    max_endpoints=None,
+):
     """Return a list of unique device identities.
 
     Parameters
@@ -677,6 +682,10 @@ def unique_identities(search, include_endpoints=None, endpoint_prefix=None):
     endpoint_prefix: str | None
         Optional prefix that endpoints must start with.  Ignored when
         ``include_endpoints`` is supplied.
+    max_endpoints: int | None
+        Optional limit for the number of endpoints to process.  When provided
+        the loop over devices stops once this many unique endpoints have been
+        encountered.
     """
 
     cache_key = {"include_endpoints": include_endpoints, "endpoint_prefix": endpoint_prefix}
@@ -688,30 +697,22 @@ def unique_identities(search, include_endpoints=None, endpoint_prefix=None):
     logger.info("Running: Unique Identities report...")
     print("Running: Unique Identities report...")
 
-    # Optionally constrain the API queries to specific endpoints.  This helps
+    # Optionally constrain the API query to specific endpoints.  This helps
     # reduce the amount of data returned and therefore overall execution time.
     device_query = queries.deviceInfo.copy()
-    da_query = queries.da_ip_lookup.copy()
 
-    endpoint_filter = None
     if include_endpoints:
         endpoint_filter = ",".join(f"'{ep}'" for ep in include_endpoints)
         device_query["query"] = device_query["query"].replace(
             "search DeviceInfo",
-            "search DeviceInfo where #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.endpoint in (%s)" % endpoint_filter,
-        )
-        da_query["query"] = da_query["query"].replace(
-            "search DiscoveryAccess",
-            "search DiscoveryAccess where endpoint in (%s)" % endpoint_filter,
+            "search DeviceInfo where #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.endpoint in (%s)"
+            % endpoint_filter,
         )
     elif endpoint_prefix:
         device_query["query"] = device_query["query"].replace(
             "search DeviceInfo",
-            "search DeviceInfo where #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.endpoint beginswith '%s'" % endpoint_prefix,
-        )
-        da_query["query"] = da_query["query"].replace(
-            "search DiscoveryAccess",
-            "search DiscoveryAccess where endpoint beginswith '%s'" % endpoint_prefix,
+            "search DeviceInfo where #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.endpoint beginswith '%s'"
+            % endpoint_prefix,
         )
 
     devices = api.search_results(
@@ -721,10 +722,10 @@ def unique_identities(search, include_endpoints=None, endpoint_prefix=None):
         search, da_query, cache_name="unique_identities_da"
     )
 
-    if not isinstance(devices, list) or not isinstance(da_results, list):
+    if not isinstance(devices, list):
         logger.error("Failed to retrieve unique identity data")
         return []
-      
+
     def _endpoint_in_scope(endpoint: str) -> bool:
         if not endpoint:
             return False
@@ -734,25 +735,7 @@ def unique_identities(search, include_endpoints=None, endpoint_prefix=None):
             return endpoint.startswith(endpoint_prefix)
         return True
 
-    # Build initial map of endpoints to sets for IPs and names
     endpoint_map = {}
-
-    timer_count = 0
-    for da in da_results:
-        timer_count = tools.completage("Getting Unique IPs", len(da_results), timer_count)
-        if not isinstance(da, dict):
-            logger.warning("Unexpected discovery access entry: %r", da)
-            continue
-            
-        endpoint = da.get("DiscoveryAccess.endpoint")
-        if endpoint and endpoint not in endpoint_map:
-            logger.debug("Unique Endpoint: %s", endpoint)
-            endpoint_map[endpoint] = {"ips": set(), "names": set()}
-
-    print(os.linesep, end="\r")
-
-    # Total endpoints for coverage calculation
-    total_endpoints = len(endpoint_map)
 
     # Fields to expand for IPs and hostnames
     ip_fields = [
@@ -772,7 +755,6 @@ def unique_identities(search, include_endpoints=None, endpoint_prefix=None):
         "NetworkInterface.fqdns",
     ]
 
-    # Populate endpoint map while iterating over devices once
     timer_count = 0
 
     for device in devices:
@@ -781,11 +763,14 @@ def unique_identities(search, include_endpoints=None, endpoint_prefix=None):
             logger.warning("Unexpected device record: %r", device)
             continue
 
-        ips = []
-        names = []
         endpoint = device.get("DiscoveryAccess.endpoint")
-        if endpoint:
-            ips.append(endpoint)
+        if not _endpoint_in_scope(endpoint):
+            continue
+
+        endpoint_map.setdefault(endpoint, {"ips": set(), "names": set()})
+
+        ips = [endpoint] if endpoint else []
+        names = []
 
         for field in ip_fields:
             ips = tools.list_of_lists(device, field, ips)
@@ -796,17 +781,23 @@ def unique_identities(search, include_endpoints=None, endpoint_prefix=None):
         names_set = {name for name in names if name is not None}
 
         for ip in ips_set:
-            data = endpoint_map.get(ip)
-            if data is not None:
-                data["ips"].update(ips_set)
-                data["names"].update(names_set)
+            data = endpoint_map.setdefault(ip, {"ips": set(), "names": set()})
+            data["ips"].update(ips_set)
+            data["names"].update(names_set)
+
+        if max_endpoints and len(endpoint_map) >= max_endpoints:
+            break
 
     print(os.linesep)
+
+    total_endpoints = len(endpoint_map)
 
     unique_identities = []
     for endpoint, data in endpoint_map.items():
         ip_list = tools.sortlist(list(data["ips"]), "None") if data["ips"] else []
-        name_list = tools.sortlist(list(data["names"]), "None") if data["names"] else []
+        name_list = (
+            tools.sortlist(list(data["names"]), "None") if data["names"] else []
+        )
         pct = (len(data["ips"]) / total_endpoints * 100) if total_endpoints else 0
         unique_identities.append(
             {

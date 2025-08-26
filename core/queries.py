@@ -123,6 +123,8 @@ deviceInfo_network = {
                                 ORDER BY hostname
                                 show
                                 hostname as 'DeviceInfo.hostname',
+                                #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.endpoint as 'DiscoveryAccess.endpoint',
+                                #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.#DiscoveryAccess:Endpoint:Endpoint:Endpoint.endpoint as 'Endpoint.endpoint',
                                 #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.#::InferredElement:.__all_ip_addrs as 'InferredElement.__all_ip_addrs',
                                 #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.#::InferredElement:.#DeviceWithInterface:DeviceInterface:InterfaceOfDevice:NetworkInterface.ip_addr as 'NetworkInterface.ip_addr',
                                 #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.#::InferredElement:.#DeviceWithInterface:DeviceInterface:InterfaceOfDevice:NetworkInterface.fqdns as 'NetworkInterface.fqdns',

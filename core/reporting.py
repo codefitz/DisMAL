@@ -565,6 +565,13 @@ def successful_cli(client, args, sysuser, passwd, reporting_dir):
 
 @output._timer("Device Access Analysis")
 def devices(twsearch, twcreds, args, identities=None):
+    """Generate the device access report.
+
+    The report previously relied on a monolithic query returning all device
+    details.  To reduce load and support reuse elsewhere, the workflow now
+    executes three granular queries (base, access, and network) and merges the
+    results by ``DiscoveryAccess.endpoint`` before processing.
+    """
 
     print("\nDevice Access Analyis")
     print("---------------------")
@@ -584,7 +591,30 @@ def devices(twsearch, twcreds, args, identities=None):
             getattr(args, "max_identities", None),
         )
 
-    results = api.search_results(twsearch, queries.deviceInfo)
+    # Gather device information using granular queries and merge by endpoint.
+    base_results = api.search_results(twsearch, queries.deviceInfo_base)
+    access_results = api.search_results(twsearch, queries.deviceInfo_access)
+    network_results = api.search_results(twsearch, queries.deviceInfo_network)
+
+    merged = {}
+    for result in base_results:
+        if not isinstance(result, dict):
+            continue
+        ep = tools.getr(result, "DiscoveryAccess.endpoint", None)
+        if ep:
+            merged[ep] = result.copy()
+
+    for dataset in (access_results, network_results):
+        for result in dataset:
+            if not isinstance(result, dict):
+                continue
+            ep = tools.getr(result, "DiscoveryAccess.endpoint", None)
+            if not ep:
+                continue
+            entry = merged.setdefault(ep, {})
+            entry.update(result)
+
+    results = list(merged.values())
 
     # Track progress for identities and device results separately to avoid
     # nested progress collisions.  ``identity_timer`` counts completed

@@ -271,21 +271,46 @@ def test_devices_report_contains_data(monkeypatch):
             "list_of_names": ["host"],
         }
     ]
-    result = [
+    base_result = [
         {
             "DiscoveryAccess.endpoint": "1.1.1.1",
             "DeviceInfo.hostname": "host",
-            "DiscoveryAccess.starttime": "2024-01-01 00:00:00 UTC",
-            "DiscoveryRun.label": "run1",
             "DeviceInfo.last_credential": "cred-uuid",
-            "DiscoveryAccess.result": "ok",
-            "DiscoveryAccess.end_state": "finished",
             "DeviceInfo.kind": "server",
             "DeviceInfo.last_access_method": "ssh",
         }
     ]
+    access_result = [
+        {
+            "DiscoveryAccess.endpoint": "1.1.1.1",
+            "DiscoveryAccess.starttime": "2024-01-01 00:00:00 UTC",
+            "DiscoveryRun.label": "run1",
+            "DiscoveryAccess.result": "ok",
+            "DiscoveryAccess.end_state": "finished",
+        }
+    ]
+    network_result = [
+        {
+            "DiscoveryAccess.endpoint": "1.1.1.1",
+            "Endpoint.endpoint": "1.1.1.1",
+        }
+    ]
+    calls = {"base": 0, "access": 0, "network": 0}
+
+    def fake_search_results(search, query, *a, **k):
+        if query == reporting.queries.deviceInfo_base:
+            calls["base"] += 1
+            return base_result
+        if query == reporting.queries.deviceInfo_access:
+            calls["access"] += 1
+            return access_result
+        if query == reporting.queries.deviceInfo_network:
+            calls["network"] += 1
+            return network_result
+        return []
+
     monkeypatch.setattr(reporting.builder, "unique_identities", lambda *a, **k: identities)
-    monkeypatch.setattr(reporting.api, "search_results", lambda *a, **k: result)
+    monkeypatch.setattr(reporting.api, "search_results", fake_search_results)
     monkeypatch.setattr(reporting.api, "get_json", lambda *a, **k: [])
     monkeypatch.setattr(reporting.tools, "get_credential", lambda *a, **k: {"label": "cred1", "username": "user1"})
     monkeypatch.setattr(reporting.tools, "list_of_lists", lambda *a, **k: a[2])
@@ -311,6 +336,7 @@ def test_devices_report_contains_data(monkeypatch):
 
     assert captured["name"] == "devices"
     assert captured["data"]
+    assert calls == {"base": 1, "access": 1, "network": 1}
 
 
 def test_discovery_access_handles_bad_api(monkeypatch):

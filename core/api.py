@@ -1393,6 +1393,7 @@ REPORT_QUERY_MAP = {
     ],
     # The device_ids report uses a dedicated query
     "device_ids": ["device_ids"],
+  
     # The devices report uses granular deviceInfo queries
     "devices": [
         "deviceInfo_base",

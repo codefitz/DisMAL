@@ -672,13 +672,10 @@ def unique_identities(
 ):
     """Return a list of unique device identities.
 
-    This routine now queries the appliance using the granular
-    ``deviceInfo_*`` lookups instead of the former monolithic
-    ``deviceInfo`` request.  ``deviceInfo_access`` seeds the list of
-    devices/endpoints, ``deviceInfo_base`` contributes identity details,
-    and ``deviceInfo_network`` merges any network metadata.  The combined
-    results replicate the original behaviour while reducing the payload
-    size and allowing the network query to be skipped when not required.
+    This routine queries the appliance using the ``device_ids`` lookup
+    which returns discovery access records with associated identity
+    details.  The result set is processed to collate IP addresses and
+    hostnames into unique identity groupings.
 
     Parameters
     ----------
@@ -705,72 +702,28 @@ def unique_identities(
     logger.info("Running: Unique Identities report...")
     print("Running: Unique Identities report...")
 
-    # Retrieve discovery access information first since it contains the
-    # originating endpoint for each host.  The result set is optionally
-    # constrained to a subset of endpoints to reduce the amount of data
-    # returned from the API.
-    access_query = queries.deviceInfo_access.copy()
-
+    # Retrieve discovery access information along with associated identity
+    # fields.  The result set is optionally constrained to a subset of
+    # endpoints to reduce the amount of data returned from the API.
+    query = queries.device_ids
     if include_endpoints:
         endpoint_filter = ",".join(f"'{ep}'" for ep in include_endpoints)
-        access_query["query"] = access_query["query"].replace(
-            "search DeviceInfo",
-            "search DeviceInfo where #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.endpoint in (%s)"
-            % endpoint_filter,
+        query = query.replace(
+            "search DiscoveryAccess",
+            f"search DiscoveryAccess where endpoint in ({endpoint_filter})",
         )
     elif endpoint_prefix:
-        access_query["query"] = access_query["query"].replace(
-            "search DeviceInfo",
-            "search DeviceInfo where #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.endpoint beginswith '%s'"
-            % endpoint_prefix,
+        query = query.replace(
+            "search DiscoveryAccess",
+            f"search DiscoveryAccess where endpoint beginswith '{endpoint_prefix}'",
         )
 
     access_results = api.search_results(
-        search, access_query, cache_name="unique_identities_access"
+        search, query, cache_name="unique_identities_device_ids"
     )
     if not isinstance(access_results, list):
         logger.error("Failed to retrieve unique identity data")
         return []
-
-    # Extract the hostnames present in the access results so subsequent queries
-    # can be limited to just these devices.
-    hostnames = {
-        tools.getr(r, "DeviceInfo.hostname")
-        for r in access_results
-        if isinstance(r, dict)
-    }
-
-    hostname_filter = ",".join(f"'{hn}'" for hn in hostnames if hn)
-
-    base_query = queries.deviceInfo_base.copy()
-    network_query = queries.deviceInfo_network.copy()
-    if hostname_filter:
-        base_query["query"] = base_query["query"].replace(
-            "search DeviceInfo",
-            f"search DeviceInfo where hostname in ({hostname_filter})",
-        )
-        network_query["query"] = network_query["query"].replace(
-            "search DeviceInfo",
-            f"search DeviceInfo where hostname in ({hostname_filter})",
-        )
-
-    base_results = api.search_results(
-        search, base_query, cache_name="unique_identities_base"
-    )
-    network_results = api.search_results(
-        search, network_query, cache_name="unique_identities_network"
-    )
-
-    base_map = {
-        tools.getr(r, "DeviceInfo.hostname"): r
-        for r in base_results
-        if isinstance(r, dict)
-    }
-    network_map = {
-        tools.getr(r, "DeviceInfo.hostname"): r
-        for r in network_results
-        if isinstance(r, dict)
-    }
 
     def _endpoint_in_scope(endpoint: str) -> bool:
         if not endpoint:
@@ -785,15 +738,13 @@ def unique_identities(
 
     # Fields to expand for IPs and hostnames
     ip_fields = [
+        "DiscoveryAccess.endpoint",
         "Endpoint.endpoint",
         "DiscoveredIPAddress.ip_addr",
         "InferredElement.__all_ip_addrs",
         "NetworkInterface.ip_addr",
     ]
     name_fields = [
-        "DeviceInfo.sysname",
-        "DeviceInfo.hostname",
-        "DeviceInfo.fqdn",
         "InferredElement.name",
         "InferredElement.hostname",
         "InferredElement.local_fqdn",
@@ -814,21 +765,12 @@ def unique_identities(
             logger.warning("Unexpected device record: %r", device)
             continue
 
-        hostname = tools.getr(device, "DeviceInfo.hostname")
-        merge = {}
-        merge.update(base_map.get(hostname, {}))
-        merge.update(network_map.get(hostname, {}))
-        device.update(merge)
-
-        endpoint = device.get("DiscoveryAccess.endpoint")
+        endpoint = tools.getr(device, "DiscoveryAccess.endpoint")
         if not _endpoint_in_scope(endpoint):
             continue
 
-        endpoint_map.setdefault(endpoint, {"ips": set(), "names": set()})
-
-        ips = [endpoint] if endpoint else []
+        ips = []
         names = []
-
         for field in ip_fields:
             ips = tools.list_of_lists(device, field, ips)
         for field in name_fields:

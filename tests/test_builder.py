@@ -414,34 +414,23 @@ def test_unique_identities_merges_device_data(monkeypatch):
     monkeypatch.setattr(builder.tools, "completage", lambda *a, **k: 0)
     monkeypatch.setattr(builder.tools, "sortlist", lambda l, dv=None: sorted(set(l)))
 
-    access = [
-        {"DiscoveryAccess.endpoint": "10.0.0.1", "DeviceInfo.hostname": "host1"},
-        {"DiscoveryAccess.endpoint": "10.0.0.2", "DeviceInfo.hostname": "host2"},
-    ]
-    base = [
+    results = [
         {
-            "DeviceInfo.hostname": "host1",
-            "DeviceInfo.sysname": "host1",
-        },
-        {
-            "DeviceInfo.hostname": "host2",
-            "DeviceInfo.sysname": "host2",
-        },
-    ]
-    network = [
-        {
-            "DeviceInfo.hostname": "host1",
+            "DiscoveryAccess.endpoint": "10.0.0.1",
             "InferredElement.__all_ip_addrs": ["10.0.0.1", "10.0.0.2"],
+            "InferredElement.name": "host1",
         },
         {
-            "DeviceInfo.hostname": "host2",
+            "DiscoveryAccess.endpoint": "10.0.0.2",
             "InferredElement.__all_ip_addrs": ["10.0.0.2"],
+            "InferredElement.name": "host2",
         },
     ]
-    seq = iter([access, base, network])
-    monkeypatch.setattr(builder.api, "search_results", lambda *a, **k: next(seq))
+    monkeypatch.setattr(builder.api, "search_results", lambda *a, **k: results)
 
-    result = builder.unique_identities(None)
+    result = sorted(
+        builder.unique_identities(None), key=lambda r: r["originating_endpoint"]
+    )
     assert result == [
         {
             "originating_endpoint": "10.0.0.1",
@@ -460,21 +449,18 @@ def test_unique_identities_uses_cache(monkeypatch, tmp_path):
     monkeypatch.setattr(builder.tools, "completage", lambda *a, **k: 0)
     monkeypatch.setattr(builder.tools, "sortlist", lambda l, dv=None: sorted(set(l)))
 
-    access = [{"DiscoveryAccess.endpoint": "1", "DeviceInfo.hostname": "h"}]
-    base = [{"DeviceInfo.hostname": "h", "DeviceInfo.sysname": "h"}]
-    network = [{"DeviceInfo.hostname": "h"}]
+    results = [{"DiscoveryAccess.endpoint": "1", "InferredElement.name": "h"}]
 
-    seq = iter([access, base, network])
     calls = {"count": 0}
 
     def fake_search(*a, **k):
         calls["count"] += 1
-        return next(seq)
+        return results
 
     monkeypatch.setattr(builder.api, "search_results", fake_search)
 
     first = builder.unique_identities(None)
-    assert calls["count"] == 3
+    assert calls["count"] == 1
 
     def fail_search(*a, **k):
         raise AssertionError("cache not used")

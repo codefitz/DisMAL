@@ -1391,9 +1391,8 @@ REPORT_QUERY_MAP = {
         "excludes",
         "outpost_credentials",
     ],
-    # The device_ids report now composes multiple queries to avoid timeouts
-    # from the former monolithic deviceInfo request.
-    "device_ids": ["deviceInfo_base", "deviceInfo_access", "deviceInfo_network"],
+    # The device_ids report uses a dedicated query
+    "device_ids": ["device_ids"],
 }
 
 def run_queries(search, args, dir):

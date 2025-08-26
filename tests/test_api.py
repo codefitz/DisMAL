@@ -115,19 +115,17 @@ def test_search_results_paginates(monkeypatch):
     results = search_results(search, {"query": "q"}, limit=0)
     assert len(results) == total
 
+def test_search_results_breaks_on_overlimit(monkeypatch):
+    """If API returns more rows than requested, only one request should be made."""
 
-def test_search_results_handles_server_side_pagination(monkeypatch):
-    """If the server ignores the limit and returns all rows, only one call is made."""
-
-    class OverPagingSearch:
+    class OverLimitSearch:
         def __init__(self):
-            self.calls = 0
+            self.calls = []
 
         def search(self, query, format="object", limit=500, offset=0):
-            self.calls += 1
-            if self.calls > 1:
-                raise AssertionError("search() called more than once")
-            data = [{"row": i} for i in range(750)]
+            self.calls.append((limit, offset))
+            assert offset == 0  # Ensure pagination does not occur
+            data = [{"row": i} for i in range(600)]
             return DummyResponse(200, json.dumps(data))
 
     monkeypatch.setattr(api_mod.tools, "list_table_to_json", lambda x: x)

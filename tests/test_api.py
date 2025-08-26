@@ -115,6 +115,28 @@ def test_search_results_paginates(monkeypatch):
     results = search_results(search, {"query": "q"}, limit=0)
     assert len(results) == total
 
+
+def test_search_results_handles_server_side_pagination(monkeypatch):
+    """If the server ignores the limit and returns all rows, only one call is made."""
+
+    class OverPagingSearch:
+        def __init__(self):
+            self.calls = 0
+
+        def search(self, query, format="object", limit=500, offset=0):
+            self.calls += 1
+            if self.calls > 1:
+                raise AssertionError("search() called more than once")
+            data = [{"row": i} for i in range(750)]
+            return DummyResponse(200, json.dumps(data))
+
+    monkeypatch.setattr(api_mod.tools, "list_table_to_json", lambda x: x)
+
+    search = OverPagingSearch()
+    results = search_results(search, {"query": "q"}, limit=0)
+    assert len(results) == 750
+    assert search.calls == 1
+
 def test_search_results_normalizes_nested_results():
     payload = {
         "count": 1,

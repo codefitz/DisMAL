@@ -5,6 +5,8 @@ import logging
 import csv
 import json
 import os
+from functools import lru_cache
+from copy import deepcopy
 
 # PIP Modules
 from pprint import pprint
@@ -257,8 +259,9 @@ def query(search, args):
 
 def get_outposts(appliance):
     """Return list of Discovery Outposts from the appliance."""
-    logger.debug("Calling appliance.get('/discovery/outposts')")
-    resp = appliance.get("/discovery/outposts")
+    path = "/discovery/outposts?deleted=false"
+    logger.debug("Calling appliance.get('%s')", path)
+    resp = appliance.get(path)
     logger.debug(
         "outposts response ok=%s status=%s text=%s",
         getattr(resp, "ok", "N/A"),
@@ -570,7 +573,7 @@ def update_cred(appliance, uuid):
             active = True
     return active
 
-def search_results(api_endpoint,query):
+def _search_results_impl(api_endpoint, query):
     try:
         if logger.isEnabledFor(logging.DEBUG):
             try:
@@ -613,10 +616,26 @@ def search_results(api_endpoint,query):
                     pass
             return results
     except Exception as e:
-        msg = "Not able to make api call.\nQuery: %s\nException: %s\n%s" %(query,e.__class__,str(e))
+        msg = "Not able to make api call.\nQuery: %s\nException: %s\n%s" % (query, e.__class__, str(e))
         print(msg)
         logger.error(msg)
         return []
+
+
+@lru_cache(maxsize=128)
+def _cached_search(api_endpoint, serialized_query):
+    query = json.loads(serialized_query)
+    return _search_results_impl(api_endpoint, query)
+
+
+def search_results(api_endpoint, query, bypass_cache=False):
+    serialized_query = json.dumps(query, sort_keys=True)
+    if bypass_cache:
+        _cached_search.cache_clear()
+        data = _search_results_impl(api_endpoint, query)
+    else:
+        data = _cached_search(api_endpoint, serialized_query)
+    return deepcopy(data)
 
 def hostname(args,dir):
     output.define_txt(args,args.target,dir+defaults.hostname_filename,None)

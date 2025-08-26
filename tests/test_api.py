@@ -47,6 +47,28 @@ def test_search_results_fallback():
     assert search_results(search, {"query": "q"}) == [{"ok": True}]
 
 
+def test_search_results_cache_bypass():
+    calls = []
+
+    class DummySearchCache:
+        def search(self, query, format="object", limit=500):
+            calls.append(query)
+            return DummyResponse(200, '[{"val": 1}]')
+
+    search = DummySearchCache()
+    query = {"query": "q"}
+
+    first = search_results(search, query)
+    first[0]["val"] = 2
+    second = search_results(search, query)
+    assert second == [{"val": 1}]
+    assert len(calls) == 1
+
+    third = search_results(search, query, bypass_cache=True)
+    assert third == [{"val": 1}]
+    assert len(calls) == 2
+
+
 def test_show_runs_handles_bad_response(capsys):
     resp = DummyResponse(401, 'not-json', reason="Unauthorized")
     disco = DummyDisco(resp)

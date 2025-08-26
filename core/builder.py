@@ -8,7 +8,7 @@ import ipaddress
 import tideway
 from collections import defaultdict
 
-from . import api, tools, output, queries
+from . import api, tools, output, queries, cache
 
 logger = logging.getLogger("_builder_")
 
@@ -679,6 +679,12 @@ def unique_identities(search, include_endpoints=None, endpoint_prefix=None):
         ``include_endpoints`` is supplied.
     """
 
+    cache_key = {"include_endpoints": include_endpoints, "endpoint_prefix": endpoint_prefix}
+    if cache.is_enabled():
+        cached = cache.load("unique_identities", cache_key, 0)
+        if cached is not None:
+            return cached
+
     logger.info("Running: Unique Identities report...")
     print("Running: Unique Identities report...")
 
@@ -708,8 +714,12 @@ def unique_identities(search, include_endpoints=None, endpoint_prefix=None):
             "search DiscoveryAccess where endpoint beginswith '%s'" % endpoint_prefix,
         )
 
-    devices = api.search_results(search, device_query)
-    da_results = api.search_results(search, da_query)
+    devices = api.search_results(
+        search, device_query, cache_name="unique_identities_devices"
+    )
+    da_results = api.search_results(
+        search, da_query, cache_name="unique_identities_da"
+    )
 
     if not isinstance(devices, list) or not isinstance(da_results, list):
         logger.error("Failed to retrieve unique identity data")
@@ -806,6 +816,9 @@ def unique_identities(search, include_endpoints=None, endpoint_prefix=None):
                 "coverage_pct": pct,
             }
         )
+
+    if cache.is_enabled():
+        cache.save("unique_identities", cache_key, 0, unique_identities)
 
     return unique_identities
 

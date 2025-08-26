@@ -44,6 +44,94 @@ def _run_with_patches(monkeypatch, func):
     assert "ran" in called
 
 
+def test_successful_uses_default_thread_limit(monkeypatch):
+    captured = {}
+
+    class DummyExecutor:
+        def __init__(self, max_workers=None):
+            captured["max_workers"] = max_workers
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def submit(self, fn, *args, **kwargs):
+            class DummyFuture:
+                def result(self_inner):
+                    return []
+
+            return DummyFuture()
+
+    monkeypatch.setattr(reporting, "ThreadPoolExecutor", DummyExecutor)
+    monkeypatch.setattr(reporting.api, "get_json", lambda *a, **k: [])
+    monkeypatch.setattr(reporting.api, "get_outpost_credential_map", lambda *a, **k: {})
+    monkeypatch.setattr(reporting.api, "search_results", lambda *a, **k: [])
+    monkeypatch.setattr(reporting.builder, "get_credentials", lambda c: c)
+    monkeypatch.setattr(reporting.tools, "session_get", lambda r: {})
+    monkeypatch.setattr(reporting.output, "report", lambda *a, **k: None)
+    monkeypatch.setattr(reporting.tools, "completage", lambda *a, **k: 0)
+    monkeypatch.setattr(reporting.tools, "getr", lambda d, k, default=None: d.get(k, default))
+    monkeypatch.setattr(reporting.tools, "range_to_ips", lambda r: [])
+
+    class Creds:
+        def get_vault_credentials(self):
+            return types.SimpleNamespace(json=lambda: [], ok=True, text="[]", status_code=200)
+
+    class Search:
+        def search(self, query, format="object", limit=500, offset=0):
+            return types.SimpleNamespace(json=lambda: [], ok=True, text="[]", status_code=200)
+
+    args = types.SimpleNamespace(output_csv=False, output_file=None)
+    reporting.successful(Creds(), Search(), args)
+    assert captured["max_workers"] == 2
+
+
+def test_successful_respects_custom_thread_limit(monkeypatch):
+    captured = {}
+
+    class DummyExecutor:
+        def __init__(self, max_workers=None):
+            captured["max_workers"] = max_workers
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def submit(self, fn, *args, **kwargs):
+            class DummyFuture:
+                def result(self_inner):
+                    return []
+
+            return DummyFuture()
+
+    monkeypatch.setattr(reporting, "ThreadPoolExecutor", DummyExecutor)
+    monkeypatch.setattr(reporting.api, "get_json", lambda *a, **k: [])
+    monkeypatch.setattr(reporting.api, "get_outpost_credential_map", lambda *a, **k: {})
+    monkeypatch.setattr(reporting.api, "search_results", lambda *a, **k: [])
+    monkeypatch.setattr(reporting.builder, "get_credentials", lambda c: c)
+    monkeypatch.setattr(reporting.tools, "session_get", lambda r: {})
+    monkeypatch.setattr(reporting.output, "report", lambda *a, **k: None)
+    monkeypatch.setattr(reporting.tools, "completage", lambda *a, **k: 0)
+    monkeypatch.setattr(reporting.tools, "getr", lambda d, k, default=None: d.get(k, default))
+    monkeypatch.setattr(reporting.tools, "range_to_ips", lambda r: [])
+
+    class Creds:
+        def get_vault_credentials(self):
+            return types.SimpleNamespace(json=lambda: [], ok=True, text="[]", status_code=200)
+
+    class Search:
+        def search(self, query, format="object", limit=500, offset=0):
+            return types.SimpleNamespace(json=lambda: [], ok=True, text="[]", status_code=200)
+
+    args = types.SimpleNamespace(output_csv=False, output_file=None, max_threads=5)
+    reporting.successful(Creds(), Search(), args)
+    assert captured["max_workers"] == 5
+
+
 def test_successful_writes_all_credentials(tmp_path, monkeypatch):
     """credential_success.csv should include more than the default 500 rows."""
 

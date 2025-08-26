@@ -70,6 +70,8 @@ outputs.add_argument('--stdout',       dest='output_cli', action='store_true', r
 parser.add_argument('-k', '--keep-awake',   dest='wakey', action='store_true', required=False, help=argparse.SUPPRESS)
 parser.add_argument('--debug',              dest='debugging',  action='store_true', required=False,
                     help='Enable debug logging including full API responses.\n\n')
+parser.add_argument('--max-threads', dest='max_threads', type=int, required=False,
+                    help='Maximum worker threads for concurrent API queries.\n\n')
 
 # CLI Appliance Management
 cli_management = parser.add_argument_group("CLI Appliance Management")
@@ -218,6 +220,7 @@ parser.set_defaults(
     # Support both ``debug`` and legacy ``debugging`` keys in the YAML config
     # file so existing configurations continue to work.
     debugging=config.get('debug', config.get('debugging', False)),
+    max_threads=config.get('max_threads', 2),
 )
 
 global args

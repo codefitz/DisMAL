@@ -12,6 +12,7 @@ sys.modules.setdefault("paramiko", types.SimpleNamespace())
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import core.builder as builder
+from core import cache
 
 
 class DummyResponse:
@@ -400,7 +401,7 @@ def test_overlapping_unscanned_connections(monkeypatch):
 def test_unique_identities_handles_bad_api(monkeypatch):
     monkeypatch.setattr(builder.tools, "completage", lambda *a, **k: 0)
 
-    def fake_search_results(api, query):
+    def fake_search_results(api, query, **kwargs):
         return {"error": "fail"}
 
     monkeypatch.setattr(builder.api, "search_results", fake_search_results)
@@ -448,6 +449,35 @@ def test_unique_identities_merges_device_data(monkeypatch):
             "coverage_pct": pytest.approx(100.0),
         },
     ]
+
+
+def test_unique_identities_uses_cache(monkeypatch, tmp_path):
+    cache.configure(tmp_path)
+    monkeypatch.setattr(builder.tools, "completage", lambda *a, **k: 0)
+    monkeypatch.setattr(builder.tools, "sortlist", lambda l, dv=None: sorted(set(l)))
+
+    devices = [{"DiscoveryAccess.endpoint": "1", "DeviceInfo.sysname": "h"}]
+    da_results = [{"DiscoveryAccess.endpoint": "1"}]
+
+    seq = iter([devices, da_results])
+    calls = {"count": 0}
+
+    def fake_search(*a, **k):
+        calls["count"] += 1
+        return next(seq)
+
+    monkeypatch.setattr(builder.api, "search_results", fake_search)
+
+    first = builder.unique_identities(None)
+    assert calls["count"] == 2
+
+    def fail_search(*a, **k):
+        raise AssertionError("cache not used")
+
+    monkeypatch.setattr(builder.api, "search_results", fail_search)
+
+    second = builder.unique_identities(None)
+    assert first == second
 
 def test_get_scans_uses_networks(monkeypatch):
     import ipaddress

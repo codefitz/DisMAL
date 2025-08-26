@@ -96,6 +96,26 @@ deviceInfo = {"query":
                             process with unique()
                         """
                 }
+
+deviceInfo_access = {
+                    "query":
+                        """
+                            search DeviceInfo
+                            show
+                            hostname as 'DeviceInfo.hostname',
+                            friendlyTime(#DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.starttime) as 'DiscoveryAccess.starttime',
+                            friendlyTime(#DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.endtime) as 'DiscoveryAccess.endtime',
+                            #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.result as 'DiscoveryAccess.result',
+                            #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.endpoint as 'DiscoveryAccess.endpoint',
+                            #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.end_state as 'DiscoveryAccess.end_state',
+                            #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess._last_marker as 'DiscoveryAccess._last_marker',
+                            #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess._first_marker as 'DiscoveryAccess._first_marker',
+                            #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess._last_interesting as 'DiscoveryAccess._last_interesting',
+                            #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.#Member:List:List:DiscoveryRun.label as 'DiscoveryRun.label',
+                            #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.__had_inference as 'DiscoveryAccess.__had_inference'
+                            process with unique()
+                        """
+                    }
 da_ip_lookup = {
                     "query":
                             """

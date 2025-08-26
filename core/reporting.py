@@ -563,7 +563,6 @@ def successful_cli(client, args, sysuser, passwd, reporting_dir):
         row.insert(0, args.target)
     output.csv_file(data, headers, reporting_dir+"/credentials.csv")
 
-
 @output._timer("Device Access Analysis")
 def devices(twsearch, twcreds, args, identities=None):
 
@@ -572,6 +571,11 @@ def devices(twsearch, twcreds, args, identities=None):
     logger.info("Running Data Analysis Report...")
     print("Running Data Analysis Report...")
 
+    vaultcreds = api.get_json(twcreds.get_vault_credentials)
+
+    # ``identities`` may be supplied by the caller to avoid recomputing the
+    # expensive lookup when multiple reports need the same data.  Fall back to
+    # gathering the identities here when not provided.
     if identities is None:
         identities = builder.unique_identities(
             twsearch,
@@ -580,72 +584,348 @@ def devices(twsearch, twcreds, args, identities=None):
             getattr(args, "max_identities", None),
         )
 
-    device_map = api.devices_lookup(twsearch, include_network=True)
+    results = api.search_results(twsearch, queries.deviceInfo)
 
-    total_ip_lookups = sum(len(i.get("list_of_ips", [])) for i in identities)
+    # Track progress for identities and device results separately to avoid
+    # nested progress collisions.  ``identity_timer`` counts completed
+    # identities while ``result_timer`` tracks processed device results.
+    total_result_iterations = len(results) * len(identities)
     identity_timer = 0
-    lookup_timer = 0
+    result_timer = 0
 
-    def _progress(id_done, id_total, ip_done, ip_total):
+    def _progress(id_done, id_total, res_done, res_total):
+        """Display progress for identities and device results."""
         id_pct = (id_done / id_total) * 100 if id_total else 100
-        ip_pct = (ip_done / ip_total) * 100 if ip_total else 100
+        res_pct = (res_done / res_total) * 100 if res_total else 100
         msg = (
-            f"Processing identities: {id_pct:.0f}% | "
-            f"Looking up devices…: {ip_pct:.0f}%"
+            f"Gathering Device Results...: {id_pct:.0f}% | "
+            f"Processing device results…: {res_pct:.0f}%"
         )
         print(f"\r{msg}", end="")
 
     devices = []
-    headers = []
     msg = None
+    headers = []
+
+    # Build the results
 
     for identity in identities:
         identity_timer += 1
-        _progress(identity_timer, len(identities), lookup_timer, total_ip_lookups)
+        _progress(identity_timer, len(identities), result_timer, total_result_iterations)
         logger.debug("Processing identity %s", identity)
-        for ip in identity.get("list_of_ips", []):
-            lookup_timer += 1
-            _progress(identity_timer, len(identities), lookup_timer, total_ip_lookups)
-            info = device_map.get(ip)
-            if not info:
-                logger.debug("No device info for IP %s", ip)
-                continue
-            devices.append(
-                {
-                    "last_scanned_ip": ip,
-                    "last_identity": info.get("last_identity", "N/A"),
-                    "last_start_time": info.get("last_start_time", "N/A"),
-                    "last_result": info.get("last_result", "N/A"),
-                }
-            )
+        latest_timestamp = None
+        all_credentials_used = []
+        all_discovery_runs = []
+        all_kinds = []
+        device = {}
+        last_identity = None
+        last_scanned_ip = None
+        last_kind = None
+        for result in results:
+            result_timer += 1
+            _progress(identity_timer, len(identities), result_timer, total_result_iterations)
+            da_endpoint = tools.getr(result,'DiscoveryAccess.endpoint',None)
+            logger.debug("Checking endpoint %s in identity %s", da_endpoint, identity)
 
+            # If this deviceinfo record relates to this device identity
+            if da_endpoint in identity.get('list_of_ips'):
+
+                # Collect ALL Data
+
+                device_name = tools.getr(result,'DeviceInfo.hostname',"None")
+                logger.debug("%s Device Name: %s", da_endpoint, device_name)
+                all_device_names = [ device_name ]
+                all_device_names = tools.list_of_lists(result,'Inferred_Name',all_device_names)
+                all_device_names = tools.list_of_lists(result,'Inferred_Hostname',all_device_names)
+                all_device_names = tools.list_of_lists(result,'Inferred_FQDN',all_device_names)
+                all_endpoints = [ da_endpoint ]
+                all_endpoints = tools.list_of_lists(result,'Endpoint.endpoint',all_endpoints)
+                all_endpoints = tools.list_of_lists(result,'DiscoveredIPAddress.ip_addr',all_endpoints)
+                all_endpoints = tools.list_of_lists(result,'InferredElement.__all_ip_addrs',all_endpoints)
+                logger.debug("%s All endpoints: %s", da_endpoint, all_endpoints)
+                    
+                scan_run = tools.getr(result,'DiscoveryRun.label',"None")
+                all_discovery_runs.append(scan_run)
+                all_discovery_runs = tools.sortlist(all_discovery_runs)
+                logger.debug("%s All Runs: %s", da_endpoint, all_discovery_runs)
+
+                uuid = tools.getr(result,'DeviceInfo.last_credential',None)
+
+                all_credentials_used = []
+                cred_label = None
+                cred_username = None
+                if uuid:
+                    credential_details = tools.get_credential(vaultcreds,uuid)
+                    cred_label = tools.getr(credential_details,'label',"Not Found")
+                    cred_username = tools.getr(credential_details,'username',"Not Found")
+                    all_credentials_used.append("%s (%s)" % (cred_label,uuid))
+                all_credentials_used = tools.sortlist(all_credentials_used)
+                logger.debug("%s All Runs: %s", da_endpoint, all_credentials_used)
+                
+                da_result = tools.getr(result,'DiscoveryAccess.result',"None")
+                end_state = tools.getr(result,'DiscoveryAccess.end_state',"None")
+                last_marker = tools.getr(result,'DiscoveryAccess._last_marker',None)
+                had_inference = tools.getr(result,'DiscoveryAccess.__had_inference',None)
+                logger.debug("%s Last Marker: %s", da_endpoint, last_marker)
+                logger.debug("%s Had Inference: %s", da_endpoint, had_inference)
+
+                # Other Attributes
+
+                first_marker = tools.getr(result,'DiscoveryAccess._first_marker',"None")
+                last_interesting = tools.getr(result,'DiscoveryAccess._last_interesting',"None")
+                os_type = tools.getr(result,'DeviceInfo.os_type',"None")
+                device_type = tools.getr(result,'DeviceInfo.device_type',"None")
+                method_success = tools.getr(result,'DeviceInfo.method_success',"None")
+                method_failure = tools.getr(result,'DeviceInfo.method_failure',"None")
+                endtime = tools.getr(result,'DiscoveryAccess.endtime',"None")
+                kind = tools.getr(result,'DeviceInfo.kind',"None")
+                last_access_method = tools.getr(result,'DeviceInfo.last_access_method',"None")
+                logger.debug("%s Last Access Method: %s", da_endpoint, last_access_method)
+
+                all_kinds.append(kind)
+
+                start_time = tools.getr(result,'DiscoveryAccess.starttime',"None")
+
+                device.update({
+                                "all_device_names":identity.get('list_of_names'),
+                                "all_endpoints":identity.get('list_of_ips'),
+                                "all_credentials_used":all_credentials_used,
+                                "all_discovery_runs":all_discovery_runs
+                                })
+
+                start_time_str = start_time.split(" ")
+                start_time_str = start_time_str[:2]
+                start_time_str = " ".join(start_time_str)
+                start_timestamp = datetime.datetime.strptime(start_time_str, "%Y-%m-%d %H:%M:%S")
+                logger.debug(
+                    "%s Start Timestamp: %s latest Timestamp: %s",
+                    da_endpoint,
+                    start_timestamp,
+                    latest_timestamp,
+                )
+                if not latest_timestamp:
+                    logger.debug(
+                        "%s No Latest Timestamp, setting to Start Timestamp: %s",
+                        da_endpoint,
+                        latest_timestamp,
+                    )
+                    latest_timestamp = start_timestamp
+                if start_timestamp > latest_timestamp:
+                    logger.debug(
+                        "%s Start Timestamp %s is fresher than latest_timestamp: %s",
+                        da_endpoint,
+                        start_timestamp,
+                        latest_timestamp,
+                    )
+                    latest_timestamp = start_timestamp
+
+                    if last_marker: # The last scan
+                        logger.debug("%s, %s Last Marker is set.", da_endpoint, latest_timestamp)
+
+                        # Collect the very LAST Data
+
+                        last_kind = kind
+                        last_identity = device_name
+                        last_scanned_ip = da_endpoint
+                        last_credential = uuid
+                        last_credential_label = cred_label
+                        last_credential_username = cred_username
+                        last_start_time = start_time
+                        last_run = scan_run
+                        last_endstate = end_state
+                        last_result = da_result
+                        last_access_method = last_access_method
+
+                        device.update({
+                                    "last_identity":last_identity,
+                                    "last_kind":last_kind,
+                                    "last_scanned_ip":last_scanned_ip,
+                                    "last_credential":last_credential,
+                                    "last_credential_label":last_credential_label,
+                                    "last_credential_username":last_credential_username,
+                                    "last_start_time":last_start_time,
+                                    "last_run":last_run,
+                                    "last_endstate":last_endstate,
+                                    "last_result":last_result,
+                                    "last_access_method":last_access_method
+                                    })
+                    
+                    if had_inference: # The last successful
+                        logger.debug("%s, %s Had Inference.", da_endpoint, latest_timestamp)
+
+                        last_successful_identity = device_name
+                        last_successful_ip = da_endpoint
+                        last_successful_credential = uuid
+                        last_successful_credential_label = cred_label
+                        last_successful_credential_username = cred_username
+                        last_successful_start_time = start_time
+                        last_successful_run = scan_run
+                        last_successful_endstate = end_state
+                        last_successful_result = da_result
+
+                        device.update({
+                                        "last_successful_identity":last_successful_identity,
+                                        "last_successful_ip":last_successful_ip,
+                                        "last_successful_credential":last_successful_credential,
+                                        "last_successful_credential_label":last_successful_credential_label,
+                                        "last_successful_credential_username":last_successful_credential_username,
+                                        "last_successful_start_time":last_successful_start_time,
+                                        "last_successful_run":last_successful_run,
+                                        "last_successful_endstate":last_successful_endstate,
+                                        "last_successful_result":last_successful_result,
+                                        "last_access_method":last_access_method
+                                        })
+                
+                if not last_identity:
+                    last_identity = all_device_names[0]
+                    device.update({"last_identity":last_identity})
+                    logger.debug(
+                        "%s, %s Last Identity missing, set to %s",
+                        da_endpoint,
+                        latest_timestamp,
+                        last_identity,
+                    )
+                if not last_kind:
+                    last_kind = kind
+                    device.update({"last_kind":last_kind})
+                    logger.debug(
+                        "%s, %s Last Kind missing, set to %s",
+                        da_endpoint,
+                        latest_timestamp,
+                        last_kind,
+                    )
+                if not last_scanned_ip:
+                    last_scanned_ip = da_endpoint
+                    device.update({"last_scanned_ip":last_scanned_ip})
+                    logger.debug(
+                        "%s, %s Last Scanned IP missing, set to %s",
+                        da_endpoint,
+                        latest_timestamp,
+                        last_scanned_ip,
+                    )
+
+                devices.append(device)
+                logger.debug("Device added to list of devices:%s", device)
+
+    # Move to the next line after the progress output
     print()
 
-    devices = list({v["last_scanned_ip"]: v for v in devices}.values())
+    # Make sure we only report each device once - there is probably a more efficient way to do this in the loop.
+    devices = list({v['last_identity']:v for v in devices}.values())
     logger.debug("Unique List of devices:%s", devices)
 
-    data = []
-    for device in devices:
-        data.append([
-            device.get("last_scanned_ip"),
-            device.get("last_identity"),
-            device.get("last_start_time"),
-            device.get("last_result"),
-        ])
+    # Build the report
 
-    headers = [
-        "last_scanned_ip",
-        "last_identity",
-        "last_start_time",
-        "last_result",
-    ]
+    data = []
+
+    for device in devices:
+        last_scanned_ip = device.get("last_scanned_ip")
+        last_identity = device.get('last_identity')
+        last_kind = device.get('last_kind')
+        all_device_names = device.get("all_device_names")
+        all_endpoints = device.get("all_endpoints")
+        all_credentials_used = device.get("all_credentials_used")
+        all_discovery_runs = device.get("all_discovery_runs")
+        last_credential = device.get("last_credential")
+        last_credential_label = device.get("last_credential_label")
+        last_credential_username = device.get("last_credential_username")
+        last_start_time = device.get("last_start_time")
+        last_run = device.get("last_run")
+        last_endstate = device.get("last_endstate")
+        last_result = device.get("last_result")
+        last_successful_identity = device.get('last_successful_identity')
+        last_successful_ip = device.get('last_successful_ip')
+        last_successful_credential = device.get("last_successful_credential")
+        last_successful_credential_label = device.get("last_successful_credential_label")
+        last_successful_credential_username = device.get("last_successful_credential_username")
+        last_successful_start_time = device.get("last_successful_start_time")
+        last_successful_run = device.get("last_successful_run")
+        last_successful_endstate = device.get("last_successful_endstate")
+        last_access_method = device.get('last_access_method')
+
+        msg = os.linesep
+        if args.output_csv or args.output_file:    
+            data.append([
+                        last_scanned_ip,
+                        last_identity,
+                        last_kind,
+                        all_device_names,
+                        all_endpoints,
+                        all_credentials_used,
+                        all_discovery_runs,
+                        last_credential,
+                        last_credential_label,
+                        last_credential_username,
+                        last_start_time,
+                        last_run,
+                        last_endstate,
+                        last_result,
+                        last_access_method,
+                        last_successful_identity,
+                        last_successful_ip,
+                        last_successful_credential,
+                        last_successful_credential_label,
+                        last_successful_credential_username,
+                        last_successful_start_time,
+                        last_successful_run,
+                        last_successful_endstate,
+                        ])
+            headers = [
+                    "last_scanned_ip",
+                    "last_identity",
+                    "last_kind",
+                    "all_device_names",
+                    "all_endpoints",
+                    "all_credentials_used",
+                    "all_discovery_runs",
+                    "last_credential",
+                    "last_credential_label",
+                    "last_credential_username",
+                    "last_start_time",
+                    "last_run",
+                    "last_endstate",
+                    "last_result",
+                    "last_access_method",
+                    "last_successful_identity",
+                    "last_successful_ip",
+                    "last_successful_credential",
+                    "last_successful_credential_label",
+                    "last_successful_credential_username",
+                    "last_successful_start_time",
+                    "last_successful_run",
+                    "last_successful_endstate"
+                    ]
+        else:
+            msg = "\nOnly showing limited details for table output. Output to CSV for full results.\n"
+            data.append([
+                        last_scanned_ip,
+                        last_identity,
+                        last_kind,
+                        last_credential_label,
+                        last_start_time,
+                        last_run,
+                        last_endstate,
+                        last_result,
+                        last_access_method
+                        ])
+
+            headers = [
+                    "last_scanned_ip",
+                    "last_identity",
+                    "last_kind",
+                    "last_credential_label",
+                    "last_start_time",
+                    "last_run",
+                    "last_endstate",
+                    "last_result",
+                    "last_access_method"
+                    ]
 
     if msg:
         print(msg)
     output.report(data, headers, args, name="devices")
 
 @output._timer("IP Address Lookup")
-
 def ipaddr(search, credentials, args):
     ipaddr = args.excavate[1]
     msg = "\nIP Address Lookup: %s" % ipaddr

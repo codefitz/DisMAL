@@ -1263,6 +1263,11 @@ def search_results(api_endpoint, query, limit=500, use_cache=True, cache_name=No
                 return data
 
             results_all.extend(data)
+            
+            # If limit==0 and the server already returned more rows than requested,
+            # treat this as the complete result set and exit.
+            if not limit and offset == 0 and len(data) > page_limit:
+                break
 
             # If the server returns more rows than requested on the first page,
             # treat it as the complete result set and stop paginating. Some

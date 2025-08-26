@@ -1329,7 +1329,8 @@ REPORT_QUERY_MAP = {
         "scanrange",
         "excludes",
         "outpost_credentials",
-    ]
+    ],
+    "device_ids": ["deviceInfo"],
 }
 
 def run_queries(search, args, dir):

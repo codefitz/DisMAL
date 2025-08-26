@@ -419,6 +419,30 @@ def test_run_queries_executes_report_queries(monkeypatch, tmp_path):
     assert all(t == "query" for _, _, t in captured)
 
 
+def test_run_queries_executes_device_ids_query(monkeypatch, tmp_path):
+    captured = {}
+
+    def fake_define_csv(args, search, query, path, file, target, typ, **kwargs):
+        captured["query"] = query
+        captured["path"] = path
+        captured["type"] = typ
+
+    monkeypatch.setattr(api_mod.output, "define_csv", fake_define_csv)
+
+    args = types.SimpleNamespace(
+        excavate=["device_ids"], output_file=None, target="appl"
+    )
+    search = object()
+    outdir = str(tmp_path)
+
+    api_mod.run_queries(search, args, outdir)
+
+    assert captured["query"] == api_mod.queries.deviceInfo
+    expected = os.path.join(outdir, "qry_deviceInfo.csv")
+    assert captured["path"] == expected
+    assert captured["type"] == "query"
+
+
 def test_map_outpost_credentials_strips_scheme(monkeypatch):
     """Outpost targets should not include protocol."""
 
@@ -640,6 +664,82 @@ def test_run_for_args_queries_invokes_run_queries(monkeypatch):
     dismal.run_for_args(args)
 
     assert called["search"] is dummy_search
+
+
+def test_run_for_args_device_ids_queries_skips_unique(monkeypatch):
+    import importlib
+
+    monkeypatch.setattr(sys, "argv", ["dismal"])
+    dismal = importlib.reload(importlib.import_module("dismal"))
+
+    dummy_search = types.SimpleNamespace()
+
+    monkeypatch.setattr(dismal.access, "api_target", lambda args: types.SimpleNamespace())
+    monkeypatch.setattr(
+        dismal.api,
+        "init_endpoints",
+        lambda ap, args: (None, dummy_search, None, None, None),
+    )
+    monkeypatch.setattr(dismal.access, "login_target", lambda *a, **k: (None, None))
+    monkeypatch.setattr(dismal.access, "ping", lambda host: 0)
+    monkeypatch.setattr(dismal.os.path, "exists", lambda p: True)
+    monkeypatch.setattr(dismal.os, "makedirs", lambda p: None)
+    monkeypatch.setattr(dismal.output, "format_duration", lambda s: "0s")
+    monkeypatch.setattr(dismal.logging, "basicConfig", lambda *a, **k: None)
+
+    called = {}
+
+    def fake_unique(*a, **k):
+        called["unique"] = True
+        return []
+
+    def fake_run_queries(search, args, dir):
+        called["run_queries"] = True
+
+    monkeypatch.setattr(dismal.builder, "unique_identities", fake_unique)
+    monkeypatch.setattr(dismal.api, "run_queries", fake_run_queries)
+
+    args = types.SimpleNamespace(
+        version=False,
+        wakey=False,
+        target="appl",
+        access_method="api",
+        username=None,
+        password=None,
+        f_passwd=None,
+        token="tok",
+        f_token=None,
+        noping=True,
+        output_path=None,
+        excavate=["device_ids"],
+        queries=True,
+        output_csv=False,
+        output_file=None,
+        include_endpoints=None,
+        endpoint_prefix=None,
+        a_query=None,
+        a_kill_run=None,
+        schedule_timezone=None,
+        reset_schedule_timezone=False,
+        sysadmin=None,
+        tideway=None,
+        clear_queue=False,
+        tw_user=None,
+        servicecctl=None,
+        debugging=False,
+        output_cli=False,
+        output_null=False,
+        a_enable=None,
+        f_enablelist=None,
+        a_opt=None,
+        a_removal=None,
+        f_remlist=None,
+    )
+
+    dismal.run_for_args(args)
+
+    assert called.get("run_queries")
+    assert "unique" not in called
 
 def test_search_results_cleans_query(monkeypatch):
     """Ensure newlines removed and single quotes preserved."""

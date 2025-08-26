@@ -339,6 +339,90 @@ def test_devices_report_contains_data(monkeypatch):
     assert calls == {"base": 1, "access": 1, "network": 1}
 
 
+def test_devices_report_populates_last_fields(monkeypatch):
+    identities = [
+        {
+            "originating_endpoint": "1.1.1.1",
+            "list_of_ips": ["1.1.1.1"],
+            "list_of_names": ["host"],
+        }
+    ]
+    base_result = [
+        {
+            "DiscoveryAccess.endpoint": "1.1.1.1",
+            "DeviceInfo.hostname": "host",
+            "DeviceInfo.last_credential": "cred-uuid",
+            "DeviceInfo.kind": "server",
+            "DeviceInfo.last_access_method": "ssh",
+        }
+    ]
+    access_result = [
+        {
+            "DiscoveryAccess.endpoint": "1.1.1.1",
+            "DiscoveryAccess.starttime": "2024-01-01 00:00:00 UTC",
+            "DiscoveryRun.label": "run1",
+            "DiscoveryAccess.result": "ok",
+            "DiscoveryAccess.end_state": "finished",
+        }
+    ]
+    network_result = [
+        {
+            "DiscoveryAccess.endpoint": "1.1.1.1",
+            "Endpoint.endpoint": "1.1.1.1",
+        }
+    ]
+
+    def fake_search_results(search, query, *a, **k):
+        if query == reporting.queries.deviceInfo_base:
+            return base_result
+        if query == reporting.queries.deviceInfo_access:
+            return access_result
+        if query == reporting.queries.deviceInfo_network:
+            return network_result
+        return []
+
+    monkeypatch.setattr(reporting.builder, "unique_identities", lambda *a, **k: identities)
+    monkeypatch.setattr(reporting.api, "search_results", fake_search_results)
+    monkeypatch.setattr(reporting.api, "get_json", lambda *a, **k: [])
+    monkeypatch.setattr(
+        reporting.tools,
+        "get_credential",
+        lambda *a, **k: {"label": "cred1", "username": "user1"},
+    )
+    monkeypatch.setattr(reporting.tools, "list_of_lists", lambda *a, **k: a[2])
+    monkeypatch.setattr(reporting.tools, "sortlist", lambda l, dv=None: l)
+
+    captured = {}
+
+    def fake_report(data, headers, args, name=None):
+        captured["data"] = data
+        captured["headers"] = headers
+
+    monkeypatch.setattr(reporting, "output", types.SimpleNamespace(report=fake_report))
+
+    args = types.SimpleNamespace(
+        output_csv=False,
+        output_file=None,
+        include_endpoints=None,
+        endpoint_prefix=None,
+    )
+
+    reporting.devices(DummySearch(), DummyCreds(), args)
+
+    row = dict(zip(captured["headers"], captured["data"][0]))
+
+    for field in [
+        "last_kind",
+        "last_credential_label",
+        "last_start_time",
+        "last_run",
+        "last_endstate",
+        "last_result",
+        "last_access_method",
+    ]:
+        assert row.get(field) is not None
+
+
 def test_discovery_access_handles_bad_api(monkeypatch):
     _run_with_patches(monkeypatch, reporting.discovery_access)
 

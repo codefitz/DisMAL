@@ -733,53 +733,57 @@ def devices(twsearch, twcreds, args, identities=None):
                     start_timestamp,
                     latest_timestamp,
                 )
-                if not latest_timestamp:
-                    logger.debug(
-                        "%s No Latest Timestamp, setting to Start Timestamp: %s",
-                        da_endpoint,
-                        latest_timestamp,
-                    )
-                    latest_timestamp = start_timestamp
-                if start_timestamp > latest_timestamp:
-                    logger.debug(
-                        "%s Start Timestamp %s is fresher than latest_timestamp: %s",
-                        da_endpoint,
-                        start_timestamp,
-                        latest_timestamp,
-                    )
+                if not latest_timestamp or start_timestamp > latest_timestamp:
+                    if not latest_timestamp:
+                        logger.debug(
+                            "%s No Latest Timestamp, setting to Start Timestamp: %s",
+                            da_endpoint,
+                            start_timestamp,
+                        )
+                    else:
+                        logger.debug(
+                            "%s Start Timestamp %s is fresher than latest_timestamp: %s",
+                            da_endpoint,
+                            start_timestamp,
+                            latest_timestamp,
+                        )
                     latest_timestamp = start_timestamp
 
-                    if last_marker: # The last scan
+                    if last_marker:
                         logger.debug("%s, %s Last Marker is set.", da_endpoint, latest_timestamp)
+                    else:
+                        logger.debug(
+                            "%s, %s Last Marker missing.", da_endpoint, latest_timestamp
+                        )
 
-                        # Collect the very LAST Data
+                    # Collect the very LAST Data
 
-                        last_kind = kind
-                        last_identity = device_name
-                        last_scanned_ip = da_endpoint
-                        last_credential = uuid
-                        last_credential_label = cred_label
-                        last_credential_username = cred_username
-                        last_start_time = start_time
-                        last_run = scan_run
-                        last_endstate = end_state
-                        last_result = da_result
-                        last_access_method = last_access_method
+                    last_kind = kind
+                    last_identity = device_name
+                    last_scanned_ip = da_endpoint
+                    last_credential = uuid
+                    last_credential_label = cred_label
+                    last_credential_username = cred_username
+                    last_start_time = start_time
+                    last_run = scan_run
+                    last_endstate = end_state
+                    last_result = da_result
+                    last_access_method = last_access_method
 
-                        device.update({
-                                    "last_identity":last_identity,
-                                    "last_kind":last_kind,
-                                    "last_scanned_ip":last_scanned_ip,
-                                    "last_credential":last_credential,
-                                    "last_credential_label":last_credential_label,
-                                    "last_credential_username":last_credential_username,
-                                    "last_start_time":last_start_time,
-                                    "last_run":last_run,
-                                    "last_endstate":last_endstate,
-                                    "last_result":last_result,
-                                    "last_access_method":last_access_method
-                                    })
-                    
+                    device.update({
+                                "last_identity":last_identity,
+                                "last_kind":last_kind,
+                                "last_scanned_ip":last_scanned_ip,
+                                "last_credential":last_credential,
+                                "last_credential_label":last_credential_label,
+                                "last_credential_username":last_credential_username,
+                                "last_start_time":last_start_time,
+                                "last_run":last_run,
+                                "last_endstate":last_endstate,
+                                "last_result":last_result,
+                                "last_access_method":last_access_method
+                                })
+
                     if had_inference: # The last successful
                         logger.debug("%s, %s Had Inference.", da_endpoint, latest_timestamp)
 

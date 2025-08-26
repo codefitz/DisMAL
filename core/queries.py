@@ -58,6 +58,24 @@ outpost_credentials = """
                             outpost
                             process with unique(0)
                         """
+deviceInfo_base = {"query":
+                        """
+                            search DeviceInfo
+                            ORDER BY hostname
+                            show
+                            hostname as 'DeviceInfo.hostname',
+                            os_type as 'DeviceInfo.os_type',
+                            sysname as 'DeviceInfo.sysname',
+                            device_type as 'DeviceInfo.device_type',
+                            fqdn as 'DeviceInfo.fqdn',
+                            kind as 'DeviceInfo.kind',
+                            method_success as 'DeviceInfo.method_success',
+                            method_failure as 'DeviceInfo.method_failure',
+                            (last_credential or last_slave or __preserved_last_credential) as 'DeviceInfo.last_credential',
+                            (last_access_method or __preserved_last_access_method) as 'DeviceInfo.last_access_method'
+                            process with unique()
+                        """
+                }
 deviceInfo = {"query":
                         """
                             search DeviceInfo

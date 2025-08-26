@@ -592,9 +592,13 @@ def devices(twsearch, twcreds, args, identities=None):
         )
 
     # Gather device information using granular queries and merge by endpoint.
-    base_results = api.search_results(twsearch, queries.deviceInfo_base)
-    access_results = api.search_results(twsearch, queries.deviceInfo_access)
-    network_results = api.search_results(twsearch, queries.deviceInfo_network)
+    # ``search_results`` defaults to returning at most 500 rows which can leave
+    # many devices missing their base metadata (kind, last credential, access
+    # method) when more are present.  Request all available rows for each query
+    # to ensure subsequent merging has the necessary data for every device.
+    base_results = api.search_results(twsearch, queries.deviceInfo_base, limit=0)
+    access_results = api.search_results(twsearch, queries.deviceInfo_access, limit=0)
+    network_results = api.search_results(twsearch, queries.deviceInfo_network, limit=0)
 
     merged = {}
     for result in base_results:

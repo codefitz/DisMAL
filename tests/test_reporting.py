@@ -296,16 +296,20 @@ def test_devices_report_contains_data(monkeypatch):
         }
     ]
     calls = {"base": 0, "access": 0, "network": 0}
+    limits = {}
 
-    def fake_search_results(search, query, *a, **k):
+    def fake_search_results(search, query, limit=500, *a, **k):
         if query == reporting.queries.deviceInfo_base:
             calls["base"] += 1
+            limits["base"] = limit
             return base_result
         if query == reporting.queries.deviceInfo_access:
             calls["access"] += 1
+            limits["access"] = limit
             return access_result
         if query == reporting.queries.deviceInfo_network:
             calls["network"] += 1
+            limits["network"] = limit
             return network_result
         return []
 
@@ -337,6 +341,7 @@ def test_devices_report_contains_data(monkeypatch):
     assert captured["name"] == "devices"
     assert captured["data"]
     assert calls == {"base": 1, "access": 1, "network": 1}
+    assert limits == {"base": 0, "access": 0, "network": 0}
 
 
 def test_devices_report_populates_last_fields(monkeypatch):

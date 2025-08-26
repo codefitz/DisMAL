@@ -1234,6 +1234,9 @@ def _gather_discovery_data(twsearch, twcreds, args):
         for result in records["discos"]:
             ep_record = {"endpoint": endpoint}
             hostname = tools.getr(result, "Hostname", None)
+            if not hostname and list_of_names:
+                # Fall back to the first identity name when hostname is absent
+                hostname = list_of_names[0]
             os_type = tools.getr(result, "OS_Type", None)
             os_class = tools.getr(result, "OS_Class", None)
             disco_run = tools.getr(result, "DiscoveryRun.label", None)
@@ -1328,6 +1331,7 @@ def _gather_discovery_data(twsearch, twcreds, args):
         for result in records["dropped"]:
             run_end = tools.getr(result, "End")
             scan_end_raw = tools.getr(result, "End_Raw", None)
+            hostname = list_of_names[0] if list_of_names else None
             ep_timestamp = None
             if scan_end_raw:
                 try:
@@ -1357,6 +1361,7 @@ def _gather_discovery_data(twsearch, twcreds, args):
             run_end_timestamp = ep_timestamp
             ep_record = {
                 "endpoint": endpoint,
+                "hostname": hostname,
                 "list_of_names": list_of_names,
                 "list_of_endpoints": list_of_endpoints,
                 "disco_run": disco_run,
@@ -1509,10 +1514,21 @@ def discovery_analysis(twsearch, twcreds, args, disco_data=None):
     headers = []
 
     for ddata in disco_data:
+        # Use the same approach as the devices report: fall back to the first
+        # known device name from the identity when a hostname is unavailable.
+        device_name = ddata.get("hostname")
+        if not device_name:
+            names = ddata.get("list_of_names") or []
+            if isinstance(names, list) and names:
+                device_name = names[0]
+
+        node_updated = ddata.get("node_updated")
+        cred_name = ddata.get("credential_name")
+
         if args.output_csv or args.output_file:
             data.append([
                 ddata.get("endpoint"),
-                ddata.get("hostname"),
+                device_name,
                 ddata.get("list_of_names"),
                 ddata.get("list_of_endpoints"),
                 ddata.get("node_kind"),
@@ -1529,14 +1545,14 @@ def discovery_analysis(twsearch, twcreds, args, disco_data=None):
                 ddata.get("consistency"),
                 ddata.get("current_access"),
                 ddata.get("access_method"),
-                ddata.get("node_updated"),
+                node_updated,
                 ddata.get("reason_not_updated"),
                 ddata.get("end_state"),
                 ddata.get("previous_end_state"),
                 ddata.get("change"),
                 ddata.get("session_results_logged"),
                 ddata.get("last_credential"),
-                ddata.get("credential_name"),
+                cred_name,
                 ddata.get("credential_login"),
                 ddata.get("timestamp"),
                 ddata.get("da_id"),
@@ -1584,12 +1600,12 @@ def discovery_analysis(twsearch, twcreds, args, disco_data=None):
             )
             data.append([
                 ddata.get("endpoint"),
-                ddata.get("hostname"),
+                device_name,
                 ddata.get("when_was_that"),
-                ddata.get("node_updated"),
+                node_updated,
                 ddata.get("consistency"),
                 ddata.get("change"),
-                ddata.get("credential_name"),
+                cred_name,
             ])
             headers = [
                 "endpoint",

@@ -18,10 +18,9 @@ from core.access import api_target  # core.access.api_target
 from core.api import (
     init_endpoints,  # core.api.init_endpoints
     get_json,  # core.api.get_json
-    search_results,  # core.api.search_results
+    devices_lookup,  # core.api.devices_lookup
 )
 from core.builder import unique_identities  # core.builder.unique_identities
-from core import queries  # core.queries.deviceInfo
 from core.reporting import devices  # core.reporting.devices
 
 
@@ -116,10 +115,9 @@ def main() -> None:
                 search, args.include_endpoints, args.endpoint_prefix
             )
             logging.debug("Collected %s unique identities", len(identities))
-            results = search_results(search, queries.deviceInfo)  # core.api.search_results
+            lookup = devices_lookup(search, include_network=True)
             logging.debug(
-                "Retrieved %s device search results",
-                len(results) if hasattr(results, "__len__") else "unknown",
+                "Retrieved %s device lookup entries", len(lookup)
             )
 
             devices(search, creds, args, identities=identities)  # core.reporting.devices

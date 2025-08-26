@@ -459,11 +459,18 @@ def test_run_queries_executes_devices_report(monkeypatch, tmp_path):
 
     api_mod.run_queries(search, args, outdir)
 
-    assert [q for q, _, _ in captured] == [api_mod.queries.deviceInfo]
-    assert [p for _, p, _ in captured] == [
-        os.path.join(outdir, "qry_deviceInfo.csv"),
+    expected_queries = [
+        api_mod.queries.deviceInfo_base,
+        api_mod.queries.deviceInfo_access,
+        api_mod.queries.deviceInfo_network,
     ]
-    assert [t for _, _, t in captured] == ["query"]
+    assert [q for q, _, _ in captured] == expected_queries
+    assert [p for _, p, _ in captured] == [
+        os.path.join(outdir, "qry_deviceInfo_base.csv"),
+        os.path.join(outdir, "qry_deviceInfo_access.csv"),
+        os.path.join(outdir, "qry_deviceInfo_network.csv"),
+    ]
+    assert [t for _, _, t in captured] == ["query"] * 3
 
 
 def test_map_outpost_credentials_strips_scheme(monkeypatch):

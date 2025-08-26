@@ -45,18 +45,28 @@ def test_missing_vms_calls_completage(monkeypatch):
 def test_missing_vms_enriches_from_devices(monkeypatch):
     missing = [{"VirtualMachine.guest_full_name": "h1"}]
 
-    device_info = [{
-        "DiscoveryAccess.endpoint": "1.2.3.4",
-        "DeviceInfo.hostname": "id1",
-        "DiscoveryAccess.starttime": "2024-01-01 10:00:00",
-        "DiscoveryAccess.result": "OK",
-    }]
+    device_base = [
+        {
+            "DiscoveryAccess.endpoint": "1.2.3.4",
+            "DeviceInfo.hostname": "id1",
+        }
+    ]
+    device_access = [
+        {
+            "DiscoveryAccess.endpoint": "1.2.3.4",
+            "DeviceInfo.hostname": "id1",
+            "DiscoveryAccess.starttime": "2024-01-01 10:00:00",
+            "DiscoveryAccess.result": "OK",
+        }
+    ]
 
     def fake_search_results(search, query):
         if query == api_mod.queries.missing_vms:
             return missing
-        if query == api_mod.queries.deviceInfo:
-            return device_info
+        if query == api_mod.queries.deviceInfo_base:
+            return device_base
+        if query == api_mod.queries.deviceInfo_access:
+            return device_access
         return []
 
     captured = {}

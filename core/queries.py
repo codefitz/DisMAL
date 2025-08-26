@@ -67,6 +67,7 @@ deviceInfo_base = {"query":
                             os_type as 'DeviceInfo.os_type',
                             sysname as 'DeviceInfo.sysname',
                             device_type as 'DeviceInfo.device_type',
+                            #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.endpoint as 'DiscoveryAccess.endpoint',
                             fqdn as 'DeviceInfo.fqdn',
                             kind as 'DeviceInfo.kind',
                             method_success as 'DeviceInfo.method_success',

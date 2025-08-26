@@ -697,30 +697,72 @@ def unique_identities(
     logger.info("Running: Unique Identities report...")
     print("Running: Unique Identities report...")
 
-    # Optionally constrain the API query to specific endpoints.  This helps
-    # reduce the amount of data returned and therefore overall execution time.
-    device_query = queries.deviceInfo.copy()
+    # Retrieve discovery access information first since it contains the
+    # originating endpoint for each host.  The result set is optionally
+    # constrained to a subset of endpoints to reduce the amount of data
+    # returned from the API.
+    access_query = queries.deviceInfo_access.copy()
 
     if include_endpoints:
         endpoint_filter = ",".join(f"'{ep}'" for ep in include_endpoints)
-        device_query["query"] = device_query["query"].replace(
+        access_query["query"] = access_query["query"].replace(
             "search DeviceInfo",
             "search DeviceInfo where #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.endpoint in (%s)"
             % endpoint_filter,
         )
     elif endpoint_prefix:
-        device_query["query"] = device_query["query"].replace(
+        access_query["query"] = access_query["query"].replace(
             "search DeviceInfo",
             "search DeviceInfo where #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.endpoint beginswith '%s'"
             % endpoint_prefix,
         )
 
-    devices = api.search_results(
-        search, device_query, cache_name="unique_identities_devices"
+    access_results = api.search_results(
+        search, access_query, cache_name="unique_identities_access"
     )
-    if not isinstance(devices, list):
+    if not isinstance(access_results, list):
         logger.error("Failed to retrieve unique identity data")
         return []
+
+    # Extract the hostnames present in the access results so subsequent queries
+    # can be limited to just these devices.
+    hostnames = {
+        tools.getr(r, "DeviceInfo.hostname")
+        for r in access_results
+        if isinstance(r, dict)
+    }
+
+    hostname_filter = ",".join(f"'{hn}'" for hn in hostnames if hn)
+
+    base_query = queries.deviceInfo_base.copy()
+    network_query = queries.deviceInfo_network.copy()
+    if hostname_filter:
+        base_query["query"] = base_query["query"].replace(
+            "search DeviceInfo",
+            f"search DeviceInfo where hostname in ({hostname_filter})",
+        )
+        network_query["query"] = network_query["query"].replace(
+            "search DeviceInfo",
+            f"search DeviceInfo where hostname in ({hostname_filter})",
+        )
+
+    base_results = api.search_results(
+        search, base_query, cache_name="unique_identities_base"
+    )
+    network_results = api.search_results(
+        search, network_query, cache_name="unique_identities_network"
+    )
+
+    base_map = {
+        tools.getr(r, "DeviceInfo.hostname"): r
+        for r in base_results
+        if isinstance(r, dict)
+    }
+    network_map = {
+        tools.getr(r, "DeviceInfo.hostname"): r
+        for r in network_results
+        if isinstance(r, dict)
+    }
 
     def _endpoint_in_scope(endpoint: str) -> bool:
         if not endpoint:
@@ -753,11 +795,19 @@ def unique_identities(
 
     timer_count = 0
 
-    for device in devices:
-        timer_count = tools.completage("Processing", len(devices), timer_count)
+    for device in access_results:
+        timer_count = tools.completage(
+            "Processing", len(access_results), timer_count
+        )
         if not isinstance(device, dict):
             logger.warning("Unexpected device record: %r", device)
             continue
+
+        hostname = tools.getr(device, "DeviceInfo.hostname")
+        merge = {}
+        merge.update(base_map.get(hostname, {}))
+        merge.update(network_map.get(hostname, {}))
+        device.update(merge)
 
         endpoint = device.get("DiscoveryAccess.endpoint")
         if not _endpoint_in_scope(endpoint):

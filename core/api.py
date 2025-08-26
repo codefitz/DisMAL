@@ -860,18 +860,79 @@ def expected_agents(search, args, dir):
 def software_users(search, args, dir):
     output.define_csv(args,search,queries.user_accounts,os.path.join(dir, defaults.si_user_accounts_filename),args.output_file,args.target,"query")
 
-def devices_lookup(search):
-    """Return a mapping of IPs to their last discovery information."""
-    results = search_results(search, queries.deviceInfo)
+def devices_lookup(search, include_network=False):
+    """Return a mapping of IPs to their last discovery information.
+
+    The device lookup previously relied on a single query to gather all data.
+    The workflow now performs multiple queries to reduce the amount of data
+    transferred and to allow callers to optionally request network details.
+
+    1. ``deviceInfo_base`` seeds the mapping with host identity information.
+    2. ``deviceInfo_access`` merges discovery metadata such as start times and
+       results.
+    3. When ``include_network`` is ``True``, ``deviceInfo_network`` is executed to
+       attach additional network/IP details.
+
+    Existing callers continue to receive the keys ``last_identity``,
+    ``last_start_time``, and ``last_result``.  Network information, when
+    requested, is stored under the ``network`` key.
+    """
+
+    # If the new granular queries are not available, fall back to the original
+    # combined query to preserve compatibility with older deployments.
+    if not (hasattr(queries, "deviceInfo_base") and hasattr(queries, "deviceInfo_access")):
+        results = search_results(search, getattr(queries, "deviceInfo", {}))
+        mapping = {}
+        for result in results:
+            ip = tools.getr(result, "DiscoveryAccess.endpoint", None)
+            if ip:
+                mapping[ip] = {
+                    "last_identity": tools.getr(result, "DeviceInfo.hostname", "N/A"),
+                    "last_start_time": tools.getr(result, "DiscoveryAccess.starttime", "N/A"),
+                    "last_result": tools.getr(result, "DiscoveryAccess.result", "N/A"),
+                }
+        return mapping
+
     mapping = {}
-    for result in results:
+
+    # Seed mapping with base device information.
+    base_results = search_results(search, queries.deviceInfo_base)
+    for result in base_results:
         ip = tools.getr(result, "DiscoveryAccess.endpoint", None)
         if ip:
             mapping[ip] = {
-                "last_identity": tools.getr(result, "DeviceInfo.hostname", "N/A"),
-                "last_start_time": tools.getr(result, "DiscoveryAccess.starttime", "N/A"),
-                "last_result": tools.getr(result, "DiscoveryAccess.result", "N/A"),
+                "last_identity": tools.getr(result, "DeviceInfo.hostname", "N/A")
             }
+
+    # Merge discovery access metadata.
+    access_results = search_results(search, queries.deviceInfo_access)
+    for result in access_results:
+        ip = tools.getr(result, "DiscoveryAccess.endpoint", None)
+        if ip:
+            entry = mapping.setdefault(ip, {"last_identity": "N/A"})
+            entry.update(
+                {
+                    "last_start_time": tools.getr(
+                        result, "DiscoveryAccess.starttime", "N/A"
+                    ),
+                    "last_result": tools.getr(result, "DiscoveryAccess.result", "N/A"),
+                }
+            )
+
+    # Optionally include network/IP details.
+    if include_network and hasattr(queries, "deviceInfo_network"):
+        network_results = search_results(search, queries.deviceInfo_network)
+        for result in network_results:
+            ip = tools.getr(result, "DiscoveryAccess.endpoint", None)
+            if ip:
+                entry = mapping.setdefault(ip, {"last_identity": "N/A"})
+                entry.setdefault("network", {})
+                entry["network"].update(
+                    {
+                        "ip_addrs": tools.getr(result, "NetworkInterface.ip_addr", [])
+                    }
+                )
+
     return mapping
 
 def tku(knowledge, args, dir):

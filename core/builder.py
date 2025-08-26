@@ -801,11 +801,14 @@ def unique_identities(
         "NetworkInterface.fqdns",
     ]
 
+    total_records = len(access_results)
     timer_count = 0
 
     for device in access_results:
         timer_count = tools.completage(
-            "Processing", len(access_results), timer_count
+            f"Running: Unique Identities report... {timer_count + 1} record of {total_records}",
+            total_records,
+            timer_count,
         )
         if not isinstance(device, dict):
             logger.warning("Unexpected device record: %r", device)
@@ -842,7 +845,8 @@ def unique_identities(
         if max_endpoints and len(endpoint_map) >= max_endpoints:
             break
 
-    print(os.linesep)
+    if timer_count > 0:
+        print(os.linesep, end="")
 
     total_endpoints = len(endpoint_map)
 

@@ -34,9 +34,23 @@ def _setup_pandas(monkeypatch, when_values):
     monkeypatch.setattr(reporting.pd, "cut", fake_cut, raising=False)
 
 def _run(monkeypatch, discos, dropped, when_values):
-    def fake_search_results(search, query):
-        if query is reporting.queries.last_disco:
-            return discos
+    id_map = {}
+
+    def fake_search_results(search, query, *args, **kwargs):
+        if query is reporting.queries.last_disco_basic:
+            results = []
+            for idx, rec in enumerate(discos, 1):
+                id_map[str(idx)] = rec
+                results.append(
+                    {
+                        "DiscoveryAccess.id": idx,
+                        "Endpoint": rec.get("Endpoint"),
+                    }
+                )
+            return results
+        if isinstance(query, dict) and "#id =" in query.get("query", ""):
+            disco_id = query["query"].split("#id =", 1)[1].split()[0]
+            return [id_map[disco_id]]
         if query is reporting.queries.dropped_endpoints:
             return dropped
         return []

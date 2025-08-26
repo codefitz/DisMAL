@@ -1169,7 +1169,33 @@ def _gather_discovery_data(twsearch, twcreds, args):
         args.endpoint_prefix,
         getattr(args, "max_identities", None),
     )
-    discos = api.search_results(twsearch, queries.last_disco)
+    def _detail_query(disco_id):
+        """Build a detailed last_disco query for a single DiscoveryAccess."""
+        base = queries.last_disco["query"]
+        query = base.replace(
+            "search DiscoveryAccess where endtime",
+            f"search DiscoveryAccess where #id = {disco_id}",
+        )
+        return {"query": query}
+
+    basic_discos = api.search_results(twsearch, queries.last_disco_basic)
+    discos = []
+    seen_ids = set()
+    for entry in basic_discos:
+        if not isinstance(entry, dict):
+            logger.warning("Unexpected discovery access entry: %r", entry)
+            continue
+        disco_id = tools.getr(entry, "DiscoveryAccess.id")
+        if not disco_id or disco_id in seen_ids:
+            continue
+        seen_ids.add(disco_id)
+        detail = api.search_results(
+            twsearch,
+            _detail_query(disco_id),
+            limit=1,
+            cache_name=f"last_disco_{disco_id}",
+        )
+        discos.extend(detail)
     # Reuse cached dropped endpoint results if previously fetched
     dropped = api.search_results(twsearch, queries.dropped_endpoints)
 

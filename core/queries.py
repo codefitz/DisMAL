@@ -276,6 +276,19 @@ last_disco = {
                     process with unique()
 """
 }
+
+last_disco_basic = {
+            "query": """
+                    search DiscoveryAccess where endtime
+                    ORDER BY discovery_endtime DESC
+                    show
+                    #id as 'DiscoveryAccess.id',
+                    endpoint as 'DiscoveryAccess.endpoint',
+                    #DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.hostname as 'DeviceInfo.hostname',
+                    discovery_endtime as 'DiscoveryAccess.discovery_endtime'
+                    process with unique()
+            """
+}
 ip_schedules = """search DiscoveryAccess
                     show endpoint,
                     nodecount(traverse Member:List:List:DiscoveryRun where scan_type = 'Scheduled') as 'schedules'

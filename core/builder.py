@@ -718,10 +718,6 @@ def unique_identities(
     devices = api.search_results(
         search, device_query, cache_name="unique_identities_devices"
     )
-    da_results = api.search_results(
-        search, da_query, cache_name="unique_identities_da"
-    )
-
     if not isinstance(devices, list):
         logger.error("Failed to retrieve unique identity data")
         return []

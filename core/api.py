@@ -5,6 +5,7 @@ import logging
 import csv
 import json
 import os
+import time
 from urllib.parse import urlparse
 
 # PIP Modules
@@ -1166,21 +1167,34 @@ def search_results(api_endpoint, query, limit=500, use_cache=True, cache_name=No
             if offset:
                 kwargs["offset"] = offset
 
-            # Perform the search, favouring the bulk API when available
-            if hasattr(api_endpoint, "search_bulk"):
-                try:
-                    results = api_endpoint.search_bulk(query, **kwargs)
-                except TypeError:  # pragma: no cover - older libs lack offset
-                    kwargs.pop("offset", None)
-                    results = api_endpoint.search_bulk(query, **kwargs)
-                    offset = 0
-            else:
-                try:
-                    results = api_endpoint.search(query, **kwargs)
-                except TypeError:  # pragma: no cover - older libs lack offset
-                    kwargs.pop("offset", None)
-                    results = api_endpoint.search(query, **kwargs)
-                    offset = 0
+            # Perform the search, retrying on 504 Gateway Timeout errors
+            max_retries = 3
+            for attempt in range(max_retries):
+                if hasattr(api_endpoint, "search_bulk"):
+                    try:
+                        results = api_endpoint.search_bulk(query, **kwargs)
+                    except TypeError:  # pragma: no cover - older libs lack offset
+                        kwargs.pop("offset", None)
+                        results = api_endpoint.search_bulk(query, **kwargs)
+                        offset = 0
+                else:
+                    try:
+                        results = api_endpoint.search(query, **kwargs)
+                    except TypeError:  # pragma: no cover - older libs lack offset
+                        kwargs.pop("offset", None)
+                        results = api_endpoint.search(query, **kwargs)
+                        offset = 0
+
+                status_code = getattr(results, "status_code", 200)
+                if status_code != 504:
+                    break
+                if attempt < max_retries - 1:
+                    logger.warning(
+                        "Search API returned 504 - Gateway Timeout. Retrying (%s/%s)...",
+                        attempt + 1,
+                        max_retries,
+                    )
+                    time.sleep(2 ** attempt)
 
             # Depending on the version of the `tideway` library the call above
             # may return either a `requests.Response` object or the decoded

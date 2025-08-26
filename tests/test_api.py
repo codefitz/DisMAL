@@ -98,6 +98,25 @@ def test_search_results_warns_on_server_error(capfd):
     assert '504' in out
     assert 'Results may be incomplete' in out
 
+
+def test_search_results_retries_on_504(monkeypatch):
+    """search_results should retry when the API returns 504."""
+
+    class FlakySearch:
+        def __init__(self):
+            self.calls = 0
+
+        def search(self, query, format="object", limit=500, offset=0):
+            self.calls += 1
+            if self.calls == 1:
+                return DummyResponse(504, 'Gateway Timeout', reason='Gateway Timeout')
+            return DummyResponse(200, '[{"ok": true}]')
+
+    monkeypatch.setattr(api_mod.time, "sleep", lambda x: None)
+    search = FlakySearch()
+    assert search_results(search, {"query": "q"}) == [{"ok": True}]
+    assert search.calls == 2
+
 def test_search_results_paginates(monkeypatch):
     """search_results should accumulate more than 500 rows when limit=0."""
 

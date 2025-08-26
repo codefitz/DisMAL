@@ -1174,14 +1174,24 @@ def update_cred(appliance, uuid):
             active = True
     return active
 
-def search_results(api_endpoint, query, limit=500, use_cache=True, cache_name=None):
+def search_results(
+    api_endpoint,
+    query,
+    limit=500,
+    use_cache=True,
+    cache_name=None,
+    page_size=500,
+):
     """Execute a search query and return all results.
 
-    The Discovery API defaults to returning a maximum of 500 rows per
-    request.  Older versions of :func:`search_results` mirrored this behaviour
-    which meant callers could silently miss data when more than 500 rows were
+    The Discovery API defaults to returning a maximum of 500 rows per request.
+    Older versions of :func:`search_results` mirrored this behaviour which
+    meant callers could silently miss data when more than 500 rows were
     available.  The ``limit`` parameter allows callers to specify a custom
-    limit or pass ``0`` to retrieve *all* available rows via pagination.
+    limit or pass ``0`` to retrieve *all* available rows via pagination.  The
+    ``page_size`` parameter controls how many rows are requested per page and
+    defaults to ``500``.  This value may be automatically reduced when the
+    appliance repeatedly returns ``504`` errors.
 
     Results are cached based on the ``query`` and ``limit`` parameters.  Set
     ``use_cache`` to ``False`` to bypass the cache and force a fresh API call.
@@ -1217,10 +1227,10 @@ def search_results(api_endpoint, query, limit=500, use_cache=True, cache_name=No
                 return cached
 
         # Determine the page size for each request.  A limit of ``0`` denotes
-        # no limit which we implement by requesting data in 500 row chunks
-        # until the API stops returning additional results.
+        # no limit which we implement by requesting data in ``page_size`` row
+        # chunks until the API stops returning additional results.
         results_all = []
-        page_limit = 500 if not limit or limit > 500 else limit
+        page_limit = page_size if not limit or limit > page_size else limit
         offset = 0
         remaining = limit
 
@@ -1231,32 +1241,45 @@ def search_results(api_endpoint, query, limit=500, use_cache=True, cache_name=No
 
             # Perform the search, retrying on 504 Gateway Timeout errors
             max_retries = 3
-            for attempt in range(max_retries):
-                if hasattr(api_endpoint, "search_bulk"):
-                    try:
-                        results = api_endpoint.search_bulk(query, **kwargs)
-                    except TypeError:  # pragma: no cover - older libs lack offset
-                        kwargs.pop("offset", None)
-                        results = api_endpoint.search_bulk(query, **kwargs)
-                        offset = 0
-                else:
-                    try:
-                        results = api_endpoint.search(query, **kwargs)
-                    except TypeError:  # pragma: no cover - older libs lack offset
-                        kwargs.pop("offset", None)
-                        results = api_endpoint.search(query, **kwargs)
-                        offset = 0
+            while True:
+                for attempt in range(max_retries):
+                    if hasattr(api_endpoint, "search_bulk"):
+                        try:
+                            results = api_endpoint.search_bulk(query, **kwargs)
+                        except TypeError:  # pragma: no cover - older libs lack offset
+                            kwargs.pop("offset", None)
+                            results = api_endpoint.search_bulk(query, **kwargs)
+                            offset = 0
+                    else:
+                        try:
+                            results = api_endpoint.search(query, **kwargs)
+                        except TypeError:  # pragma: no cover - older libs lack offset
+                            kwargs.pop("offset", None)
+                            results = api_endpoint.search(query, **kwargs)
+                            offset = 0
 
-                status_code = getattr(results, "status_code", 200)
-                if status_code != 504:
-                    break
-                if attempt < max_retries - 1:
-                    logger.warning(
-                        "Search API returned 504 - Gateway Timeout. Retrying (%s/%s)...",
-                        attempt + 1,
-                        max_retries,
-                    )
-                    time.sleep(2 ** attempt)
+                    status_code = getattr(results, "status_code", 200)
+                    if status_code != 504:
+                        break
+                    if attempt < max_retries - 1:
+                        logger.warning(
+                            "Search API returned 504 - Gateway Timeout. Retrying (%s/%s)...",
+                            attempt + 1,
+                            max_retries,
+                        )
+                        time.sleep(2 ** attempt)
+                else:
+                    if page_limit > 1:
+                        new_limit = max(1, page_limit // 2)
+                        logger.warning(
+                            "Reducing page limit from %s to %s due to repeated 504 errors",
+                            page_limit,
+                            new_limit,
+                        )
+                        page_limit = new_limit
+                        kwargs["limit"] = page_limit
+                        continue
+                break
 
             # Depending on the version of the `tideway` library the call above
             # may return either a `requests.Response` object or the decoded
@@ -1357,7 +1380,7 @@ def search_results(api_endpoint, query, limit=500, use_cache=True, cache_name=No
                 remaining = limit - len(results_all)
                 if remaining <= 0:
                     break
-                page_limit = 500 if remaining > 500 else remaining
+                page_limit = page_size if remaining > page_size else remaining
 
         result_json = tools.list_table_to_json(results_all)
         if use_cache:
@@ -1380,7 +1403,16 @@ def search_results(api_endpoint, query, limit=500, use_cache=True, cache_name=No
             )
         return []
 
-def search_in_chunks(api_endpoint, base_query, chunks, *, limit=0, use_cache=True, cache_name="chunk"):
+def search_in_chunks(
+    api_endpoint,
+    base_query,
+    chunks,
+    *,
+    limit=0,
+    use_cache=True,
+    cache_name="chunk",
+    page_size=500,
+):
     """Run a query multiple times using a chunking strategy.
 
     Parameters
@@ -1402,6 +1434,9 @@ def search_in_chunks(api_endpoint, base_query, chunks, *, limit=0, use_cache=Tru
     cache_name : str, optional
         Prefix for cache entries.  A unique suffix is appended for every
         chunk so results are stored separately.
+    page_size : int, optional
+        Maximum number of rows requested per API call.  Passed directly to
+        :func:`search_results`.
 
     Returns
     -------
@@ -1433,6 +1468,7 @@ def search_in_chunks(api_endpoint, base_query, chunks, *, limit=0, use_cache=Tru
             limit=limit,
             use_cache=use_cache,
             cache_name=chunk_cache,
+            page_size=page_size,
         )
         if isinstance(result, list):
             combined.extend(result)

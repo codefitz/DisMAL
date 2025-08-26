@@ -118,6 +118,28 @@ def test_search_results_retries_on_504(monkeypatch):
     assert search_results(search, {"query": "q"}) == [{"ok": True}]
     assert search.calls == 2
 
+
+def test_search_results_halves_page_size_after_retries(monkeypatch, caplog):
+    """Page limit is halved after exhausting 504 retries."""
+
+    class FlakySearch:
+        def __init__(self):
+            self.limits = []
+
+        def search(self, query, format="object", limit=500, offset=0):
+            self.limits.append(limit)
+            if len(self.limits) <= 3:
+                return DummyResponse(504, "Gateway Timeout", reason="Gateway Timeout")
+            return DummyResponse(200, "[{\"ok\": true}]")
+
+    monkeypatch.setattr(api_mod.time, "sleep", lambda x: None)
+    search = FlakySearch()
+    with caplog.at_level(logging.WARNING):
+        result = search_results(search, {"query": "q"})
+    assert result == [{"ok": True}]
+    assert search.limits == [500, 500, 500, 250]
+    assert any("Reducing page limit" in r.message for r in caplog.records)
+
 def test_search_results_paginates(monkeypatch):
     """search_results should accumulate more than 500 rows when limit=0."""
 
@@ -1052,7 +1074,14 @@ def test_outpost_creds_passes_endpoint_as_appliance(monkeypatch):
 def test_search_in_chunks_merges_results_and_uses_unique_cache(monkeypatch):
     calls = []
 
-    def fake_search_results(api_endpoint, query, limit=0, use_cache=True, cache_name=None):
+    def fake_search_results(
+        api_endpoint,
+        query,
+        limit=0,
+        use_cache=True,
+        cache_name=None,
+        page_size=500,
+    ):
         calls.append((query, cache_name))
         return [{"cache": cache_name}]
 
@@ -1069,7 +1098,14 @@ def test_search_in_chunks_merges_results_and_uses_unique_cache(monkeypatch):
 def test_search_in_chunks_formats_dict_queries(monkeypatch):
     captured = []
 
-    def fake_search_results(api_endpoint, query, limit=0, use_cache=True, cache_name=None):
+    def fake_search_results(
+        api_endpoint,
+        query,
+        limit=0,
+        use_cache=True,
+        cache_name=None,
+        page_size=500,
+    ):
         captured.append(query["query"])
         return []
 

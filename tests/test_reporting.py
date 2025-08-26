@@ -1212,7 +1212,9 @@ def test_discovery_analysis_includes_raw_timestamp(monkeypatch):
     monkeypatch.setattr(reporting.builder, "unique_identities", lambda s, *a, **k: [])
 
     def fake_search_results(search, query, limit=500, *args, **kwargs):
-        if query is reporting.queries.last_disco:
+        if query is reporting.queries.last_disco_basic:
+            return [{"DiscoveryAccess.id": 1, "Endpoint": "1.1.1.1"}]
+        if isinstance(query, dict) and "#id = 1" in query.get("query", ""):
             return [
                 {
                     "Endpoint": "1.1.1.1",
@@ -1306,7 +1308,13 @@ def test_discovery_analysis_merges_latest_fields(monkeypatch):
     monkeypatch.setattr(reporting.builder, "unique_identities", lambda s, *a, **k: [])
 
     def fake_search_results(search, query, limit=500, *args, **kwargs):
-        if query is reporting.queries.last_disco:
+        if query is reporting.queries.last_disco_basic:
+            return [
+                {"DiscoveryAccess.id": 1, "Endpoint": "1.1.1.1"},
+                {"DiscoveryAccess.id": 2, "Endpoint": "1.1.1.1"},
+                {"DiscoveryAccess.id": 3, "Endpoint": "3.3.3.3"},
+            ]
+        if isinstance(query, dict) and "#id = 1" in query.get("query", ""):
             return [
                 {
                     "Endpoint": "1.1.1.1",
@@ -1314,21 +1322,27 @@ def test_discovery_analysis_merges_latest_fields(monkeypatch):
                     "Scan_Endtime": "2024-01-01 00:00:00",
                     "Scan_Endtime_Raw": "2024-01-01T00:00:00+00:00",
                     "End_State": "OK",
-                },
+                }
+            ]
+        if isinstance(query, dict) and "#id = 2" in query.get("query", ""):
+            return [
                 {
                     "Endpoint": "1.1.1.1",
                     "Scan_Endtime": "2024-01-02 00:00:00",
                     "Scan_Endtime_Raw": "2024-01-02T00:00:00+00:00",
                     "End_State": "Failed",
                     "Host_Node_Updated": "2024-01-02 00:00:00",
-                },
+                }
+            ]
+        if isinstance(query, dict) and "#id = 3" in query.get("query", ""):
+            return [
                 {
                     "Endpoint": "3.3.3.3",
                     "Scan_Endtime": "2024-01-03 00:00:00",
                     "Scan_Endtime_Raw": "2024-01-03T00:00:00+00:00",
                     "End_State": "OK",
                     "DeviceInfo.last_credential": "cred1",
-                },
+                }
             ]
         if query is reporting.queries.dropped_endpoints:
             return []

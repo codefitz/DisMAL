@@ -96,6 +96,21 @@ deviceInfo = {"query":
                             process with unique()
                         """
                 }
+
+deviceInfo_network = {
+                        "query":
+                            """
+                                search DeviceInfo
+                                ORDER BY hostname
+                                show
+                                hostname as 'DeviceInfo.hostname',
+                                #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.#::InferredElement:.__all_ip_addrs as 'InferredElement.__all_ip_addrs',
+                                #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.#::InferredElement:.#DeviceWithInterface:DeviceInterface:InterfaceOfDevice:NetworkInterface.ip_addr as 'NetworkInterface.ip_addr',
+                                #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.#::InferredElement:.#DeviceWithInterface:DeviceInterface:InterfaceOfDevice:NetworkInterface.fqdns as 'NetworkInterface.fqdns',
+                                #DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.#DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DiscoveredIPAddressList.#List:List:Member:DiscoveredIPAddress.ip_addr as 'DiscoveredIPAddress.ip_addr'
+                                process with unique()
+                            """
+                }
 da_ip_lookup = {
                     "query":
                             """

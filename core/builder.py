@@ -570,8 +570,10 @@ def unique_identities(search):
 
     logger.info("Running: Unique Identities report...")
 
-    devices = api.search_results(search,queries.deviceInfo)
-    da_results = api.search_results(search,queries.da_ip_lookup)
+    # Use a larger page size for these potentially large queries to reduce
+    # the number of round trips to the Discovery API.
+    devices = api.search_results(search, queries.deviceInfo, page_size=1000)
+    da_results = api.search_results(search, queries.da_ip_lookup, page_size=1000)
 
     ### list of unique endpoints
     unique_endpoints = []

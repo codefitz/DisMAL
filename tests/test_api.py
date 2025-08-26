@@ -23,7 +23,10 @@ class DummyResponse:
 class DummySearch:
     def __init__(self, response):
         self._response = response
+        self.limit = None
+
     def search(self, query, format="object", limit=500):
+        self.limit = limit
         return self._response
 
 class DummyDisco:
@@ -45,6 +48,13 @@ def test_search_results_fallback():
     resp = DummyResponse(200, '[{"ok": true}]')
     search = DummySearch(resp)
     assert search_results(search, {"query": "q"}) == [{"ok": True}]
+
+
+def test_search_results_respects_page_size():
+    resp = DummyResponse(200, '[{"ok": true}]')
+    search = DummySearch(resp)
+    search_results(search, {"query": "q"}, page_size=42)
+    assert search.limit == 42
 
 
 def test_show_runs_handles_bad_response(capsys):

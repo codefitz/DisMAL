@@ -257,8 +257,8 @@ def query(search, args):
 
 def get_outposts(appliance):
     """Return list of Discovery Outposts from the appliance."""
-    logger.debug("Calling appliance.get('/discovery/outposts')")
-    resp = appliance.get("/discovery/outposts")
+    logger.debug("Calling appliance.get('/discovery/outposts?deleted=false')")
+    resp = appliance.get("/discovery/outposts?deleted=false")
     logger.debug(
         "outposts response ok=%s status=%s text=%s",
         getattr(resp, "ok", "N/A"),
@@ -570,7 +570,20 @@ def update_cred(appliance, uuid):
             active = True
     return active
 
-def search_results(api_endpoint,query):
+def search_results(api_endpoint, query, page_size=500):
+    """Return results from a Discovery API search.
+
+    Parameters
+    ----------
+    api_endpoint : object
+        The API endpoint object exposing ``search`` or ``search_bulk``.
+    query : dict or str
+        The query to execute.
+    page_size : int, optional
+        Number of results requested per page from the API.  Increasing the
+        value reduces the number of calls needed but may increase memory and
+        network load.  Defaults to ``500``.
+    """
     try:
         if logger.isEnabledFor(logging.DEBUG):
             try:
@@ -578,9 +591,9 @@ def search_results(api_endpoint,query):
             except Exception:
                 pass
         if hasattr(api_endpoint, "search_bulk"):
-            results = api_endpoint.search_bulk(query, format="object", limit=500)
+            results = api_endpoint.search_bulk(query, format="object", limit=page_size)
         else:
-            results = api_endpoint.search(query, format="object", limit=500)
+            results = api_endpoint.search(query, format="object", limit=page_size)
         # Depending on the version of the `tideway` library the call above may
         # return either a `requests.Response` object or the decoded JSON
         # directly.  Normalise the output so callers always get Python data

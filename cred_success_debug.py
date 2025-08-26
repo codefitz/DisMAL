@@ -221,7 +221,7 @@ def get_json(api_endpoint):
                 pass
         return data
 
-def search_results(api_endpoint, query):
+def search_results(api_endpoint, query, page_size=500):
     try:
         if logger.isEnabledFor(logging.DEBUG):
             try:
@@ -229,9 +229,9 @@ def search_results(api_endpoint, query):
             except Exception:
                 pass
         if hasattr(api_endpoint, "search_bulk"):
-            results = api_endpoint.search_bulk(query, format="object", limit=500)
+            results = api_endpoint.search_bulk(query, format="object", limit=page_size)
         else:
-            results = api_endpoint.search(query, format="object", limit=500)
+            results = api_endpoint.search(query, format="object", limit=page_size)
         if hasattr(results, "json"):
             if logger.isEnabledFor(logging.DEBUG):
                 try:

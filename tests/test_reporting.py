@@ -1216,7 +1216,11 @@ def test_discovery_analysis_includes_raw_timestamp(monkeypatch):
         return []
 
     def fake_chunked_last_disco(search):
-        reporting.api.search_results(search, reporting.queries.last_disco_functional_key)
+        reporting.api.search_results(search, reporting.queries.last_disco_key_deviceinfo)
+        reporting.api.search_results(search, reporting.queries.last_disco_key_run)
+        reporting.api.search_results(search, reporting.queries.last_disco_key_inferred)
+        reporting.api.search_results(search, reporting.queries.last_disco_key_session)
+        reporting.api.search_results(search, reporting.queries.last_disco_key_interface)
         reporting.api.search_results(search, reporting.queries.last_disco_access)
         reporting.api.search_results(search, reporting.queries.last_disco_deviceinfo)
         reporting.api.search_results(search, reporting.queries.last_disco_run)
@@ -1293,7 +1297,11 @@ def test_discovery_analysis_includes_raw_timestamp(monkeypatch):
     assert dropped_row[idx] == "2024-01-02T00:00:00+00:00"
 
     for q in [
-        reporting.queries.last_disco_functional_key,
+        reporting.queries.last_disco_key_deviceinfo,
+        reporting.queries.last_disco_key_run,
+        reporting.queries.last_disco_key_inferred,
+        reporting.queries.last_disco_key_session,
+        reporting.queries.last_disco_key_interface,
         reporting.queries.last_disco_access,
         reporting.queries.last_disco_deviceinfo,
         reporting.queries.last_disco_run,
@@ -1311,7 +1319,11 @@ def test_gather_discovery_data_calls_chunked_queries(monkeypatch):
         return []
 
     def fake_chunked_last_disco(search):
-        reporting.api.search_results(search, reporting.queries.last_disco_functional_key)
+        reporting.api.search_results(search, reporting.queries.last_disco_key_deviceinfo)
+        reporting.api.search_results(search, reporting.queries.last_disco_key_run)
+        reporting.api.search_results(search, reporting.queries.last_disco_key_inferred)
+        reporting.api.search_results(search, reporting.queries.last_disco_key_session)
+        reporting.api.search_results(search, reporting.queries.last_disco_key_interface)
         reporting.api.search_results(search, reporting.queries.last_disco_access)
         reporting.api.search_results(search, reporting.queries.last_disco_deviceinfo)
         reporting.api.search_results(search, reporting.queries.last_disco_run)
@@ -1334,7 +1346,11 @@ def test_gather_discovery_data_calls_chunked_queries(monkeypatch):
     reporting._gather_discovery_data(DummySearch(), DummyCreds(), args)
 
     for q in [
-        reporting.queries.last_disco_functional_key,
+        reporting.queries.last_disco_key_deviceinfo,
+        reporting.queries.last_disco_key_run,
+        reporting.queries.last_disco_key_inferred,
+        reporting.queries.last_disco_key_session,
+        reporting.queries.last_disco_key_interface,
         reporting.queries.last_disco_access,
         reporting.queries.last_disco_deviceinfo,
         reporting.queries.last_disco_run,
@@ -1357,7 +1373,11 @@ def test_discovery_analysis_merges_latest_fields(monkeypatch):
 
     def fake_chunked_last_disco(search):
         for q in [
-            reporting.queries.last_disco_functional_key,
+            reporting.queries.last_disco_key_deviceinfo,
+            reporting.queries.last_disco_key_run,
+            reporting.queries.last_disco_key_inferred,
+            reporting.queries.last_disco_key_session,
+            reporting.queries.last_disco_key_interface,
             reporting.queries.last_disco_access,
             reporting.queries.last_disco_deviceinfo,
             reporting.queries.last_disco_run,
@@ -1424,7 +1444,11 @@ def test_discovery_analysis_merges_latest_fields(monkeypatch):
     assert second[headers.index("credential_name")] == "CRED"
 
     for q in [
-        reporting.queries.last_disco_functional_key,
+        reporting.queries.last_disco_key_deviceinfo,
+        reporting.queries.last_disco_key_run,
+        reporting.queries.last_disco_key_inferred,
+        reporting.queries.last_disco_key_session,
+        reporting.queries.last_disco_key_interface,
         reporting.queries.last_disco_access,
         reporting.queries.last_disco_deviceinfo,
         reporting.queries.last_disco_run,

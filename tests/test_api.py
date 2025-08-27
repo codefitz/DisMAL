@@ -3,6 +3,7 @@ import sys
 import types
 import json
 import logging
+import pytest
 
 sys.modules.setdefault("pandas", types.SimpleNamespace())
 sys.modules.setdefault("tabulate", types.SimpleNamespace(tabulate=lambda *a, **k: ""))
@@ -90,14 +91,14 @@ def test_search_results_error_non_json():
     assert search_results(search, {"query": "q"}) == {"error": "Internal Server Error"}
 
 
-def test_search_results_warns_on_server_error(capfd):
+def test_search_results_warns_on_server_error(monkeypatch, caplog):
     resp = DummyResponse(504, 'Gateway Timeout', reason='Gateway Timeout')
     search = DummySearch(resp)
-    search_results(search, {"query": "q"})
-    out = capfd.readouterr().out
-    assert 'WARNING' in out
-    assert '504' in out
-    assert 'Results may be incomplete' in out
+    monkeypatch.setattr(api_mod.time, "sleep", lambda x: None)
+    with caplog.at_level(logging.WARNING):
+        with pytest.raises(api_mod.APITimeoutError):
+            search_results(search, {"query": "q"})
+    assert any("Gateway Timeout" in r.message for r in caplog.records)
 
 
 def test_search_results_retries_on_504(monkeypatch):

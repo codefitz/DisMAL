@@ -1179,6 +1179,97 @@ def chunked_last_disco(twsearch):
         DataFrame containing the merged discovery access information.
     """
 
+    def _fetch_df(query, label, columns):
+        """Return a DataFrame for ``query`` or an empty frame on error."""
+
+        data = api.search_results(twsearch, query)
+        if isinstance(data, list):
+            if data:
+                return pd.DataFrame(data)
+            return pd.DataFrame(columns=columns)
+        print(f"*** WARNING: {label} query failed; continuing with partial data. ***")
+        return pd.DataFrame(columns=columns)
+
+    # Retrieve foreign key mappings individually and merge on DiscoveryAccess.id
+    device_keys = _fetch_df(
+        queries.last_disco_key_deviceinfo,
+        "DeviceInfo key",
+        ["DiscoveryAccess.id", "DeviceInfo.id"],
+    )
+    if device_keys.empty:
+        return device_keys
+    run_keys = _fetch_df(
+        queries.last_disco_key_run,
+        "DiscoveryRun key",
+        ["DiscoveryAccess.id", "DiscoveryRun.id"],
+    )
+    inferred_keys = _fetch_df(
+        queries.last_disco_key_inferred,
+        "InferredElement key",
+        ["DiscoveryAccess.id", "InferredElement.id"],
+    )
+    session_keys = _fetch_df(
+        queries.last_disco_key_session,
+        "SessionResult key",
+        ["DiscoveryAccess.id", "SessionResult.id"],
+    )
+    interface_keys = _fetch_df(
+        queries.last_disco_key_interface,
+        "NetworkInterface key",
+        ["DiscoveryAccess.id", "NetworkInterface.id"],
+    )
+
+    key_df = device_keys.merge(run_keys, how="left", on="DiscoveryAccess.id")
+    key_df = key_df.merge(inferred_keys, how="left", on="DiscoveryAccess.id")
+    key_df = key_df.merge(session_keys, how="left", on="DiscoveryAccess.id")
+    key_df = key_df.merge(interface_keys, how="left", on="DiscoveryAccess.id")
+
+    access_df = _fetch_df(
+        queries.last_disco_access,
+        "DiscoveryAccess",
+        [
+            "DiscoveryAccess.id",
+            "DiscoveryAccess.end_state",
+            "DiscoveryAccess.previous_id",
+            "DiscoveryAccess.next_id",
+        ],
+    )
+    device_df = _fetch_df(
+        queries.last_disco_deviceinfo,
+        "DeviceInfo",
+        [
+            "DeviceInfo.id",
+            "DeviceInfo.last_access_method",
+            "DeviceInfo.last_slave",
+            "DeviceInfo.probed_os",
+        ],
+    )
+    run_df = _fetch_df(
+        queries.last_disco_run,
+        "DiscoveryRun",
+        ["DiscoveryRun.id"],
+    )
+    session_df = _fetch_df(
+        queries.last_disco_session,
+        "SessionResult",
+        [
+            "SessionResult.id",
+            "SessionResult.provider",
+            "SessionResult.session_type",
+            "SessionResult.success",
+        ],
+    )
+    inferred_df = _fetch_df(
+        queries.last_disco_inferred,
+        "InferredElement",
+        ["InferredElement.id", "InferredElement.__all_ip_addrs"],
+    )
+    interface_df = _fetch_df(
+        queries.last_disco_interface,
+        "NetworkInterface",
+        ["NetworkInterface.id", "NetworkInterface.ip_addr"],
+    )
+
     def _safe_search(query):
         try:
             return pd.DataFrame(api.search_results(twsearch, query))
@@ -1212,16 +1303,22 @@ def chunked_last_disco(twsearch):
     merged = key_df.merge(access_df, how="left", on="DiscoveryAccess.id")
     merged = merged.merge(device_df, how="left", on="DeviceInfo.id")
     merged = merged.merge(run_df, how="left", on="DiscoveryRun.id")
-    merged = merged.merge(session_df, how="left", on="SessionResult.id")
-    merged = merged.merge(inferred_df, how="left", on="InferredElement.id")
-    merged = merged.merge(interface_df, how="left", on="NetworkInterface.id")
+    if "SessionResult.id" in merged.columns:
+        merged = merged.merge(session_df, how="left", on="SessionResult.id")
+    if "InferredElement.id" in merged.columns:
+        merged = merged.merge(inferred_df, how="left", on="InferredElement.id")
+    if "NetworkInterface.id" in merged.columns:
+        merged = merged.merge(interface_df, how="left", on="NetworkInterface.id")
 
     session_logged = merged.groupby("DiscoveryAccess.id")["SessionResult.provider"].transform(
         lambda s: s.isna().any()
     )
     merged["DiscoveryAccess.session_results_logged"] = session_logged
 
-    prev_map = access_df.set_index("DiscoveryAccess.id")["DiscoveryAccess.end_state"]
+    if "DiscoveryAccess.end_state" in access_df.columns:
+        prev_map = access_df.set_index("DiscoveryAccess.id")["DiscoveryAccess.end_state"]
+    else:
+        prev_map = pd.Series(dtype=object)
     merged["DiscoveryAccess.previous_end_state"] = merged["DiscoveryAccess.previous_id"].map(prev_map)
 
     merged["DiscoveryAccess.access_method"] = merged[

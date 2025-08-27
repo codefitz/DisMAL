@@ -297,6 +297,11 @@ last_disco_basic = {
 # side using :mod:`pandas`.
 
 # 0) Functional Key extraction used for joins
+#
+# ``last_disco_functional_key`` is retained for backwards compatibility but the
+# reporting code now favours the more granular ``last_disco_key_*`` queries
+# defined below.  Each key query maps ``DiscoveryAccess.id`` to a specific
+# related node allowing partial lookups when some queries fail.
 last_disco_functional_key = {
     "query": """
             search DiscoveryAccess where endtime
@@ -308,6 +313,61 @@ last_disco_functional_key = {
             #Member:List:List:DiscoveryRun.#id as "DiscoveryRun.id",
             #::InferredElement:.#id as "InferredElement.id",
             #DiscoveryAccess:Metadata:Detail:SessionResult.#id as "SessionResult.id",
+            explode #::InferredElement:.#DeviceWithInterface:DeviceInterface:InterfaceOfDevice:NetworkInterface.#id as "NetworkInterface.id"
+            processwith unique()
+            """,
+}
+
+# 0a) DiscoveryAccess -> DeviceInfo key mapping
+last_disco_key_deviceinfo = {
+    "query": """
+            search DiscoveryAccess where endtime
+            show
+            #id as "DiscoveryAccess.id",
+            #DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.#id as "DeviceInfo.id"
+            processwith unique()
+            """,
+}
+
+# 0b) DiscoveryAccess -> DiscoveryRun key mapping
+last_disco_key_run = {
+    "query": """
+            search DiscoveryAccess where endtime
+            show
+            #id as "DiscoveryAccess.id",
+            #Member:List:List:DiscoveryRun.#id as "DiscoveryRun.id"
+            processwith unique()
+            """,
+}
+
+# 0c) DiscoveryAccess -> InferredElement key mapping
+last_disco_key_inferred = {
+    "query": """
+            search DiscoveryAccess where endtime
+            show
+            #id as "DiscoveryAccess.id",
+            #::InferredElement:.#id as "InferredElement.id"
+            processwith unique()
+            """,
+}
+
+# 0d) DiscoveryAccess -> SessionResult key mapping
+last_disco_key_session = {
+    "query": """
+            search DiscoveryAccess where endtime
+            show
+            #id as "DiscoveryAccess.id",
+            explode #DiscoveryAccess:Metadata:Detail:SessionResult.#id as "SessionResult.id"
+            processwith unique()
+            """,
+}
+
+# 0e) DiscoveryAccess -> NetworkInterface key mapping
+last_disco_key_interface = {
+    "query": """
+            search DiscoveryAccess where endtime
+            show
+            #id as "DiscoveryAccess.id",
             explode #::InferredElement:.#DeviceWithInterface:DeviceInterface:InterfaceOfDevice:NetworkInterface.#id as "NetworkInterface.id"
             processwith unique()
             """,

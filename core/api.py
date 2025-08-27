@@ -34,6 +34,12 @@ logger = logging.getLogger("_api_")
 _SEARCH_CACHE = {}
 _CACHE_ENDPOINT = None
 
+
+class APITimeoutError(RuntimeError):
+    """Raised when the Discovery API repeatedly times out."""
+
+    pass
+
 def init_endpoints(api_target, args):
     try:
         logger.debug("Requesting discovery endpoint from %s", args.target)
@@ -1279,6 +1285,9 @@ def search_results(
                         page_limit = new_limit
                         kwargs["limit"] = page_limit
                         continue
+                    raise APITimeoutError(
+                        "Search API returned 504 - Gateway Timeout after multiple retries"
+                    )
                 break
 
             # Depending on the version of the `tideway` library the call above
@@ -1387,6 +1396,8 @@ def search_results(
             _SEARCH_CACHE[cache_key] = result_json
             cache.save(cache_name or "query", query, limit, result_json)
         return result_json
+    except APITimeoutError:
+        raise
     except Exception as e:
         if logger.isEnabledFor(logging.DEBUG):
             msg = (

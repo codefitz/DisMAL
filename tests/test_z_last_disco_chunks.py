@@ -1,6 +1,8 @@
 import importlib
 import types
 import sys
+import importlib
+import logging
 
 # Ensure real pandas is available for this test
 sys.modules.pop("pandas", None)
@@ -8,6 +10,7 @@ import pandas as pd  # noqa: F401
 
 import core.reporting as reporting
 import core.queries as queries
+import core.api as api
 
 # Reload reporting to bind the real pandas module
 importlib.reload(reporting)
@@ -257,3 +260,16 @@ def test_chunked_last_disco_warns_on_partial_timeout(monkeypatch, capsys):
     reporting.chunked_last_disco(DummySearch())
     captured = capsys.readouterr()
     assert "partial data" in captured.out
+
+def test_chunked_last_disco_timeout(monkeypatch, caplog):
+    """Timeouts in any chunk return an empty DataFrame."""
+
+    def raise_timeout(_search, query, *args, **kwargs):
+        raise api.APITimeoutError()
+
+    monkeypatch.setattr(reporting.api, "search_results", raise_timeout)
+    with caplog.at_level(logging.WARNING):
+        df = reporting.chunked_last_disco(DummySearch())
+    assert df.empty
+    assert any("timed out" in r.message for r in caplog.records)
+

@@ -4,24 +4,41 @@
 #
 # For use with BMC Discovery
 #
-vers = "0.1.3"
+vers = "0.1.8"
 
 import argparse
 import datetime
 import logging
+import time
 import os
 import sys
+import yaml
 from argparse import RawTextHelpFormatter
 
-from core import access, api, builder, cli, curl, output, reporting, tools
+from core import access, api, builder, cli, curl, output, reporting, tools, cache, defaults
 
 logfile = 'dismal_%s.log'%( str(datetime.date.today() ))
 
 argv = sys.argv[1:]
 pwd  = os.getcwd()
 
-parser = argparse.ArgumentParser(description='DisMAL Toolkit for BMC Discovery v%s'%vers,formatter_class=RawTextHelpFormatter)
+# Pre-parse config file option so YAML values can supply defaults
+config_parser = argparse.ArgumentParser(add_help=False)
+config_parser.add_argument('--config', dest='config', type=str, help='Path to YAML config file.')
+config_args, remaining_argv = config_parser.parse_known_args(argv)
+
+config_file = config_args.config or os.path.join(pwd, 'config.yaml')
+config = {}
+if os.path.exists(config_file):
+    with open(config_file, 'r') as cf:
+        config = yaml.safe_load(cf) or {}
+
+parser = argparse.ArgumentParser(
+    description='DisMAL Toolkit for BMC Discovery v%s'%vers,
+    formatter_class=RawTextHelpFormatter,
+)
 parser.add_argument('-v', '--version', dest='version', action='store_true', required=False, help='Version info for this app.\n\n')
+parser.add_argument('--config', dest='config', type=str, required=False, help='Path to YAML config file.')
 
 # Access Inputs
 access_inputs = parser.add_argument_group("Discovery Target Access Methods")
@@ -29,8 +46,8 @@ access_inputs.add_argument('-a','--access_method', dest='access_method', choices
 Method to get data:
 "api" - Use API commands only.
 "cli" - Use CLI commands only.
-"all" - Use API and CLI commands (default).
-\n''',default='all',metavar='<method>')
+"all" - Use API and CLI commands.
+\n''',metavar='<method>')
 access_inputs.add_argument('-i','--discovery_instance', dest='target',  type=str, required=False, help='The Discovery or Outpost target.\n\n', metavar='<ip_or_hostname>')
 access_inputs.add_argument('-u','--username',           dest='username',  type=str, required=False, help='A login username for Discovery.\n\n',metavar='<username>')
 access_inputs.add_argument('-p','--password',           dest='password',  type=str, required=False, help='The login password for Discovery.\n\n',metavar='<password>')
@@ -49,10 +66,37 @@ outputs.add_argument('-s', '--path',    dest='output_path', type=str, required=F
 outputs.add_argument('--null',          dest='output_null',  action='store_true', required=False, help='Run report functions but do not output data (used for debugging).\n\n')
 outputs.add_argument('--stdout',       dest='output_cli', action='store_true', required=False, help='Print results to CLI instead of writing to output directory.\n\n')
 
+# Cache Options
+cache_opts = parser.add_argument_group("Cache Options")
+cache_opts.add_argument(
+    '--cache-dir',
+    dest='cache_dir',
+    type=str,
+    required=False,
+    help='Directory to store cached API query results.\n\n',
+    metavar='<path>',
+)
+cache_opts.add_argument(
+    '--no-cache',
+    dest='no_cache',
+    action='store_true',
+    required=False,
+    help='Force fresh API calls without reading or writing cache.\n\n',
+)
+cache_opts.add_argument(
+    '--use-export',
+    dest='use_export',
+    action='store_true',
+    required=False,
+    help='Use asynchronous export API for heavy queries.\n\n',
+)
+
 # Hidden Options
 parser.add_argument('-k', '--keep-awake',   dest='wakey', action='store_true', required=False, help=argparse.SUPPRESS)
 parser.add_argument('--debug',              dest='debugging',  action='store_true', required=False,
                     help='Enable debug logging including full API responses.\n\n')
+parser.add_argument('--max-threads', dest='max_threads', type=int, required=False,
+                    help='Maximum worker threads for concurrent API queries.\n\n')
 
 # CLI Appliance Management
 cli_management = parser.add_argument_group("CLI Appliance Management")
@@ -109,6 +153,11 @@ administration.add_argument('--cred_optimise',      dest='a_opt', action='store_
 administration.add_argument('--cred_remove',        dest='a_removal', type=str, required=False, help='Delete a credential from the system (with prompt).\n\n',metavar='<UUID>')
 administration.add_argument('--cred_remove_list',   dest='f_remlist', type=str, required=False, help='Specify a list of credentials to delete (no prompt).\n\n',metavar='<filename>')
 administration.add_argument('--kill_run',           dest='a_kill_run', type=str, required=False, help='Nicely kill a discovery run that is jammed.\n\n',metavar='<argument>')
+administration.add_argument('--schedule_timezone',  dest='schedule_timezone', type=str, required=False,
+                           help='Timezone to apply to discovery run schedules (e.g. CST or America/Chicago).\n\n',
+                           metavar='<timezone>')
+administration.add_argument('--reset_schedule_timezone', dest='reset_schedule_timezone', action='store_true', required=False,
+                           help='With --schedule_timezone, shift scheduled times back to UTC.\n\n')
 
 # Excavation (Boosted Reports)
 excavation = parser.add_argument_group("Excavation (Boosted Reports)")
@@ -116,14 +165,13 @@ excavation.add_argument('--excavate', dest='excavate', type=str, required=False,
 Excavation reports - for automated beneficial reporting and deeper analysis.
 Providing no <report> or using "default" will run all options that do not require a value.
 \nOptions:
-"active_runs"               - List active Discovery Runs
+"active_scans"              - List active Discovery Runs (use --queries for query output)
 "credential_success"        - Report on credential success with total number of accesses, success %% and ranges
 "db_lifecycle"              - Export Database lifecycle report
 "device" <name>             - Report on a specific device node by name (Host, NetworkDevice, Printer, SNMPManagedDevice, StorageDevice, ManagementController)
 "device_ids"                - Export list of unique device identities
 "devices"                   - Report of unique device profiles - includes last DiscoveryAccess and last _successful_ DiscoveryAccess results with credential details
 "devices_with_cred" <UUID>  - Run devices report for a specific credential
-"discovery_access"          - Report of all DiscoveryAccesses and dropped endpoints with credential details, consistency if available
 "discovery_analysis"        - Report of unique DiscoveryAccesses and dropped endpoints with credential details, consistency analysis and end state change
 "eca_errors"                - Export list of ECA Errors
 "excludes"                  - Export of exclude schedules
@@ -131,545 +179,961 @@ Providing no <report> or using "default" will run all options that do not requir
 "host_utilisation"          - Export of Hosts which appear to be underutilised (less than 3 running SIs)
 "hostname"                  - Print hostname
 "installed_agents"          - Analysis of installed agents
+"expected_agents"          - Report hosts missing expected agents
 "ipaddr" <ip_address>       - Search specific IP address for DiscoveryAccess results
 "missing_vms"               - Report of Hypervisor Hosts that have VMs which have not been discovered
 "near_removal"              - Export list of devices near removal
 "open_ports"                - Export of open ports analysis
 "orphan_vms"                - Report of Virtual Machines that are not related to a container Host
 "os_lifecycle"              - Export OS lifecycle report
-"overlapping_ips"           - Run overlapping range analysis report
+"ip_analysis"               - Run IP analysis report
 "pattern_modules"           - Summary of installed pattern modules
 "removed"                   - Export list of devices removed in the last 7 days (aged out)
 "schedules"                 - Export of schedules with additional list of which credentials will be used with scan/exclude
 "sensitive_data"            - Export Sensitive Data anaylsis
 "si_lifecycle"              - Export SoftwareInstance lifecycle report
 "si_user_accounts"          - Software with running process usernames
-"suggest_cred_opt"          - Display suggested order of credentials based on restricted ips, excluded ips, success/failure, privilege, type
+"suggested_cred_opt"        - Display suggested order of credentials based on restricted ips, excluded ips, success/failure, privilege, type
 "tku"                       - TKU version summary
 "unrecognised_snmp"         - Report of unrecognised SNMP devices (Model > Device)
+"capture_candidates" - Report of capture candidates
+"outpost_creds"            - Mapping of credentials to Outposts
 "vault"                     - Vault details
+"discovery_run_analysis"   - Report on DiscoveryRun ranges and endpoint stats
 "default"                   - Run all options that do not require a value
 \n
 ''',metavar='<report> [value]',nargs='*')
+excavation.add_argument('--resolve-hostnames', dest='resolve_hostnames', action='store_true', required=False,
+                        help='Ping guest full names and record the resolved IP address in results.')
+
+# Preserve existing report files when excavating
+excavation.add_argument(
+    '--preserve-existing',
+    dest='preserve_existing',
+    action='store_true',
+    required=False,
+    help='When running --excavate, skip writing any report file that already exists.',
+)
+# Backward-compatible alias for common misspelling
+excavation.add_argument(
+    '--perserve-existing',
+    dest='preserve_existing',
+    action='store_true',
+    required=False,
+    help=argparse.SUPPRESS,
+)
+
+excavation.add_argument(
+    '--queries',
+    dest='queries',
+    action='store_true',
+    required=False,
+    help=('Run specified --excavate items as raw queries and export CSV results without '
+          'post-processing. Each query is saved to a separate file prefixed with qry_.'),
+)
+
+excavation.add_argument(
+    '--include-endpoints',
+    dest='include_endpoints',
+    nargs='*',
+    required=False,
+    help='Only include the specified endpoints in device related reports. '
+         'Multiple IPs may be supplied separated by spaces.',
+    metavar='<ip>',
+)
+excavation.add_argument(
+    '--endpoint-prefix',
+    dest='endpoint_prefix',
+    required=False,
+    help='Limit device related reports to endpoints beginning with this prefix.',
+    metavar='<prefix>',
+)
+excavation.add_argument(
+    '--max-identities',
+    dest='max_identities',
+    type=int,
+    required=False,
+    help='Limit the number of unique identities processed for device reports.',
+    metavar='<num>',
+)
+
+# Apply configuration defaults before final parsing so CLI overrides them
+parser.set_defaults(
+    access_method=config.get('access_method', 'all'),
+    target=config.get('target'),
+    username=config.get('username'),
+    password=config.get('password'),
+    token=config.get('token'),
+    f_token=config.get('token_file'),
+    f_passwd=config.get('password_file'),
+    noping=config.get('noping', False),
+    # Support both ``debug`` and legacy ``debugging`` keys in the YAML config
+    # file so existing configurations continue to work.
+    debugging=config.get('debug', config.get('debugging', False)),
+    cache_dir=config.get('cache_dir'),
+    no_cache=config.get('no_cache', False),
+    max_threads=config.get('max_threads', 2),
+)
 
 global args
-args = parser.parse_args()
+args = parser.parse_args(remaining_argv)
+cache.configure(getattr(args, "cache_dir", None), enabled=not getattr(args, "no_cache", False))
 
-# Detect if --excavate was provided with no report or with 'default'
-excavate_default = False
-if args.excavate is not None:
-    if len(args.excavate) == 0 or args.excavate[0] == "default":
-        excavate_default = True
+def run_for_args(args):
+    start_time = time.time()
 
-if args.version:
-    print(vers)
-    if not args.target:
-        sys.exit(0)
+    # Detect if --excavate was provided with no report or with 'default'
+    excavate_default = False
+    if args.excavate is not None:
+        if len(args.excavate) == 0 or args.excavate[0] == "default":
+            excavate_default = True
 
-if args.wakey:
-    if not tools.in_wsl():
-        # pyautogui can't run in WSL as there is no screen, but need to keep function for Linux desktop
-        import pyautogui
-        print("Press CTRL+C to exit.")
-        while True:
-            pyautogui.moveRel(5,0, duration=0)
-            pyautogui.moveRel(-5,0, duration=0)
-            pyautogui.press('shift')
-            pyautogui.PAUSE = 60
+    if args.version:
+        print(vers)
+        if not args.target:
+            sys.exit(0)
 
-if args.target:
-    if args.output_path:
-        reporting_dir = args.output_path + "/output_" + args.target.replace(".","_")
-    else:
-        reporting_dir = pwd + "/output_" + args.target.replace(".","_")
-    if not os.path.exists(reporting_dir):
-        os.makedirs(reporting_dir)
-    args.reporting_dir = reporting_dir
+    if args.wakey:
+        if not tools.in_wsl():
+            # pyautogui can't run in WSL as there is no screen, but need to keep function for Linux desktop
+            import pyautogui
+            print("Press CTRL+C to exit.")
+            while True:
+                pyautogui.moveRel(5,0, duration=0)
+                pyautogui.moveRel(-5,0, duration=0)
+                pyautogui.press('shift')
+                pyautogui.PAUSE = 60
 
-logging.basicConfig(level=logging.INFO, filename=logfile, filemode='w', force=True)
-logger = logging.getLogger("_dismal_")
-if args.debugging:
-    logging.getLogger().setLevel(logging.DEBUG)
-    logger.setLevel(logging.DEBUG)
-
-logger.info("DisMAL Version %s"%vers)
-
-if args.noping:
-    msg = "Ping check off for %s..."%args.target
-    print(msg)
-else:
     if args.target:
-        exit_code = access.ping(args.target)
-        if exit_code == 0:
-            msg = "%s: successful ping!"%args.target
-            print(msg)
-            logger.info(msg)
+        if args.output_path:
+            reporting_dir = args.output_path + "/output_" + args.target.replace(".","_")
         else:
-            msg = "%s not found (ping)\nExit code: %s"%(args.target, exit_code)
-            print(msg)
-            logger.critical(msg)
-            sys.exit(1)
-
-# Validate access methods
-api_target = None
-cli_target = None
-## API
-if args.access_method=="api":
-    api_target = access.api_target(args)
-    disco, search, creds, vault, knowledge = api.init_endpoints(api_target, args)
-    system_user, system_passwd = access.login_target(None, args)
-
-## Client
-if args.access_method=="cli":
-    cli_target, tw_passwd = access.cli_target(args)
-    ## System User Access
-    system_user, system_passwd = access.login_target(cli_target, args)
-
-## All
-if args.access_method=="all":
-    api_target = access.api_target(args)
-    disco, search, creds, vault, knowledge = api.init_endpoints(api_target, args)
-    cli_target, tw_passwd = access.cli_target(args)
-    system_user, system_passwd = access.login_target(cli_target, args)
-
-if args.access_method == "all":
-
-    curl_cmd = True
-
-    if cli_target:
-
-        cli.certificates(cli_target, args, reporting_dir)
-        cli.etc_passwd(cli_target, args, reporting_dir)
-        cli.cluster_info(cli_target, args, reporting_dir)
-        cli.cmdb_errors(cli_target, args, reporting_dir)
-        cli.core_dumps(cli_target, args, reporting_dir)
-        cli.df_h(cli_target, args, reporting_dir)
-        cli.resolv_conf(cli_target, args, reporting_dir)
-        cli.ds_compact(cli_target, args, reporting_dir)
-        cli.host_info(cli_target, args, reporting_dir)
-        cli.ldap(cli_target, args, reporting_dir)
-        cli.timedatectl(cli_target, args, reporting_dir)
-        cli.reasoning(cli_target, args, system_user, system_passwd, reporting_dir)
-        cli.reports_model(cli_target, args, system_user, system_passwd, reporting_dir)
-        cli.syslog(cli_target, args, tw_passwd, reporting_dir)
-        cli.tax_deprecated(cli_target, args, system_user, system_passwd, reporting_dir)
-        cli.tree(cli_target, args, reporting_dir)
-        cli.tw_config_dump(cli_target, args, reporting_dir)
-        cli.tw_crontab(cli_target, args, reporting_dir)
-        cli.tw_options(cli_target, args, system_user, system_passwd, reporting_dir)
-        cli.ui_errors(cli_target, args, reporting_dir)
-        cli.vmware_tools(cli_target, args, tw_passwd, reporting_dir)
-        cli.audit(cli_target, args, system_user, system_passwd, reporting_dir)
-        cli.baseline(cli_target, args, reporting_dir)
-        cli.cmdb_sync(cli_target, args, system_user, system_passwd, reporting_dir)
-        cli.tw_events(cli_target, args, system_user, system_passwd, reporting_dir)
-        cli.export_platforms(cli_target, args, system_user, system_passwd, reporting_dir)
-        curl.platform_scripts(args, system_user, system_passwd, reporting_dir+"/platforms")
-        curl_cmd = False
-        cli.knowledge(cli_target, args, system_user, system_passwd, reporting_dir)
-        cli.licensing(cli_target, args, system_user, system_passwd, reporting_dir)
-        cli.tw_list_users(cli_target, args, reporting_dir)
-        reporting.successful_cli(cli_target, args, system_user, system_passwd, reporting_dir)
-        cli.schedules(cli_target, args, system_user, system_passwd, reporting_dir)
-        cli.excludes(cli_target, args, system_user, system_passwd, reporting_dir)
-        cli.sensitive(cli_target, args, system_user, system_passwd, reporting_dir)
-        cli.tplexport(cli_target, args, system_user, system_passwd, reporting_dir)
-        cli.eca_errors(cli_target, args, system_user, system_passwd, reporting_dir)
-        cli.open_ports(cli_target, args, system_user, system_passwd, reporting_dir)
-        cli.host_util(cli_target, args, system_user, system_passwd, reporting_dir)
-        cli.orphan_vms(cli_target, args, system_user, system_passwd, reporting_dir)
-        cli.missing_vms(cli_target, args, system_user, system_passwd, reporting_dir)
-        cli.near_removal(cli_target, args, system_user, system_passwd, reporting_dir)
-        cli.removed(cli_target, args, system_user, system_passwd, reporting_dir)
-        cli.os_lifecycle(cli_target, args, system_user, system_passwd, reporting_dir)
-        cli.software_lifecycle(cli_target, args, system_user, system_passwd, reporting_dir)
-        cli.db_lifecycle(cli_target, args, system_user, system_passwd, reporting_dir)
-        cli.unrecognised_snmp(cli_target, args, system_user, system_passwd, reporting_dir)
-        cli.installed_agents(cli_target, args, system_user, system_passwd, reporting_dir)
-        cli.software_usernames(cli_target, args, system_user, system_passwd, reporting_dir)
-        cli.module_summary(cli_target, args, system_user, system_passwd, reporting_dir)
-
-    if api_target:
-
-        api.admin(disco, args, reporting_dir)
-        api.audit(search, args, reporting_dir)
-        api.baseline(disco, args, reporting_dir)
-        api.cmdb_config(search, args, reporting_dir)
-        if curl_cmd:
-            curl.platform_scripts(args, system_user, system_passwd, reporting_dir+"/platforms")
-        api.modules(search, args, reporting_dir)
-        api.licensing(search, args, reporting_dir)     
-        reporting.devices(search, creds, args)
-        builder.ordering(creds, search, args, False)
-        api.success(creds, search, args, reporting_dir)
-        builder.scheduling(creds, search, args)
-        api.excludes(search, args, reporting_dir)
-        builder.overlapping(search, args)
-        reporting.discovery_access(search, creds, args)
-        reporting.discovery_analysis(search, creds, args)
-        api.show_runs(disco, args)
-        api.discovery_runs(disco, args, reporting_dir)
-        api.tpl_export(search, args, reporting_dir)
-        api.eca_errors(search, args, reporting_dir)
-        api.open_ports(search, args, reporting_dir)
-        api.host_util(search, args, reporting_dir)
-        api.orphan_vms(search, args, reporting_dir)
-        api.missing_vms(search, args, reporting_dir)
-        api.near_removal(search, args, reporting_dir)
-        api.removed(search, args, reporting_dir)
-        api.snmp(search, args, reporting_dir)
-        api.oslc(search, args, reporting_dir)
-        api.slc(search, args, reporting_dir)
-        api.dblc(search, args, reporting_dir)
-        api.agents(search, args, reporting_dir)
-        api.software_users(search, args, reporting_dir)
-        api.tku(knowledge, args, reporting_dir)
-
-if args.access_method=="cli":
-
-    if args.tideway == "certificates":
-        cli.certificates(cli_target, args, reporting_dir)
-
-    if args.tideway == "cli_users":
-        cli.etc_passwd(cli_target, args, reporting_dir)
-
-    if args.tideway == "clustering":
-        cli.cluster_info(cli_target, args, reporting_dir)
-
-    if args.tideway == "cmdb_errors":
-        cli.cmdb_errors(cli_target, args, reporting_dir)
-
-    if args.tideway == "core_dumps":
-        cli.core_dumps(cli_target, args, reporting_dir)
-
-    if args.tideway == "disk_info":
-        cli.df_h(cli_target, args, reporting_dir)
-
-    if args.tideway == "dns_resolution":
-        cli.resolv_conf(cli_target, args, reporting_dir)
-
-    if args.tideway == "ds_status":
-        cli.ds_compact(cli_target, args, reporting_dir)
-
-    if args.tideway == "host_info":
-        cli.host_info(cli_target, args, reporting_dir)
-
-    if args.tideway == "ldap":
-        cli.ldap(cli_target, args, reporting_dir)
-
-    if args.tideway == "ntp":
-        cli.timedatectl(cli_target, args, reporting_dir)
-
-    if args.tideway == "reasoning":
-        cli.reasoning(cli_target, args, system_user, system_passwd, reporting_dir)
-
-    if args.tideway == "reports_model":
-        cli.reports_model(cli_target, args, system_user, system_passwd, reporting_dir)
-
-    if args.tideway == "syslog":
-        cli.syslog(cli_target, args, tw_passwd, reporting_dir)
-
-    if args.tideway == "tax_deprecated":
-        cli.tax_deprecated(cli_target, args, system_user, system_passwd, reporting_dir)
-
-    if args.tideway == "tree":
-        cli.tree(cli_target, args, reporting_dir)
-
-    if args.tideway == "tw_config_dump":
-        cli.tw_config_dump(cli_target, args, reporting_dir)
-
-    if args.tideway == "tw_crontab":
-        cli.tw_crontab(cli_target, args, reporting_dir)
-
-    if args.tideway == "tw_options":
-        cli.tw_options(cli_target, args, system_user, system_passwd, reporting_dir)
-
-    if args.tideway == "ui_errors":
-        cli.ui_errors(cli_target, args, reporting_dir)
-
-    if args.tideway == "vmware_tools":
-        cli.vmware_tools(cli_target, args, tw_passwd, reporting_dir)
-
-    if args.clear_queue:
-        cli.clear_queue(cli_target)
-
-    if args.tw_user:
-        cli.user_management(cli_target, args)
-
-    if args.servicecctl:
-        cli.service_management(cli_target, args)
-
-    if args.sysadmin == "audit":
-        cli.audit(cli_target, args, system_user, system_passwd, reporting_dir)
-
-    if args.sysadmin == "baseline":
-        cli.baseline(cli_target, args, reporting_dir)
-
-    if args.sysadmin == "cmdbsync":
-        cli.cmdb_sync(cli_target, args, system_user, system_passwd, reporting_dir)
-
-    if args.sysadmin == "events":
-        cli.tw_events(cli_target, args, system_user, system_passwd, reporting_dir)
-
-    if args.sysadmin == "platforms":
-        cli.export_platforms(cli_target, args, system_user, system_passwd, reporting_dir)
-        curl.platform_scripts(args, system_user, system_passwd, reporting_dir+"/platforms")
-
-    if args.sysadmin == "knowledge":
-        cli.knowledge(cli_target, args, system_user, system_passwd, reporting_dir)
-    
-    if args.sysadmin == "licensing":
-        cli.licensing(cli_target, args, system_user, system_passwd, reporting_dir)
-
-    if args.sysadmin == "users":
-        cli.tw_list_users(cli_target, args, reporting_dir)
-
-    if excavate_default or (args.excavate and args.excavate[0] == "credential_success"):
-        reporting.successful_cli(cli_target, args, system_user, system_passwd, reporting_dir)
-
-    if excavate_default or (args.excavate and args.excavate[0] == "schedules"):
-        cli.schedules(cli_target, args, system_user, system_passwd, reporting_dir)
-
-    if excavate_default or (args.excavate and args.excavate[0] == "excludes"):
-        cli.excludes(cli_target, args, system_user, system_passwd, reporting_dir)
-
-    if excavate_default or (args.excavate and args.excavate[0] == "sensitive_data"):
-        cli.sensitive(cli_target, args, system_user, system_passwd, reporting_dir)
-
-    if excavate_default or (args.excavate and args.excavate[0] == "export_tpl"):
-        cli.tplexport(cli_target, args, system_user, system_passwd, reporting_dir)
-
-    if excavate_default or (args.excavate and args.excavate[0] == "eca_errors"):
-        cli.eca_errors(cli_target, args, system_user, system_passwd, reporting_dir)
-
-    if excavate_default or (args.excavate and args.excavate[0] == "open_ports"):
-        cli.open_ports(cli_target, args, system_user, system_passwd, reporting_dir)
-    
-    if excavate_default or (args.excavate and args.excavate[0] == "host_utilisation"):
-        cli.host_util(cli_target, args, system_user, system_passwd, reporting_dir)
-
-    if excavate_default or (args.excavate and args.excavate[0] == "orphan_vms"):
-        cli.orphan_vms(cli_target, args, system_user, system_passwd, reporting_dir)
-
-    if excavate_default or (args.excavate and args.excavate[0] == "missing_vms"):
-        cli.missing_vms(cli_target, args, system_user, system_passwd, reporting_dir)
-
-    if excavate_default or (args.excavate and args.excavate[0] == "near_removal"):
-        cli.near_removal(cli_target, args, system_user, system_passwd, reporting_dir)
-
-    if excavate_default or (args.excavate and args.excavate[0] == "removed"):
-        cli.removed(cli_target, args, system_user, system_passwd, reporting_dir)
-
-    if excavate_default or (args.excavate and args.excavate[0] == "os_lifecycle"):
-        cli.os_lifecycle(cli_target, args, system_user, system_passwd, reporting_dir)
-
-    if excavate_default or (args.excavate and args.excavate[0] == "software_lifecycle"):
-        cli.software_lifecycle(cli_target, args, system_user, system_passwd, reporting_dir)
-
-    if excavate_default or (args.excavate and args.excavate[0] == "db_lifecycle"):
-        cli.db_lifecycle(cli_target, args, system_user, system_passwd, reporting_dir)
-
-    if excavate_default or (args.excavate and args.excavate[0] == "unrecogised_snmp"):
-        cli.unrecognised_snmp(cli_target, args, system_user, system_passwd, reporting_dir)
-
-    if excavate_default or (args.excavate and args.excavate[0] == "installed_agents"):
-        cli.installed_agents(cli_target, args, system_user, system_passwd, reporting_dir)
-
-    if excavate_default or (args.excavate and args.excavate[0] == "si_user_accounts"):
-        cli.software_usernames(cli_target, args, system_user, system_passwd, reporting_dir)
-
-    if excavate_default or (args.excavate and args.excavate[0] == "pattern_modules"):
-        cli.module_summary(cli_target, args, system_user, system_passwd, reporting_dir)
-
-if args.access_method=="api":
-
-    if args.sysadmin == "api_version":
-        api.admin(disco, args, reporting_dir)
-
-    if args.sysadmin == "audit":
-        api.audit(search, args, reporting_dir)
-
-    if args.sysadmin == "baseline":
-        api.baseline(disco, args, reporting_dir)
-
-    if args.sysadmin == "cmdbsync":
-        api.cmdb_config(search, args, reporting_dir)
-
-    if args.sysadmin == "platforms":
-        curl.platform_scripts(args, system_user, system_passwd, reporting_dir+"/platforms")
-
-    if args.sysadmin == "knowledge":
-        api.modules(search, args, reporting_dir)
-
-    if args.sysadmin == "licensing":
-        api.licensing(search, args, reporting_dir)
-
-    if args.a_enable:
-        active = api.update_cred(creds, args.a_enable)
-        if active is not None:
-            if active:
-                msg = "Credential %s Activated.\n" % (args.a_enable)
-            else:
-                msg = "Credential %s Deactivated.\n" % (args.a_enable)
-        else:
-            msg = "Unable to determine %s credential state.\n" % (args.a_enable)
+            reporting_dir = pwd + "/output_" + args.target.replace(".","_")
+        if not os.path.exists(reporting_dir):
+            os.makedirs(reporting_dir)
+        args.reporting_dir = reporting_dir
+
+    logging.basicConfig(level=logging.INFO, filename=logfile, filemode='w', force=True)
+    logger = logging.getLogger("_dismal_")
+    if args.debugging:
+        logging.getLogger().setLevel(logging.DEBUG)
+        logger.setLevel(logging.DEBUG)
+
+    logger.info("DisMAL Version %s"%vers)
+
+    if args.noping:
+        msg = "Ping check off for %s..."%args.target
         print(msg)
-        logger.info(msg)
+    else:
+        if args.target:
+            exit_code = access.ping(args.target)
+            if exit_code == 0:
+                msg = "%s: successful ping!"%args.target
+                print(msg)
+                logger.info(msg)
+            else:
+                msg = "%s not found (ping)\nExit code: %s"%(args.target, exit_code)
+                print(msg)
+                logger.critical(msg)
+                sys.exit(1)
 
-    if args.f_enablelist:
-        exists = os.path.isfile(args.f_enablelist)
-        if exists:
-            go_ahead = input("This will switch the 'enabled' status of all credentials\nEnabled -> Disabled\nDisabled -> Enabled\n\nContinue? (Y/y) ")
-            if go_ahead == "y" or go_ahead == "Y":
-                with open(args.f_enablelist) as f:
-                    for line in f:
-                        active = api.update_cred(creds, line.strip())
-                        if active is not None:
-                            if active:
-                                msg = "Credential %s Activated.\n" % (line.strip())
-                            else:
-                                msg = "Credential %s Deactivated.\n" % (line.strip())
-                        else:
-                            msg = "Unable to determine %s credential state.\n" % (line.strip())
-                        logger.info(msg)
+    # Validate access methods
+    api_target = None
+    cli_target = None
+    ## API
+    if args.access_method=="api":
+        api_target = access.api_target(args)
+        disco, search, creds, vault, knowledge = api.init_endpoints(api_target, args)
+        system_user, system_passwd = access.login_target(None, args)
 
-    if args.a_opt:
-        builder.ordering(creds, search, args, True)
+    ## Client
+    if args.access_method=="cli":
+        cli_target, tw_passwd = access.cli_target(args)
+        ## System User Access
+        system_user, system_passwd = access.login_target(cli_target, args)
 
-    if args.a_removal:
-        lookup = builder.get_credential(search, creds, args.a_removal, args)
-        if lookup:
-            go_ahead = input("Are you sure you want to delete this credential? (Y/y) ")
-            if go_ahead == "y" or go_ahead == "Y":
-                success = api.remove_cred(creds, args)
-                if success:
-                    msg = "Credential %s deleted from %s." % (args.a_removal, args.target)
-                else:
-                    msg = "Credential %s was not deleted\n%s" % (args.a_removal, success)
+    ## All
+    if args.access_method=="all":
+        api_target = access.api_target(args)
+        disco, search, creds, vault, knowledge = api.init_endpoints(api_target, args)
+        cli_target, tw_passwd = access.cli_target(args)
+        system_user, system_passwd = access.login_target(cli_target, args)
+
+    identities = None
+    # Only build identity cache when we will actually generate devices or
+    # device_ids and those outputs are not preserved.
+    if api_target and not getattr(args, "queries", False):
+        dev_csv = os.path.join(reporting_dir, "devices.csv")
+        ids_csv = os.path.join(reporting_dir, "device_ids.csv")
+        preserve = getattr(args, "preserve_existing", False)
+
+        want_devices_default = True  # default flow calls devices
+        if preserve and os.path.exists(dev_csv):
+            want_devices_default = False
+
+        want_devices_excavate = False
+        want_device_ids_excavate = False
+        if args.excavate is not None:
+            ex = args.excavate
+            # default includes both devices and device_ids
+            if len(ex) == 0 or ex[0] == "default":
+                want_devices_excavate = not (preserve and os.path.exists(dev_csv))
+                want_device_ids_excavate = not (preserve and os.path.exists(ids_csv))
+            else:
+                if ex[0] == "devices":
+                    want_devices_excavate = not (preserve and os.path.exists(dev_csv))
+                if ex[0] == "device_ids":
+                    want_device_ids_excavate = not (preserve and os.path.exists(ids_csv))
+
+        if want_devices_default or want_devices_excavate or want_device_ids_excavate:
+            identities = builder.unique_identities(
+                search,
+                args.include_endpoints,
+                args.endpoint_prefix,
+                getattr(args, "max_identities", None),
+            )
+
+    if getattr(args, "queries", False):
+        if "search" in locals() and search:
+            api.run_queries(search, args, reporting_dir)
+        else:
+            msg = "API access required to run queries"
+            print(msg)
+            logger.error(msg)
+        return
+
+    if args.access_method == "all":
+
+        curl_cmd = True
+
+        if cli_target:
+
+            cli.certificates(cli_target, args, reporting_dir)
+            cli.etc_passwd(cli_target, args, reporting_dir)
+            cli.cluster_info(cli_target, args, reporting_dir)
+            cli.cmdb_errors(cli_target, args, reporting_dir)
+            cli.core_dumps(cli_target, args, reporting_dir)
+            cli.df_h(cli_target, args, reporting_dir)
+            cli.resolv_conf(cli_target, args, reporting_dir)
+            cli.ds_compact(cli_target, args, reporting_dir)
+            cli.host_info(cli_target, args, reporting_dir)
+            cli.ldap(cli_target, args, reporting_dir)
+            cli.timedatectl(cli_target, args, reporting_dir)
+            cli.reasoning(cli_target, args, system_user, system_passwd, reporting_dir)
+            cli.reports_model(cli_target, args, system_user, system_passwd, reporting_dir)
+            cli.syslog(cli_target, args, tw_passwd, reporting_dir)
+            cli.tax_deprecated(cli_target, args, system_user, system_passwd, reporting_dir)
+            cli.tree(cli_target, args, reporting_dir)
+            cli.tw_config_dump(cli_target, args, reporting_dir)
+            cli.tw_crontab(cli_target, args, reporting_dir)
+            cli.tw_options(cli_target, args, system_user, system_passwd, reporting_dir)
+            cli.ui_errors(cli_target, args, reporting_dir)
+            cli.vmware_tools(cli_target, args, tw_passwd, reporting_dir)
+            cli.audit(cli_target, args, system_user, system_passwd, reporting_dir)
+            cli.baseline(cli_target, args, reporting_dir)
+            cli.cmdb_sync(cli_target, args, system_user, system_passwd, reporting_dir)
+            cli.tw_events(cli_target, args, system_user, system_passwd, reporting_dir)
+            cli.export_platforms(cli_target, args, system_user, system_passwd, reporting_dir)
+            curl.platform_scripts(args, system_user, system_passwd, reporting_dir+"/platforms")
+            curl_cmd = False
+            cli.knowledge(cli_target, args, system_user, system_passwd, reporting_dir)
+            cli.licensing(cli_target, args, system_user, system_passwd, reporting_dir)
+            cli.tw_list_users(cli_target, args, reporting_dir)
+            reporting.successful_cli(cli_target, args, system_user, system_passwd, reporting_dir)
+            cli.schedules(cli_target, args, system_user, system_passwd, reporting_dir)
+            cli.excludes(cli_target, args, system_user, system_passwd, reporting_dir)
+            cli.sensitive(cli_target, args, system_user, system_passwd, reporting_dir)
+            cli.tplexport(cli_target, args, system_user, system_passwd, reporting_dir)
+            cli.eca_errors(cli_target, args, system_user, system_passwd, reporting_dir)
+            cli.open_ports(cli_target, args, system_user, system_passwd, reporting_dir)
+            cli.host_util(cli_target, args, system_user, system_passwd, reporting_dir)
+            cli.orphan_vms(cli_target, args, system_user, system_passwd, reporting_dir)
+            cli.missing_vms(cli_target, args, system_user, system_passwd, reporting_dir)
+            cli.near_removal(cli_target, args, system_user, system_passwd, reporting_dir)
+            cli.removed(cli_target, args, system_user, system_passwd, reporting_dir)
+            cli.os_lifecycle(cli_target, args, system_user, system_passwd, reporting_dir)
+            cli.software_lifecycle(cli_target, args, system_user, system_passwd, reporting_dir)
+            cli.db_lifecycle(cli_target, args, system_user, system_passwd, reporting_dir)
+            cli.unrecognised_snmp(cli_target, args, system_user, system_passwd, reporting_dir)
+            cli.capture_candidates(cli_target, args, system_user, system_passwd, reporting_dir)
+            cli.installed_agents(cli_target, args, system_user, system_passwd, reporting_dir)
+            cli.expected_agents(cli_target, args, system_user, system_passwd, reporting_dir)
+            cli.software_usernames(cli_target, args, system_user, system_passwd, reporting_dir)
+            cli.module_summary(cli_target, args, system_user, system_passwd, reporting_dir)
+
+        if api_target:
+
+            def _preserve(path: str) -> bool:
+                try:
+                    return bool(
+                        getattr(args, "preserve_existing", False)
+                        and args.excavate is not None
+                        and path
+                        and os.path.exists(path)
+                    )
+                except Exception:
+                    return False
+
+            def _msg_preserve(path: str):
+                msg = f"Preserving existing report: {path}"
                 print(msg)
                 logger.info(msg)
 
-    if args.f_remlist:
-        exists = os.path.isfile(args.f_remlist)
-        if exists:
-            with open(args.f_remlist) as f:
-                for line in f:
-                    success = api.remove_cred(creds, line.strip())
+            # Core API reports — skip heavy work if file already exists during excavation
+            p = os.path.join(reporting_dir, defaults.api_filename)
+            if not _preserve(p):
+                api.admin(disco, args, reporting_dir)
+            else:
+                _msg_preserve(p)
+
+            p = os.path.join(reporting_dir, defaults.audit_filename)
+            if not _preserve(p):
+                api.audit(search, args, reporting_dir)
+            else:
+                _msg_preserve(p)
+
+            p = os.path.join(reporting_dir, defaults.baseline_filename)
+            if not _preserve(p):
+                api.baseline(disco, args, reporting_dir)
+            else:
+                _msg_preserve(p)
+
+            p = os.path.join(reporting_dir, defaults.cmdbsync_filename)
+            if not _preserve(p):
+                api.cmdb_config(search, args, reporting_dir)
+            else:
+                _msg_preserve(p)
+            if curl_cmd:
+                curl.platform_scripts(args, system_user, system_passwd, reporting_dir+"/platforms")
+            p = os.path.join(reporting_dir, defaults.tw_knowledge_filename)
+            if not _preserve(p):
+                api.modules(search, args, reporting_dir)
+            else:
+                _msg_preserve(p)
+
+            # Licensing may write a ZIP or TXT; skip if either exists
+            p_zip = os.path.join(reporting_dir, defaults.tw_license_zip_filename)
+            p_txt = os.path.join(reporting_dir, defaults.tw_license_raw_filename)
+            if not _preserve(p_zip) and not _preserve(p_txt):
+                api.licensing(search, args, reporting_dir)
+            else:
+                _msg_preserve(p_zip if os.path.exists(p_zip) else p_txt)
+
+            p = os.path.join(reporting_dir, "devices.csv")
+            if not _preserve(p):
+                reporting.devices(search, creds, args, identities=identities)
+            else:
+                _msg_preserve(p)
+
+            p = os.path.join(reporting_dir, "suggested_cred_opt.csv")
+            if not _preserve(p):
+                builder.ordering(creds, search, args, False)
+            else:
+                _msg_preserve(p)
+
+            p = os.path.join(reporting_dir, "credential_success.csv")
+            if not _preserve(p):
+                api.success(creds, search, args, reporting_dir)
+            else:
+                _msg_preserve(p)
+
+            p = os.path.join(reporting_dir, "schedules.csv")
+            if not _preserve(p):
+                builder.scheduling(creds, search, args)
+            else:
+                _msg_preserve(p)
+
+            p = os.path.join(reporting_dir, defaults.exclude_ranges_filename)
+            if not _preserve(p):
+                api.excludes(search, args, reporting_dir)
+            else:
+                _msg_preserve(p)
+
+            p = os.path.join(reporting_dir, "ip_analysis.csv")
+            if not _preserve(p):
+                builder.ip_analysis(search, args)
+            else:
+                _msg_preserve(p)
+            if args.excavate and args.excavate[0] == "discovery_analysis":
+                reporting.discovery_analysis(search, creds, args)
+            api.show_runs(disco, args)
+            p = os.path.join(reporting_dir, defaults.active_scans_filename)
+            if not _preserve(p):
+                api.discovery_runs(disco, args, reporting_dir)
+            else:
+                _msg_preserve(p)
+
+            # Export TPL tree; leave as-is (multi-file output)
+            api.tpl_export(search, args, reporting_dir)
+
+            for fname, fn in [
+                (defaults.eca_errors_filename, api.eca_errors),
+                (defaults.open_ports_filename, api.open_ports),
+                (defaults.host_util_filename, api.host_util),
+                (defaults.orphan_vms_filename, api.orphan_vms),
+                (defaults.missing_vms_filename, api.missing_vms),
+                (defaults.near_removal_filename, api.near_removal),
+                (defaults.removed_filename, api.removed),
+                (defaults.snmp_unrecognised_filename, api.snmp),
+                (defaults.capture_candidates_filename, api.capture_candidates),
+                (defaults.os_lifecycle_filename, api.oslc),
+                (defaults.si_lifecycle_filename, api.slc),
+                (defaults.db_lifecycle_filename, api.dblc),
+                (defaults.installed_agents_filename, api.agents),
+                ("expected_agents.csv", api.expected_agents),
+                (defaults.si_user_accounts_filename, api.software_users),
+                (defaults.tku_filename, api.tku),
+                (defaults.outpost_creds_filename, api.outpost_creds),
+            ]:
+                p = os.path.join(reporting_dir, fname)
+                if not _preserve(p):
+                    # Many of these functions have signature (search,args,dir)
+                    # Some accept (creds, search, args, dir) or (knowledge, args, dir)
+                    try:
+                        if fn is api.outpost_creds:
+                            fn(creds, search, args, reporting_dir)
+                        elif fn is api.tku:
+                            fn(knowledge, args, reporting_dir)
+                        else:
+                            fn(search, args, reporting_dir)
+                    except TypeError:
+                        # Fallback for differing signatures
+                        try:
+                            fn(search, args)
+                        except Exception:
+                            fn(args, reporting_dir)
+                else:
+                    _msg_preserve(p)
+
+    if args.access_method=="cli":
+
+        if args.tideway == "certificates":
+            cli.certificates(cli_target, args, reporting_dir)
+
+        if args.tideway == "cli_users":
+            cli.etc_passwd(cli_target, args, reporting_dir)
+
+        if args.tideway == "clustering":
+            cli.cluster_info(cli_target, args, reporting_dir)
+
+        if args.tideway == "cmdb_errors":
+            cli.cmdb_errors(cli_target, args, reporting_dir)
+
+        if args.tideway == "core_dumps":
+            cli.core_dumps(cli_target, args, reporting_dir)
+
+        if args.tideway == "disk_info":
+            cli.df_h(cli_target, args, reporting_dir)
+
+        if args.tideway == "dns_resolution":
+            cli.resolv_conf(cli_target, args, reporting_dir)
+
+        if args.tideway == "ds_status":
+            cli.ds_compact(cli_target, args, reporting_dir)
+
+        if args.tideway == "host_info":
+            cli.host_info(cli_target, args, reporting_dir)
+
+        if args.tideway == "ldap":
+            cli.ldap(cli_target, args, reporting_dir)
+
+        if args.tideway == "ntp":
+            cli.timedatectl(cli_target, args, reporting_dir)
+
+        if args.tideway == "reasoning":
+            cli.reasoning(cli_target, args, system_user, system_passwd, reporting_dir)
+
+        if args.tideway == "reports_model":
+            cli.reports_model(cli_target, args, system_user, system_passwd, reporting_dir)
+
+        if args.tideway == "syslog":
+            cli.syslog(cli_target, args, tw_passwd, reporting_dir)
+
+        if args.tideway == "tax_deprecated":
+            cli.tax_deprecated(cli_target, args, system_user, system_passwd, reporting_dir)
+
+        if args.tideway == "tree":
+            cli.tree(cli_target, args, reporting_dir)
+
+        if args.tideway == "tw_config_dump":
+            cli.tw_config_dump(cli_target, args, reporting_dir)
+
+        if args.tideway == "tw_crontab":
+            cli.tw_crontab(cli_target, args, reporting_dir)
+
+        if args.tideway == "tw_options":
+            cli.tw_options(cli_target, args, system_user, system_passwd, reporting_dir)
+
+        if args.tideway == "ui_errors":
+            cli.ui_errors(cli_target, args, reporting_dir)
+
+        if args.tideway == "vmware_tools":
+            cli.vmware_tools(cli_target, args, tw_passwd, reporting_dir)
+
+        if args.clear_queue:
+            cli.clear_queue(cli_target)
+
+        if args.tw_user:
+            cli.user_management(cli_target, args)
+
+        if args.servicecctl:
+            cli.service_management(cli_target, args)
+
+        if args.sysadmin == "audit":
+            cli.audit(cli_target, args, system_user, system_passwd, reporting_dir)
+
+        if args.sysadmin == "baseline":
+            cli.baseline(cli_target, args, reporting_dir)
+
+        if args.sysadmin == "cmdbsync":
+            cli.cmdb_sync(cli_target, args, system_user, system_passwd, reporting_dir)
+
+        if args.sysadmin == "events":
+            cli.tw_events(cli_target, args, system_user, system_passwd, reporting_dir)
+
+        if args.sysadmin == "platforms":
+            cli.export_platforms(cli_target, args, system_user, system_passwd, reporting_dir)
+            curl.platform_scripts(args, system_user, system_passwd, reporting_dir+"/platforms")
+
+        if args.sysadmin == "knowledge":
+            cli.knowledge(cli_target, args, system_user, system_passwd, reporting_dir)
+    
+        if args.sysadmin == "licensing":
+            cli.licensing(cli_target, args, system_user, system_passwd, reporting_dir)
+
+        if args.sysadmin == "users":
+            cli.tw_list_users(cli_target, args, reporting_dir)
+
+        if excavate_default or (args.excavate and args.excavate[0] == "credential_success"):
+            p = os.path.join(reporting_dir, "credential_success.csv")
+            if not (getattr(args, "preserve_existing", False) and os.path.exists(p)):
+                reporting.successful_cli(cli_target, args, system_user, system_passwd, reporting_dir)
+
+        if excavate_default or (args.excavate and args.excavate[0] == "schedules"):
+            p = os.path.join(reporting_dir, "schedules.csv")
+            if not (getattr(args, "preserve_existing", False) and os.path.exists(p)):
+                cli.schedules(cli_target, args, system_user, system_passwd, reporting_dir)
+
+        if excavate_default or (args.excavate and args.excavate[0] == "excludes"):
+            p = os.path.join(reporting_dir, defaults.exclude_ranges_filename)
+            if not (getattr(args, "preserve_existing", False) and os.path.exists(p)):
+                cli.excludes(cli_target, args, system_user, system_passwd, reporting_dir)
+
+        if excavate_default or (args.excavate and args.excavate[0] == "sensitive_data"):
+            p = os.path.join(reporting_dir, defaults.sensitive_data_filename)
+            if not (getattr(args, "preserve_existing", False) and os.path.exists(p)):
+                cli.sensitive(cli_target, args, system_user, system_passwd, reporting_dir)
+
+        if excavate_default or (args.excavate and args.excavate[0] == "export_tpl"):
+            cli.tplexport(cli_target, args, system_user, system_passwd, reporting_dir)
+
+        if excavate_default or (args.excavate and args.excavate[0] == "eca_errors"):
+            p = os.path.join(reporting_dir, defaults.eca_errors_filename)
+            if not (getattr(args, "preserve_existing", False) and os.path.exists(p)):
+                cli.eca_errors(cli_target, args, system_user, system_passwd, reporting_dir)
+
+        if excavate_default or (args.excavate and args.excavate[0] == "open_ports"):
+            p = os.path.join(reporting_dir, defaults.open_ports_filename)
+            if not (getattr(args, "preserve_existing", False) and os.path.exists(p)):
+                cli.open_ports(cli_target, args, system_user, system_passwd, reporting_dir)
+    
+        if excavate_default or (args.excavate and args.excavate[0] == "host_utilisation"):
+            p = os.path.join(reporting_dir, defaults.host_util_filename)
+            if not (getattr(args, "preserve_existing", False) and os.path.exists(p)):
+                cli.host_util(cli_target, args, system_user, system_passwd, reporting_dir)
+
+        if excavate_default or (args.excavate and args.excavate[0] == "orphan_vms"):
+            p = os.path.join(reporting_dir, defaults.orphan_vms_filename)
+            if not (getattr(args, "preserve_existing", False) and os.path.exists(p)):
+                cli.orphan_vms(cli_target, args, system_user, system_passwd, reporting_dir)
+
+        if excavate_default or (args.excavate and args.excavate[0] == "missing_vms"):
+            p = os.path.join(reporting_dir, defaults.missing_vms_filename)
+            if not (getattr(args, "preserve_existing", False) and os.path.exists(p)):
+                cli.missing_vms(cli_target, args, system_user, system_passwd, reporting_dir)
+
+        if excavate_default or (args.excavate and args.excavate[0] == "near_removal"):
+            p = os.path.join(reporting_dir, defaults.near_removal_filename)
+            if not (getattr(args, "preserve_existing", False) and os.path.exists(p)):
+                cli.near_removal(cli_target, args, system_user, system_passwd, reporting_dir)
+
+        if excavate_default or (args.excavate and args.excavate[0] == "removed"):
+            p = os.path.join(reporting_dir, defaults.removed_filename)
+            if not (getattr(args, "preserve_existing", False) and os.path.exists(p)):
+                cli.removed(cli_target, args, system_user, system_passwd, reporting_dir)
+
+        if excavate_default or (args.excavate and args.excavate[0] == "os_lifecycle"):
+            p = os.path.join(reporting_dir, defaults.os_lifecycle_filename)
+            if not (getattr(args, "preserve_existing", False) and os.path.exists(p)):
+                cli.os_lifecycle(cli_target, args, system_user, system_passwd, reporting_dir)
+
+        if excavate_default or (args.excavate and args.excavate[0] == "software_lifecycle"):
+            p = os.path.join(reporting_dir, defaults.si_lifecycle_filename)
+            if not (getattr(args, "preserve_existing", False) and os.path.exists(p)):
+                cli.software_lifecycle(cli_target, args, system_user, system_passwd, reporting_dir)
+
+        if excavate_default or (args.excavate and args.excavate[0] == "db_lifecycle"):
+            p = os.path.join(reporting_dir, defaults.db_lifecycle_filename)
+            if not (getattr(args, "preserve_existing", False) and os.path.exists(p)):
+                cli.db_lifecycle(cli_target, args, system_user, system_passwd, reporting_dir)
+
+        if excavate_default or (args.excavate and args.excavate[0] == "unrecogised_snmp"):
+            p = os.path.join(reporting_dir, defaults.snmp_unrecognised_filename)
+            if not (getattr(args, "preserve_existing", False) and os.path.exists(p)):
+                cli.unrecognised_snmp(cli_target, args, system_user, system_passwd, reporting_dir)
+
+        if excavate_default or (args.excavate and args.excavate[0] == "capture_candidates"):
+            p = os.path.join(reporting_dir, defaults.capture_candidates_filename)
+            if not (getattr(args, "preserve_existing", False) and os.path.exists(p)):
+                cli.capture_candidates(cli_target, args, system_user, system_passwd, reporting_dir)
+
+        if excavate_default or (args.excavate and args.excavate[0] == "installed_agents"):
+            p = os.path.join(reporting_dir, defaults.installed_agents_filename)
+            if not (getattr(args, "preserve_existing", False) and os.path.exists(p)):
+                cli.installed_agents(cli_target, args, system_user, system_passwd, reporting_dir)
+
+        if excavate_default or (args.excavate and args.excavate[0] == "expected_agents"):
+            p = os.path.join(reporting_dir, "expected_agents.csv")
+            if not (getattr(args, "preserve_existing", False) and os.path.exists(p)):
+                cli.expected_agents(cli_target, args, system_user, system_passwd, reporting_dir)
+
+        if excavate_default or (args.excavate and args.excavate[0] == "si_user_accounts"):
+            p = os.path.join(reporting_dir, defaults.si_user_accounts_filename)
+            if not (getattr(args, "preserve_existing", False) and os.path.exists(p)):
+                cli.software_usernames(cli_target, args, system_user, system_passwd, reporting_dir)
+
+        if excavate_default or (args.excavate and args.excavate[0] == "pattern_modules"):
+            cli.module_summary(cli_target, args, system_user, system_passwd, reporting_dir)
+
+    if args.access_method=="api":
+
+        if args.sysadmin == "api_version":
+            api.admin(disco, args, reporting_dir)
+
+        if args.sysadmin == "audit":
+            api.audit(search, args, reporting_dir)
+
+        if args.sysadmin == "baseline":
+            api.baseline(disco, args, reporting_dir)
+
+        if args.sysadmin == "cmdbsync":
+            api.cmdb_config(search, args, reporting_dir)
+
+        if args.sysadmin == "platforms":
+            curl.platform_scripts(args, system_user, system_passwd, reporting_dir+"/platforms")
+
+        if args.sysadmin == "knowledge":
+            api.modules(search, args, reporting_dir)
+
+        if args.sysadmin == "licensing":
+            api.licensing(search, args, reporting_dir)
+
+        if args.a_enable:
+            active = api.update_cred(creds, args.a_enable)
+            if active is not None:
+                if active:
+                    msg = "Credential %s Activated.\n" % (args.a_enable)
+                else:
+                    msg = "Credential %s Deactivated.\n" % (args.a_enable)
+            else:
+                msg = "Unable to determine %s credential state.\n" % (args.a_enable)
+            print(msg)
+            logger.info(msg)
+
+        if args.f_enablelist:
+            exists = os.path.isfile(args.f_enablelist)
+            if exists:
+                go_ahead = input("This will switch the 'enabled' status of all credentials\nEnabled -> Disabled\nDisabled -> Enabled\n\nContinue? (Y/y) ")
+                if go_ahead == "y" or go_ahead == "Y":
+                    with open(args.f_enablelist) as f:
+                        for line in f:
+                            active = api.update_cred(creds, line.strip())
+                            if active is not None:
+                                if active:
+                                    msg = "Credential %s Activated.\n" % (line.strip())
+                                else:
+                                    msg = "Credential %s Deactivated.\n" % (line.strip())
+                            else:
+                                msg = "Unable to determine %s credential state.\n" % (line.strip())
+                            logger.info(msg)
+
+        if args.a_opt:
+            builder.ordering(creds, search, args, True)
+
+        if args.a_removal:
+            lookup = builder.get_credential(search, creds, args.a_removal, args)
+            if lookup:
+                go_ahead = input("Are you sure you want to delete this credential? (Y/y) ")
+                if go_ahead == "y" or go_ahead == "Y":
+                    success = api.remove_cred(creds, args)
                     if success:
-                        msg = "Credential %s deleted from %s." % (line.strip(), args.target)
+                        msg = "Credential %s deleted from %s." % (args.a_removal, args.target)
                     else:
-                        msg = "Credential %s was not deleted\n%s" % (line.strip(), success)
+                        msg = "Credential %s was not deleted\n%s" % (args.a_removal, success)
+                    print(msg)
                     logger.info(msg)
+
+        if args.f_remlist:
+            exists = os.path.isfile(args.f_remlist)
+            if exists:
+                with open(args.f_remlist) as f:
+                    for line in f:
+                        success = api.remove_cred(creds, line.strip())
+                        if success:
+                            msg = "Credential %s deleted from %s." % (line.strip(), args.target)
+                        else:
+                            msg = "Credential %s was not deleted\n%s" % (line.strip(), success)
+                        logger.info(msg)
         
-    if args.a_kill_run:
-        api.cancel_run(disco, args)
+        if args.a_kill_run:
+            api.cancel_run(disco, args)
 
-    if args.excavate and args.excavate[0] == "device":
-        builder.get_device(search, creds, args)
+        if args.schedule_timezone:
+            api.update_schedule_timezone(disco, args)
 
-    if excavate_default or (args.excavate and args.excavate[0] == "devices"):
-        reporting.devices(search, creds, args)
+        if args.excavate and args.excavate[0] == "device":
+            builder.get_device(search, creds, args)
 
-    if excavate_default or (args.excavate and args.excavate[0] == "device_ids"):
-        identities = builder.unique_identities(search)
-        data = []
-        for identity in identities:
-            data.append([identity['originating_endpoint'],identity['list_of_ips'],identity['list_of_names']])
-        output.report(data, [ "Origating Endpoint", "List of IPs", "List of Names" ], args, name="device_ids")
+        if excavate_default or (args.excavate and args.excavate[0] == "devices"):
+            p = os.path.join(reporting_dir, "devices.csv")
+            if not (getattr(args, "preserve_existing", False) and os.path.exists(p)):
+                reporting.devices(search, creds, args, identities=identities)
+            else:
+                print(f"Preserving existing report: {p}")
+                logging.getLogger("_dismal_").info(f"Preserving existing report: {p}")
 
-    if args.excavate and args.excavate[0] == "ipaddr":
-        reporting.ipaddr(search, creds, args)
+        if excavate_default or (args.excavate and args.excavate[0] == "device_ids"):
+            p = os.path.join(reporting_dir, "device_ids.csv")
+            if not (getattr(args, "preserve_existing", False) and os.path.exists(p)):
+                if identities is None:
+                    identities = builder.unique_identities(
+                        search,
+                        args.include_endpoints,
+                        args.endpoint_prefix,
+                        getattr(args, "max_identities", None),
+                    )
+                data = []
+                for identity in identities:
+                    data.append([
+                        identity['originating_endpoint'],
+                        identity['list_of_ips'],
+                        identity['list_of_names'],
+                    ])
+                output.report(
+                    data,
+                    ["Origating Endpoint", "List of IPs", "List of Names"],
+                    args,
+                    name="device_ids",
+                )
+            else:
+                print(f"Preserving existing report: {p}")
+                logging.getLogger("_dismal_").info(f"Preserving existing report: {p}")
 
-    if args.excavate and args.excavate[0] == "devices_with_cred":
-        builder.get_credential(search, creds, args)
+        if args.excavate and args.excavate[0] == "ipaddr":
+            reporting.ipaddr(search, creds, args)
 
-    if excavate_default or (args.excavate and args.excavate[0] == "suggested_cred_opt"):
-        builder.ordering(creds, search, args, False)
+        if args.excavate and args.excavate[0] == "devices_with_cred":
+            builder.get_credential(search, creds, args)
 
-    if args.a_query:
-        api.query(search, args)
+        if excavate_default or (args.excavate and args.excavate[0] == "suggested_cred_opt"):
+            p = os.path.join(reporting_dir, "suggested_cred_opt.csv")
+            if not (getattr(args, "preserve_existing", False) and os.path.exists(p)):
+                builder.ordering(creds, search, args, False)
+            else:
+                print(f"Preserving existing report: {p}")
+                logging.getLogger("_dismal_").info(f"Preserving existing report: {p}")
 
-    if excavate_default or (args.excavate and args.excavate[0] == "credential_success"):
-        api.success(creds, search, args, reporting_dir)
+        if args.a_query:
+            api.query(search, args)
 
-    if excavate_default or (args.excavate and args.excavate[0] == "schedules"):
-        builder.scheduling(creds, search, args)
+        if excavate_default or (args.excavate and args.excavate[0] == "credential_success"):
+            p = os.path.join(reporting_dir, "credential_success.csv")
+            if not (getattr(args, "preserve_existing", False) and os.path.exists(p)):
+                api.success(creds, search, args, reporting_dir)
 
-    if excavate_default or (args.excavate and args.excavate[0] == "excludes"):
-        api.excludes(search, args, reporting_dir)
+        if excavate_default or (args.excavate and args.excavate[0] == "schedules"):
+            p = os.path.join(reporting_dir, "schedules.csv")
+            if not (getattr(args, "preserve_existing", False) and os.path.exists(p)):
+                builder.scheduling(creds, search, args)
 
-    if excavate_default or (args.excavate and args.excavate[0] == "overlapping_ips"):
-        builder.overlapping(search, args)
+        if excavate_default or (args.excavate and args.excavate[0] == "excludes"):
+            p = os.path.join(reporting_dir, defaults.exclude_ranges_filename)
+            if not (getattr(args, "preserve_existing", False) and os.path.exists(p)):
+                api.excludes(search, args, reporting_dir)
 
-    if excavate_default or (args.excavate and args.excavate[0] == "discovery_access"):
-        reporting.discovery_access(search, creds, args)
+        if excavate_default or (args.excavate and args.excavate[0] == "ip_analysis"):
+            p = os.path.join(reporting_dir, "ip_analysis.csv")
+            if not (getattr(args, "preserve_existing", False) and os.path.exists(p)):
+                builder.ip_analysis(search, args)
 
-    if excavate_default or (args.excavate and args.excavate[0] == "discovery_analysis"):
-        reporting.discovery_analysis(search, creds, args)
+        # Gather discovery data and run analysis when requested.
+        if args.excavate and args.excavate[0] == "discovery_analysis":
+            disco_data = reporting._gather_discovery_data(search, creds, args)
+            reporting.discovery_analysis(search, creds, args, disco_data)
 
-    if excavate_default or (args.excavate and args.excavate[0] == "active_runs"):
-        api.show_runs(disco, args)
-        api.discovery_runs(disco, args, reporting_dir)
+        if excavate_default or (args.excavate and args.excavate[0] == "discovery_run_analysis"):
+            p = os.path.join(reporting_dir, "discovery_run_analysis.csv")
+            if not (getattr(args, "preserve_existing", False) and os.path.exists(p)):
+                reporting.discovery_run_analysis(search, creds, args)
 
-    if excavate_default or (args.excavate and args.excavate[0] == "sensitive_data"):
-        api.sensitive(search, args, reporting_dir)
+        if excavate_default or (args.excavate and args.excavate[0] == "active_scans"):
+            api.show_runs(disco, args)
+            p = os.path.join(reporting_dir, defaults.active_scans_filename)
+            if not (getattr(args, "preserve_existing", False) and os.path.exists(p)):
+                api.discovery_runs(disco, args, reporting_dir)
 
-    if excavate_default or (args.excavate and args.excavate[0] == "export_tpl"):
-        api.tpl_export(search, args, reporting_dir)
+        if excavate_default or (args.excavate and args.excavate[0] == "sensitive_data"):
+            p = os.path.join(reporting_dir, defaults.sensitive_data_filename)
+            if not (getattr(args, "preserve_existing", False) and os.path.exists(p)):
+                api.sensitive(search, args, reporting_dir)
 
-    if excavate_default or (args.excavate and args.excavate[0] == "eca_errors"):
-        api.eca_errors(search, args, reporting_dir)
+        if excavate_default or (args.excavate and args.excavate[0] == "export_tpl"):
+            api.tpl_export(search, args, reporting_dir)
 
-    if excavate_default or (args.excavate and args.excavate[0] == "open_ports"):
-        api.open_ports(search, args, reporting_dir)
+        if excavate_default or (args.excavate and args.excavate[0] == "eca_errors"):
+            p = os.path.join(reporting_dir, defaults.eca_errors_filename)
+            if not (getattr(args, "preserve_existing", False) and os.path.exists(p)):
+                api.eca_errors(search, args, reporting_dir)
 
-    if excavate_default or (args.excavate and args.excavate[0] == "host_utilisation"):
-        api.host_util(search, args, reporting_dir)
+        if excavate_default or (args.excavate and args.excavate[0] == "open_ports"):
+            p = os.path.join(reporting_dir, defaults.open_ports_filename)
+            if not (getattr(args, "preserve_existing", False) and os.path.exists(p)):
+                api.open_ports(search, args, reporting_dir)
 
-    if excavate_default or (args.excavate and args.excavate[0] == "orphan_vms"):
-        api.orphan_vms(search, args, reporting_dir)
+        if excavate_default or (args.excavate and args.excavate[0] == "host_utilisation"):
+            p = os.path.join(reporting_dir, defaults.host_util_filename)
+            if not (getattr(args, "preserve_existing", False) and os.path.exists(p)):
+                api.host_util(search, args, reporting_dir)
 
-    if excavate_default or (args.excavate and args.excavate[0] == "missing_vms"):
-        api.missing_vms(search, args, reporting_dir)
+        if excavate_default or (args.excavate and args.excavate[0] == "orphan_vms"):
+            p = os.path.join(reporting_dir, defaults.orphan_vms_filename)
+            if not (getattr(args, "preserve_existing", False) and os.path.exists(p)):
+                api.orphan_vms(search, args, reporting_dir)
+
+        if excavate_default or (args.excavate and args.excavate[0] == "missing_vms"):
+            p = os.path.join(reporting_dir, defaults.missing_vms_filename)
+            if not (getattr(args, "preserve_existing", False) and os.path.exists(p)):
+                api.missing_vms(search, args, reporting_dir)
     
-    if excavate_default or (args.excavate and args.excavate[0] == "near_removal"):
-        api.near_removal(search, args, reporting_dir)
+        if excavate_default or (args.excavate and args.excavate[0] == "near_removal"):
+            p = os.path.join(reporting_dir, defaults.near_removal_filename)
+            if not (getattr(args, "preserve_existing", False) and os.path.exists(p)):
+                api.near_removal(search, args, reporting_dir)
     
-    if excavate_default or (args.excavate and args.excavate[0] == "removed"):
-        api.removed(search, args, reporting_dir)
+        if excavate_default or (args.excavate and args.excavate[0] == "removed"):
+            p = os.path.join(reporting_dir, defaults.removed_filename)
+            if not (getattr(args, "preserve_existing", False) and os.path.exists(p)):
+                api.removed(search, args, reporting_dir)
     
-    if excavate_default or (args.excavate and args.excavate[0] == "os_lifecycle"):
-        api.oslc(search, args, reporting_dir)
+        if excavate_default or (args.excavate and args.excavate[0] == "os_lifecycle"):
+            p = os.path.join(reporting_dir, defaults.os_lifecycle_filename)
+            if not (getattr(args, "preserve_existing", False) and os.path.exists(p)):
+                api.oslc(search, args, reporting_dir)
     
-    if excavate_default or (args.excavate and args.excavate[0] == "software_lifecycle"):
-        api.slc(search, args, reporting_dir)
+        if excavate_default or (args.excavate and args.excavate[0] == "software_lifecycle"):
+            p = os.path.join(reporting_dir, defaults.si_lifecycle_filename)
+            if not (getattr(args, "preserve_existing", False) and os.path.exists(p)):
+                api.slc(search, args, reporting_dir)
     
-    if excavate_default or (args.excavate and args.excavate[0] == "db_lifecycle"):
-        api.dblc(search, args, reporting_dir)
-    
-    if excavate_default or (args.excavate and args.excavate[0] == "unrecogised_snmp"):
-        api.snmp(search, args, reporting_dir)
-        
-    if excavate_default or (args.excavate and args.excavate[0] == "installed_agents"):
-        api.agents(search, args, reporting_dir)
-    
-    if excavate_default or (args.excavate and args.excavate[0] == "si_user_accounts"):
-        api.software_users(search, args, reporting_dir)
-    
-    if excavate_default or (args.excavate and args.excavate[0] == "pattern_modules"):
-        #TODO: This report has been overlooked
-        api.tku(knowledge,args, reporting_dir)
+        if excavate_default or (args.excavate and args.excavate[0] == "db_lifecycle"):
+            p = os.path.join(reporting_dir, defaults.db_lifecycle_filename)
+            if not (getattr(args, "preserve_existing", False) and os.path.exists(p)):
+                api.dblc(search, args, reporting_dir)
 
-    if excavate_default or (args.excavate and args.excavate[0] == "tku"):
-        api.tku(knowledge, args, reporting_dir)
+        if excavate_default or (args.excavate and args.excavate[0] == "unrecogised_snmp"):
+            p = os.path.join(reporting_dir, defaults.snmp_unrecognised_filename)
+            if not (getattr(args, "preserve_existing", False) and os.path.exists(p)):
+                api.snmp(search, args, reporting_dir)
 
-    if excavate_default or (args.excavate and args.excavate[0] == "vault"):
-        api.vault(vault, args, reporting_dir)
+        if excavate_default or (args.excavate and args.excavate[0] == "capture_candidates"):
+            p = os.path.join(reporting_dir, defaults.capture_candidates_filename)
+            if not (getattr(args, "preserve_existing", False) and os.path.exists(p)):
+                api.capture_candidates(search, args, reporting_dir)
+
+        if excavate_default or (args.excavate and args.excavate[0] == "installed_agents"):
+            p = os.path.join(reporting_dir, defaults.installed_agents_filename)
+            if not (getattr(args, "preserve_existing", False) and os.path.exists(p)):
+                api.agents(search, args, reporting_dir)
+
+        if excavate_default or (args.excavate and args.excavate[0] == "expected_agents"):
+            p = os.path.join(reporting_dir, "expected_agents.csv")
+            if not (getattr(args, "preserve_existing", False) and os.path.exists(p)):
+                api.expected_agents(search, args, reporting_dir)
+
+        if excavate_default or (args.excavate and args.excavate[0] == "si_user_accounts"):
+            p = os.path.join(reporting_dir, defaults.si_user_accounts_filename)
+            if not (getattr(args, "preserve_existing", False) and os.path.exists(p)):
+                api.software_users(search, args, reporting_dir)
+
+        if excavate_default or (args.excavate and args.excavate[0] == "pattern_modules"):
+            #TODO: This report has been overlooked
+            p = os.path.join(reporting_dir, defaults.tku_filename)
+            if not (getattr(args, "preserve_existing", False) and os.path.exists(p)):
+                api.tku(knowledge,args, reporting_dir)
+
+        if excavate_default or (args.excavate and args.excavate[0] == "outpost_creds"):
+            p = os.path.join(reporting_dir, defaults.outpost_creds_filename)
+            if not (getattr(args, "preserve_existing", False) and os.path.exists(p)):
+                api.outpost_creds(creds, search, args, reporting_dir)
+
+        if excavate_default or (args.excavate and args.excavate[0] == "tku"):
+            api.tku(knowledge, args, reporting_dir)
+
+        if excavate_default or (args.excavate and args.excavate[0] == "vault"):
+            api.vault(vault, args, reporting_dir)
     
-    if excavate_default or (args.excavate and args.excavate[0] == "hostname"):
-        api.hostname(args, reporting_dir)
+        if excavate_default or (args.excavate and args.excavate[0] == "hostname"):
+            api.hostname(args, reporting_dir)
 
-if cli_target:
-    cli_target.close()
+    if cli_target:
+        cli_target.close()
 
-print(os.linesep)
+    elapsed = time.time() - start_time
+    formatted = output.format_duration(elapsed)
+    msg = f"Completed in {formatted}"
+    print(msg)
+    logger.info(msg)
+
+    print(os.linesep)
+
+def run_appliance_list(appliance_list, args):
+    """Run the tool for each appliance entry in a config list.
+
+    Each entry may be either a simple string representing the target host or
+    a dictionary providing credential overrides such as username/password,
+    token, or paths to token/password files.
+    """
+
+    if appliance_list and not args.target:
+        for appliance in appliance_list:
+            app_args = argparse.Namespace(**vars(args))
+
+            if isinstance(appliance, dict):
+                # Map config keys to CLI attribute names
+                key_map = {
+                    "target": "target",
+                    "username": "username",
+                    "password": "password",
+                    "token": "token",
+                    "token_file": "f_token",
+                    "password_file": "f_passwd",
+                }
+                for key, attr in key_map.items():
+                    if key in appliance:
+                        setattr(app_args, attr, appliance[key])
+            else:
+                # Treat string entries as target hostnames
+                app_args.target = appliance
+
+            run_for_args(app_args)
+    else:
+        run_for_args(args)
+
+
+def main():
+    appliance_list = config.get("appliances")
+    run_appliance_list(appliance_list, args)
+
+
+if __name__ == "__main__":
+    main()

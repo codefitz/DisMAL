@@ -1,13 +1,27 @@
 import os
 import sys
 import types
+import json
+import logging
+import pytest
 
 sys.modules.setdefault("pandas", types.SimpleNamespace())
 sys.modules.setdefault("tabulate", types.SimpleNamespace(tabulate=lambda *a, **k: ""))
 sys.modules.setdefault("tideway", types.SimpleNamespace())
 sys.modules.setdefault("paramiko", types.SimpleNamespace())
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from core.api import get_json, search_results, show_runs
+from core.api import (
+    get_json,
+    search_results,
+    export_search,
+    show_runs,
+    get_outposts,
+    map_outpost_credentials,
+    get_outpost_credential_map,
+)
+import core.api as api_mod
+from core import queries, tools, defaults
+import core.access as access
 
 class DummyResponse:
     def __init__(self, status_code=200, data="{}", reason="OK", url="http://x"):
@@ -16,6 +30,7 @@ class DummyResponse:
         self.reason = reason
         self.url = url
         self.ok = status_code == 200
+        self.text = data
     def json(self):
         import json
         return json.loads(self._data)
@@ -33,6 +48,15 @@ class DummyDisco:
     def get_discovery_runs(self):
         return self._response
 
+class RecorderDisco(DummyDisco):
+    def __init__(self, response):
+        super().__init__(response)
+        self.patches = []
+
+    def patch_discovery_run(self, rid, payload):
+        self.patches.append((rid, payload))
+        return DummyResponse(200, "{}")
+
 def test_get_json_success():
     resp = DummyResponse(200, '{"a":1}')
     assert get_json(resp) == {"a":1}
@@ -41,11 +65,178 @@ def test_get_json_bad_json():
     resp = DummyResponse(200, 'not-json')
     assert get_json(resp) == {}
 
+def test_get_json_returns_list_directly():
+    data = [{"x": 1}]
+    # When a list is passed in, get_json should return it unchanged
+    assert get_json(data) == data
+
+def test_get_json_returns_dict_directly():
+    data = {"a": 1}
+    assert get_json(data) == data
+
 def test_search_results_fallback():
     resp = DummyResponse(200, '[{"ok": true}]')
     search = DummySearch(resp)
     assert search_results(search, {"query": "q"}) == [{"ok": True}]
 
+def test_search_results_error_json():
+    resp = DummyResponse(404, '{"error": "missing"}')
+    search = DummySearch(resp)
+    assert search_results(search, {"query": "q"}) == {"error": "missing"}
+
+
+def test_search_results_error_non_json():
+    resp = DummyResponse(500, 'Internal Server Error')
+    search = DummySearch(resp)
+    assert search_results(search, {"query": "q"}) == {"error": "Internal Server Error"}
+
+
+def test_search_results_warns_on_server_error(monkeypatch, caplog):
+    resp = DummyResponse(504, 'Gateway Timeout', reason='Gateway Timeout')
+    search = DummySearch(resp)
+    monkeypatch.setattr(api_mod.time, "sleep", lambda x: None)
+    with caplog.at_level(logging.WARNING):
+        with pytest.raises(api_mod.APITimeoutError):
+            search_results(search, {"query": "q"})
+    assert any("Gateway Timeout" in r.message for r in caplog.records)
+
+
+def test_search_results_retries_on_504(monkeypatch):
+    """search_results should retry when the API returns 504."""
+
+    class FlakySearch:
+        def __init__(self):
+            self.calls = 0
+
+        def search(self, query, format="object", limit=500, offset=0):
+            self.calls += 1
+            if self.calls == 1:
+                return DummyResponse(504, 'Gateway Timeout', reason='Gateway Timeout')
+            return DummyResponse(200, '[{"ok": true}]')
+
+    monkeypatch.setattr(api_mod.time, "sleep", lambda x: None)
+    search = FlakySearch()
+    assert search_results(search, {"query": "q"}) == [{"ok": True}]
+    assert search.calls == 2
+
+
+def test_search_results_halves_page_size_after_retries(monkeypatch, caplog):
+    """Page limit is halved after exhausting 504 retries."""
+
+    class FlakySearch:
+        def __init__(self):
+            self.limits = []
+
+        def search(self, query, format="object", limit=500, offset=0):
+            self.limits.append(limit)
+            if len(self.limits) <= 3:
+                return DummyResponse(504, "Gateway Timeout", reason="Gateway Timeout")
+            return DummyResponse(200, "[{\"ok\": true}]")
+
+    monkeypatch.setattr(api_mod.time, "sleep", lambda x: None)
+    search = FlakySearch()
+    with caplog.at_level(logging.WARNING):
+        result = search_results(search, {"query": "q"})
+    assert result == [{"ok": True}]
+    assert search.limits == [500, 500, 500, 250]
+    assert any("Reducing page limit" in r.message for r in caplog.records)
+
+def test_search_results_paginates(monkeypatch):
+    """search_results should accumulate more than 500 rows when limit=0."""
+
+    total = 800
+
+    class PagingSearch:
+        def search(self, query, format="object", limit=500, offset=0):
+            data = [{"row": i} for i in range(offset, min(offset + limit, total))]
+            return DummyResponse(200, json.dumps(data))
+
+    # Simplify downstream processing
+    monkeypatch.setattr(api_mod.tools, "list_table_to_json", lambda x: x)
+
+    search = PagingSearch()
+    results = search_results(search, {"query": "q"}, limit=0)
+    assert len(results) == total
+
+def test_search_results_handles_overfetch(monkeypatch):
+    """Stop paginating if the first page contains more rows than requested."""
+
+    class OverfetchSearch:
+        def __init__(self):
+            self.offsets = []
+
+        def search(self, query, format="object", limit=500, offset=0):
+            self.offsets.append(offset)
+            data = [{"row": i} for i in range(713)]
+            return DummyResponse(200, json.dumps(data))
+
+    monkeypatch.setattr(api_mod.tools, "list_table_to_json", lambda x: x)
+    search = OverfetchSearch()
+    results = search_results(search, {"query": "q"}, limit=0)
+    assert len(results) == 713
+    # Only the initial request should be made (offset=0)
+    assert search.offsets == [0]
+
+
+def test_search_results_handles_overfetch_with_limit(monkeypatch):
+    """Stop paginating if the server returns more rows than the requested limit."""
+
+    class OverfetchSearch:
+        def __init__(self):
+            self.offsets = []
+
+        def search(self, query, format="object", limit=500, offset=0):
+            self.offsets.append(offset)
+            data = [{"row": i} for i in range(300)]
+            return DummyResponse(200, json.dumps(data))
+
+    monkeypatch.setattr(api_mod.tools, "list_table_to_json", lambda x: x)
+    search = OverfetchSearch()
+    results = search_results(search, {"query": "q"}, limit=100)
+    assert len(results) == 100
+    # Only the initial request should be made (offset=0)
+    assert search.offsets == [0]
+
+def test_search_results_normalizes_nested_results():
+    payload = {
+        "count": 1,
+        "results": [
+            [
+                "SessionResult.credential_or_slave",
+                "SessionResult.session_type",
+                "Count",
+            ],
+            ["abc", "ssh", 5],
+        ],
+    }
+    resp = DummyResponse(200, json.dumps(payload))
+    search = DummySearch(resp)
+    data = search_results(search, {"query": "q"})
+    assert data["count"] == 1
+    assert data["results"] == [
+        {
+            "SessionResult.credential_or_slave": "abc",
+            "SessionResult.session_type": "ssh",
+            "Count": 5,
+        }
+    ]
+
+
+def test_session_get_extracts_counts_from_normalized_results():
+    payload = {
+        "results": [
+            [
+                "SessionResult.credential_or_slave",
+                "SessionResult.session_type",
+                "Count",
+            ],
+            ["ABCDEF", "ssh", 2],
+        ]
+    }
+    resp = DummyResponse(200, json.dumps(payload))
+    search = DummySearch(resp)
+    data = search_results(search, {"query": "q"})
+    assert tools.session_get(data) == {"abcdef": ["ssh", 2]}
 
 def test_show_runs_handles_bad_response(capsys):
     resp = DummyResponse(401, 'not-json', reason="Unauthorized")
@@ -56,3 +247,877 @@ def test_show_runs_handles_bad_response(capsys):
 
     captured = capsys.readouterr()
     assert "No runs in progress." in captured.out
+
+
+def test_show_runs_minimal_args(capsys):
+    """show_runs should handle args without optional attributes."""
+    resp = DummyResponse(401, 'not-json', reason="Unauthorized")
+    disco = DummyDisco(resp)
+    args = types.SimpleNamespace()
+
+    show_runs(disco, args)
+
+    captured = capsys.readouterr()
+    assert "No runs in progress." in captured.out
+
+
+def test_show_runs_prints_summary(capsys):
+    resp = DummyResponse(200, '[{"run_id": "1", "status": "running"}]')
+    disco = DummyDisco(resp)
+    args = types.SimpleNamespace()
+
+    show_runs(disco, args)
+
+    captured = capsys.readouterr()
+    assert "Active discovery runs: 1" in captured.out
+    assert "1" in captured.out
+    assert "running" in captured.out
+    assert "{" not in captured.out
+
+
+def test_show_runs_debug_prints_json(capsys):
+    resp = DummyResponse(200, '[{"run_id": "1", "status": "running"}]')
+    disco = DummyDisco(resp)
+    args = types.SimpleNamespace(debugging=True)
+
+    show_runs(disco, args)
+
+    captured = capsys.readouterr()
+    assert "'run_id': '1'" in captured.out
+    assert "'status': 'running'" in captured.out
+
+
+def test_show_runs_excavate_routes_to_define_csv(monkeypatch):
+    resp = DummyResponse(
+        200, '[{"DiscoveryRun.run_id": "1", "DiscoveryRun.status": "running"}]'
+    )
+    disco = DummyDisco(resp)
+    recorded = {}
+
+    def fake_define_csv(args, header, data, path, file, target, typ):
+        recorded["header"] = header
+        recorded["data"] = data
+        recorded["path"] = path
+
+    monkeypatch.setattr(api_mod.output, "define_csv", fake_define_csv)
+
+    reporting_dir = "/tmp"
+    args = types.SimpleNamespace(
+        excavate=["active_scans"], reporting_dir=reporting_dir, target="appl"
+    )
+
+    show_runs(disco, args)
+
+    assert recorded["header"] == ["DiscoveryRun.run_id", "DiscoveryRun.status"]
+    assert recorded["data"] == [["1", "running"]]
+    expected_path = os.path.join(reporting_dir, defaults.active_scans_filename)
+    assert recorded["path"] == expected_path
+
+
+def test_show_runs_excavate_default_dir(monkeypatch):
+    resp = DummyResponse(
+        200, '[{"DiscoveryRun.run_id": "1", "DiscoveryRun.status": "running"}]'
+    )
+    disco = DummyDisco(resp)
+    recorded = {}
+
+    def fake_define_csv(args, header, data, path, file, target, typ):
+        recorded["path"] = path
+
+    monkeypatch.setattr(api_mod.output, "define_csv", fake_define_csv)
+
+    args = types.SimpleNamespace(excavate=["active_scans"])
+
+    show_runs(disco, args)
+
+    assert recorded["path"] == defaults.active_scans_filename
+
+
+def test_discovery_runs_emits_ints_and_headers(monkeypatch):
+    runs = [{
+        "DiscoveryRun.range_id": "r1",
+        "DiscoveryRun.done": "1",
+        "DiscoveryRun.pre_scanning": "2",
+        "DiscoveryRun.scanning": "3",
+        "DiscoveryRun.total": "4",
+    }]
+    disco = DummyDisco(DummyResponse(200, json.dumps(runs)))
+    captured = {}
+
+    def fake_define_csv(args, header, rows, path, file, target, typ):
+        captured["header"] = header
+        captured["rows"] = rows
+
+    monkeypatch.setattr(api_mod.output, "define_csv", fake_define_csv)
+
+    args = types.SimpleNamespace(target="appl", output_file=None)
+
+    api_mod.discovery_runs(disco, args, "/tmp")
+
+    assert captured["header"] == [
+        "Discovery Instance",
+        "DiscoveryRun.done",
+        "DiscoveryRun.pre_scanning",
+        "DiscoveryRun.range_id",
+        "DiscoveryRun.scanning",
+        "DiscoveryRun.total",
+    ]
+    assert captured["rows"] == [["appl", 1, 2, "r1", 3, 4]]
+    row = captured["rows"][0]
+    for index in [1, 2, 4, 5]:
+        assert isinstance(row[index], int)
+
+def test_get_outposts_uses_deleted_false():
+    """Verify get_outposts calls the correct API path."""
+    class DummyAppliance:
+        def __init__(self):
+            self.requested = None
+
+        def get(self, path):
+            self.requested = path
+            return DummyResponse(200, "[]")
+
+    app = DummyAppliance()
+    get_outposts(app)
+
+    assert app.requested == "/discovery/outposts?deleted=false"
+
+
+def test_run_queries_executes_named_query(monkeypatch, tmp_path):
+    recorded = {}
+
+    def fake_define_csv(args, search, query, path, file, target, typ, **kwargs):
+        recorded["search"] = search
+        recorded["query"] = query
+        recorded["path"] = path
+        recorded["type"] = typ
+
+    monkeypatch.setattr(api_mod.output, "define_csv", fake_define_csv)
+
+    args = types.SimpleNamespace(
+        excavate=["active_scans"], output_file=None, target="appl"
+    )
+    search = object()
+    outdir = str(tmp_path)
+
+    api_mod.run_queries(search, args, outdir)
+
+    assert recorded["query"] == api_mod.queries.active_scans
+    expected = os.path.join(outdir, "qry_active_scans.csv")
+    assert recorded["path"] == expected
+    assert recorded["type"] == "query"
+
+
+def test_run_queries_executes_report_queries(monkeypatch, tmp_path):
+    captured = []
+
+    def fake_define_csv(args, search, query, path, file, target, typ, **kwargs):
+        captured.append((query, path, typ))
+
+    monkeypatch.setattr(api_mod.output, "define_csv", fake_define_csv)
+
+    args = types.SimpleNamespace(
+        excavate=["credential_success"], output_file=None, target="appl"
+    )
+    search = object()
+    outdir = str(tmp_path)
+
+    api_mod.run_queries(search, args, outdir)
+
+    expected_names = [
+        "credential_success",
+        "deviceinfo_success",
+        "credential_failure",
+        "credential_success_7d",
+        "deviceinfo_success_7d",
+        "credential_failure_7d",
+        "scanrange",
+        "excludes",
+        "outpost_credentials",
+    ]
+    expected_queries = [getattr(api_mod.queries, n) for n in expected_names]
+    assert [q for q, _, _ in captured] == expected_queries
+    assert [p for _, p, _ in captured] == [
+        os.path.join(outdir, f"qry_{n}.csv") for n in expected_names
+    ]
+    assert all(t == "query" for _, _, t in captured)
+
+
+def test_run_queries_executes_device_ids_query(monkeypatch, tmp_path):
+    captured = []
+
+    def fake_define_csv(args, search, query, path, file, target, typ, **kwargs):
+        captured.append((query, path, typ))
+
+    monkeypatch.setattr(api_mod.output, "define_csv", fake_define_csv)
+
+    args = types.SimpleNamespace(
+        excavate=["device_ids"], output_file=None, target="appl"
+    )
+    search = object()
+    outdir = str(tmp_path)
+
+    api_mod.run_queries(search, args, outdir)
+
+    expected = [api_mod.queries.device_ids]
+    assert [q for q, _, _ in captured] == expected
+    assert [t for _, _, t in captured] == ["query"]
+    assert [p for _, p, _ in captured] == [
+        os.path.join(outdir, "qry_device_ids.csv"),
+    ]
+
+
+def test_run_queries_executes_devices_report(monkeypatch, tmp_path):
+    captured = []
+
+    def fake_define_csv(args, search, query, path, file, target, typ, **kwargs):
+        captured.append((query, path, typ))
+
+    monkeypatch.setattr(api_mod.output, "define_csv", fake_define_csv)
+
+    args = types.SimpleNamespace(
+        excavate=["devices"], output_file=None, target="appl"
+    )
+    search = object()
+    outdir = str(tmp_path)
+
+    api_mod.run_queries(search, args, outdir)
+
+    expected_queries = [
+        api_mod.queries.deviceInfo_base,
+        api_mod.queries.deviceInfo_access,
+        api_mod.queries.deviceInfo_network,
+    ]
+    assert [q for q, _, _ in captured] == expected_queries
+    assert [p for _, p, _ in captured] == [
+        os.path.join(outdir, "qry_deviceInfo_base.csv"),
+        os.path.join(outdir, "qry_deviceInfo_access.csv"),
+        os.path.join(outdir, "qry_deviceInfo_network.csv"),
+    ]
+    assert [t for _, _, t in captured] == ["query"] * 3
+
+
+def test_map_outpost_credentials_strips_scheme(monkeypatch):
+    """Outpost targets should not include protocol."""
+
+    def fake_get_outposts(app):
+        return [{"url": "https://op.example.com"}]
+
+    class DummyCreds:
+        def get_vault_credentials(self):
+            return DummyResponse(200, '[{"uuid": "u1"}]')
+        def get_vault_credential(self, uuid):
+            return DummyResponse(200, "{}")
+
+    class DummyOutpost:
+        def credentials(self):
+            return DummyCreds()
+
+    captured = {}
+
+    def fake_outpost(target, token, api_version=None, ssl_verify=None, limit=None, offset=None):
+        captured["target"] = target
+        return DummyOutpost()
+
+    monkeypatch.setattr(api_mod, "get_outposts", fake_get_outposts)
+    monkeypatch.setattr(api_mod.tideway, "outpost", fake_outpost, raising=False)
+    monkeypatch.setattr(api_mod.access, "ping", lambda host: 0)
+
+    mapping = map_outpost_credentials(types.SimpleNamespace(token="t"))
+
+    assert captured["target"] == "op.example.com"
+    assert mapping == {"u1": "https://op.example.com"}
+
+
+def test_map_outpost_credentials_skips_unreachable(monkeypatch, capsys, caplog):
+    def fake_get_outposts(app):
+        return [{"url": "https://op.example.com"}]
+
+    called = {"outpost": False}
+
+    def fake_outpost(*args, **kwargs):
+        called["outpost"] = True
+        return None
+
+    monkeypatch.setattr(api_mod, "get_outposts", fake_get_outposts)
+    monkeypatch.setattr(api_mod.tideway, "outpost", fake_outpost, raising=False)
+    monkeypatch.setattr(api_mod.access, "ping", lambda host: 1)
+
+    with caplog.at_level(logging.WARNING):
+        mapping = map_outpost_credentials(types.SimpleNamespace(token="t"))
+    captured = capsys.readouterr()
+
+    assert mapping == {}
+    assert not called["outpost"]
+    msg = "Outpost https://op.example.com is not available"
+    assert msg in captured.out
+    assert msg in caplog.text
+
+
+def test_get_outpost_credential_map_groups_by_outpost(monkeypatch):
+    """Credentials should be grouped under their outposts."""
+
+    search_data = {
+        "results": [
+            {"credential": "c1", "outpost": "op1"},
+            {"credential": "c2", "outpost": "op1"},
+            {"credential": "c3", "outpost": "op2"},
+        ]
+    }
+
+    monkeypatch.setattr(api_mod, "search_results", lambda *a, **k: search_data)
+    monkeypatch.setattr(
+        api_mod,
+        "get_outposts",
+        lambda app: [
+            {"id": "op1", "url": "http://op1"},
+            {"id": "op2", "url": "http://op2"},
+        ],
+    )
+
+    mapping = get_outpost_credential_map(None, None)
+
+    assert mapping == {
+        "op1": {"url": "http://op1", "credentials": ["c1", "c2"]},
+        "op2": {"url": "http://op2", "credentials": ["c3"]},
+    }
+
+
+def test_cli_dispatch_outpost_creds(monkeypatch):
+    import importlib
+    monkeypatch.setattr(sys, "argv", ["dismal"])
+    dismal = importlib.reload(importlib.import_module("dismal"))
+
+    monkeypatch.setattr(dismal.access, "api_target", lambda args: types.SimpleNamespace())
+    dummy_creds = types.SimpleNamespace(appliance=None)
+    dummy_search = types.SimpleNamespace()
+    monkeypatch.setattr(
+        dismal.api,
+        "init_endpoints",
+        lambda ap, args: (None, dummy_search, dummy_creds, None, None),
+    )
+    monkeypatch.setattr(dismal.access, "login_target", lambda *a, **k: (None, None))
+    monkeypatch.setattr(dismal.access, "ping", lambda host: 0)
+    monkeypatch.setattr(dismal.os.path, "exists", lambda p: True)
+    monkeypatch.setattr(dismal.os, "makedirs", lambda p: None)
+    monkeypatch.setattr(dismal.output, "format_duration", lambda s: "0s")
+    monkeypatch.setattr(dismal.logging, "basicConfig", lambda *a, **k: None)
+
+    called = {}
+    monkeypatch.setattr(
+        dismal.api, "outpost_creds", lambda *a, **k: called.setdefault("ran", True)
+    )
+
+    args = types.SimpleNamespace(
+        version=False,
+        wakey=False,
+        target="appl",
+        access_method="api",
+        username=None,
+        password=None,
+        f_passwd=None,
+        token=None,
+        f_token=None,
+        noping=True,
+        output_path=None,
+        excavate=["outpost_creds"],
+        output_csv=False,
+        output_file=None,
+        include_endpoints=None,
+        endpoint_prefix=None,
+        a_query=None,
+        a_kill_run=None,
+        schedule_timezone=None,
+        reset_schedule_timezone=False,
+        sysadmin=None,
+        tideway=None,
+        clear_queue=False,
+        tw_user=None,
+        servicecctl=None,
+        debugging=False,
+        output_cli=False,
+        output_null=False,
+        a_enable=None,
+        f_enablelist=None,
+        a_opt=None,
+        a_removal=None,
+        f_remlist=None,
+    )
+
+    dismal.run_for_args(args)
+
+    assert called.get("ran")
+
+
+def test_run_for_args_queries_invokes_run_queries(monkeypatch):
+    import importlib
+
+    monkeypatch.setattr(sys, "argv", ["dismal"])
+    dismal = importlib.reload(importlib.import_module("dismal"))
+
+    dummy_search = types.SimpleNamespace()
+
+    monkeypatch.setattr(dismal.access, "api_target", lambda args: types.SimpleNamespace())
+    monkeypatch.setattr(
+        dismal.api,
+        "init_endpoints",
+        lambda ap, args: (None, dummy_search, None, None, None),
+    )
+    monkeypatch.setattr(dismal.access, "login_target", lambda *a, **k: (None, None))
+    monkeypatch.setattr(dismal.access, "ping", lambda host: 0)
+    monkeypatch.setattr(dismal.os.path, "exists", lambda p: True)
+    monkeypatch.setattr(dismal.os, "makedirs", lambda p: None)
+    monkeypatch.setattr(dismal.output, "format_duration", lambda s: "0s")
+    monkeypatch.setattr(dismal.logging, "basicConfig", lambda *a, **k: None)
+
+    called = {}
+
+    def fake_run_queries(search, args, dir):
+        called["search"] = search
+        called["dir"] = dir
+
+    monkeypatch.setattr(dismal.api, "run_queries", fake_run_queries)
+
+    args = types.SimpleNamespace(
+        version=False,
+        wakey=False,
+        target="appl",
+        access_method="api",
+        username=None,
+        password=None,
+        f_passwd=None,
+        token="tok",
+        f_token=None,
+        noping=True,
+        output_path=None,
+        excavate=["credential_success"],
+        queries=True,
+        output_csv=False,
+        output_file=None,
+        include_endpoints=None,
+        endpoint_prefix=None,
+        a_query=None,
+        a_kill_run=None,
+        schedule_timezone=None,
+        reset_schedule_timezone=False,
+        sysadmin=None,
+        tideway=None,
+        clear_queue=False,
+        tw_user=None,
+        servicecctl=None,
+        debugging=False,
+        output_cli=False,
+        output_null=False,
+        a_enable=None,
+        f_enablelist=None,
+        a_opt=None,
+        a_removal=None,
+        f_remlist=None,
+    )
+
+    dismal.run_for_args(args)
+
+    assert called["search"] is dummy_search
+
+
+def test_run_for_args_device_ids_queries_skips_unique(monkeypatch):
+    import importlib
+
+    monkeypatch.setattr(sys, "argv", ["dismal"])
+    dismal = importlib.reload(importlib.import_module("dismal"))
+
+    dummy_search = types.SimpleNamespace()
+
+    monkeypatch.setattr(dismal.access, "api_target", lambda args: types.SimpleNamespace())
+    monkeypatch.setattr(
+        dismal.api,
+        "init_endpoints",
+        lambda ap, args: (None, dummy_search, None, None, None),
+    )
+    monkeypatch.setattr(dismal.access, "login_target", lambda *a, **k: (None, None))
+    monkeypatch.setattr(dismal.access, "ping", lambda host: 0)
+    monkeypatch.setattr(dismal.os.path, "exists", lambda p: True)
+    monkeypatch.setattr(dismal.os, "makedirs", lambda p: None)
+    monkeypatch.setattr(dismal.output, "format_duration", lambda s: "0s")
+    monkeypatch.setattr(dismal.logging, "basicConfig", lambda *a, **k: None)
+
+    called = {}
+
+    def fake_unique(*a, **k):
+        called["unique"] = True
+        return []
+
+    def fake_run_queries(search, args, dir):
+        called["run_queries"] = True
+
+    monkeypatch.setattr(dismal.builder, "unique_identities", fake_unique)
+    monkeypatch.setattr(dismal.api, "run_queries", fake_run_queries)
+
+    args = types.SimpleNamespace(
+        version=False,
+        wakey=False,
+        target="appl",
+        access_method="api",
+        username=None,
+        password=None,
+        f_passwd=None,
+        token="tok",
+        f_token=None,
+        noping=True,
+        output_path=None,
+        excavate=["device_ids"],
+        queries=True,
+        output_csv=False,
+        output_file=None,
+        include_endpoints=None,
+        endpoint_prefix=None,
+        a_query=None,
+        a_kill_run=None,
+        schedule_timezone=None,
+        reset_schedule_timezone=False,
+        sysadmin=None,
+        tideway=None,
+        clear_queue=False,
+        tw_user=None,
+        servicecctl=None,
+        debugging=False,
+        output_cli=False,
+        output_null=False,
+        a_enable=None,
+        f_enablelist=None,
+        a_opt=None,
+        a_removal=None,
+        f_remlist=None,
+    )
+
+    dismal.run_for_args(args)
+
+    assert called.get("run_queries")
+    assert "unique" not in called
+
+def test_search_results_cleans_query(monkeypatch):
+    """Ensure newlines removed and single quotes preserved."""
+
+    captured = {}
+
+    class Recorder:
+        def search(self, query, format="object", limit=500):
+            captured["query"] = query
+            return DummyResponse(200, "[]")
+
+    qry = "search Device\nwhere name = 'foo'\n"
+    search_results(Recorder(), {"query": qry})
+
+    sent = captured["query"]["query"]
+    assert "\n" not in sent
+    assert "'foo'" in sent
+    assert '\\"foo\\"' not in sent
+
+
+def test_search_results_sanitizes_once(monkeypatch):
+    """Ensure query sanitization occurs exactly once."""
+
+    class CountingStr(str):
+        calls = 0
+
+        def replace(self, old, new, count=-1):
+            CountingStr.calls += 1
+            return CountingStr(super().replace(old, new, count))
+
+    captured = {}
+
+    class Recorder:
+        def search(self, query, format="object", limit=500):
+            captured["query"] = query
+            return DummyResponse(200, "[]")
+
+    CountingStr.calls = 0
+    qry = CountingStr("search Device\nwhere name = 'foo'\r")
+    search_results(Recorder(), {"query": qry})
+
+    sent = captured["query"]["query"]
+    assert "\n" not in sent
+    assert "\r" not in sent
+    assert CountingStr.calls == 2
+
+
+def test_search_results_wraps_str_query(monkeypatch):
+    """Ensure plain string queries are wrapped and sanitized."""
+
+    captured = {}
+
+    class Recorder:
+        def search(self, query, format="object", limit=500):
+            captured["query"] = query
+            return DummyResponse(200, "[]")
+
+    qry = "search Device\nwhere name = 'foo'\r"
+    search_results(Recorder(), qry)
+
+    sent = captured["query"]
+    assert isinstance(sent, dict)
+    assert "query" in sent
+    assert "\n" not in sent["query"]
+    assert "\r" not in sent["query"]
+
+
+def test_search_results_returns_error_payload(caplog):
+    resp = DummyResponse(400, '{"msg": "bad"}', reason="Bad")
+    search = DummySearch(resp)
+
+    with caplog.at_level("ERROR"):
+        result = search_results(search, {"query": "q"})
+
+    assert result == {"msg": "bad"}
+    assert "Bad" in caplog.text
+
+def test_search_results_list_table():
+    search = DummySearch([["A", "B"], [1, 2]])
+    result = search_results(search, {"query": "q"})
+    assert result == [{"A": 1, "B": 2}]
+
+
+def test_export_search_parses_csv(monkeypatch):
+    class DummyExport:
+        def __init__(self):
+            self.calls = 0
+
+        def export(self, payload):
+            return DummyResponse(200, '{"export_id": "1"}')
+
+        def export_status(self, export_id):
+            self.calls += 1
+            status = "running" if self.calls == 1 else "completed"
+            return DummyResponse(200, f'{{"status": "{status}"}}')
+
+        def export_download(self, export_id):
+            return types.SimpleNamespace(text="a,b\n1,2\n")
+
+    monkeypatch.setattr(api_mod.time, "sleep", lambda x: None)
+    rows = export_search(DummyExport(), {"query": "q"})
+    assert rows == [{"a": "1", "b": "2"}]
+
+
+def test_export_search_parses_json(monkeypatch):
+    class DummyExport:
+        def __init__(self):
+            self.calls = 0
+
+        def export(self, payload):
+            return DummyResponse(200, '{"export_id": "1"}')
+
+        def export_status(self, export_id):
+            self.calls += 1
+            status = "running" if self.calls == 1 else "completed"
+            return DummyResponse(200, f'{{"status": "{status}"}}')
+
+        def export_download(self, export_id):
+            return types.SimpleNamespace(text="[{\"x\": 1}]")
+
+    monkeypatch.setattr(api_mod.time, "sleep", lambda x: None)
+    rows = export_search(DummyExport(), {"query": "q"})
+    assert rows == [{"x": 1}]
+
+
+def test_capture_candidates_writes_csv(monkeypatch):
+    results = [
+        {
+            "DiscoveryAccess.access_method": "SNMP v2c",
+            "DiscoveryAccess.request_time": "2025-08-06T17:02:48.981762+00:00",
+            "DeviceInfo.hostname": "hpi19e815",
+            "DeviceInfo.os": "HP ETHERNET MULTI-ENVIRONMENT",
+            "DiscoveryAccessResult.failure_reason": None,
+            "DeviceInfo.syscontact": None,
+            "DeviceInfo.syslocation": None,
+            "DeviceInfo.sysdescr": "HP ETHERNET MULTI-ENVIRONMENT",
+            "DeviceInfo.sysobjectid": 0.0,
+        }
+    ]
+
+    monkeypatch.setattr(api_mod, "search_results", lambda *a, **k: results)
+    monkeypatch.setattr(api_mod.tools, "completage", lambda *a, **k: 0)
+
+    captured = {}
+
+    def fake_define_csv(args, header, rows, path, *a):
+        captured["header"] = header
+        captured["rows"] = rows
+        captured["path"] = path
+
+    monkeypatch.setattr(
+        api_mod,
+        "output",
+        types.SimpleNamespace(define_csv=fake_define_csv),
+    )
+
+    args = types.SimpleNamespace(output_file=None, target="appl")
+
+    api_mod.capture_candidates(types.SimpleNamespace(), args, "/tmp")
+
+    keys = sorted(results[0])
+    expected_header = ["Discovery Instance"] + keys
+    expected_row = [
+        "appl"
+    ] + [
+        (results[0][k] if results[0][k] is not None else "N/A")
+        for k in keys
+    ]
+
+    assert captured["header"] == expected_header
+    assert captured["rows"][0] == expected_row
+    assert captured["path"].endswith(api_mod.defaults.capture_candidates_filename)
+
+
+def test_device_capture_candidates_defaults_sysobjectid(monkeypatch):
+    results = [{"DeviceInfo.sysobjectid": None}]
+
+    monkeypatch.setattr(api_mod, "search_results", lambda *a, **k: results)
+    monkeypatch.setattr(api_mod.tools, "completage", lambda *a, **k: 0)
+
+    captured = {}
+
+    def fake_define_csv(args, header, rows, path, *a):
+        captured["header"] = header
+        captured["rows"] = rows
+
+    monkeypatch.setattr(
+        api_mod,
+        "output",
+        types.SimpleNamespace(define_csv=fake_define_csv),
+    )
+
+    args = types.SimpleNamespace(output_file=None, target="appl")
+
+    api_mod.device_capture_candidates(types.SimpleNamespace(), args, "/tmp")
+
+    idx = captured["header"].index("DeviceInfo.sysobjectid")
+    assert captured["rows"][0][idx] == 0
+
+def test_update_schedule_timezone_applies_offset():
+    runs = [{"range_id": "r1", "schedule": {"start_times": [10, 23]}}]
+    resp = DummyResponse(200, json.dumps(runs))
+    disco = RecorderDisco(resp)
+    args = types.SimpleNamespace(schedule_timezone="Etc/GMT+5", reset_schedule_timezone=False)
+
+    api_mod.update_schedule_timezone(disco, args)
+
+    assert disco.patches == [("r1", {"schedule": {"start_times": [5, 18]}})]
+
+
+def test_update_schedule_timezone_reset():
+    runs = [{"range_id": "r1", "schedule": {"start_times": [10]}}]
+    resp = DummyResponse(200, json.dumps(runs))
+    disco = RecorderDisco(resp)
+    args = types.SimpleNamespace(schedule_timezone="Etc/GMT+5", reset_schedule_timezone=True)
+
+    api_mod.update_schedule_timezone(disco, args)
+
+    assert disco.patches[0][1]["schedule"]["start_times"] == [15]
+
+def test_host_util_converts_numeric_columns(monkeypatch):
+    sample = [
+        {
+            "Host.hostname": "h1",
+            "Host.hostname_hash": "hash",
+            "Host.os": "Linux",
+            "Host.os_type": "Linux",
+            "Host.virtual": False,
+            "Host.cloud": False,
+            "DiscoveryAccess.endpoint": "ep",
+            "Host.running_software_instances": "1",
+            "Host.candidate_software_instances": "2",
+            "Host.running_processes": "3",
+            "Host.running_services": "4",
+        }
+    ]
+
+    monkeypatch.setattr(api_mod, "search_results", lambda *a, **k: sample)
+    monkeypatch.setattr(api_mod.tools, "completage", lambda *a, **k: 0)
+
+    recorded = {}
+
+    def fake_define_csv(args, header, rows, path, *a):
+        recorded["header"] = header
+        recorded["rows"] = rows
+
+    monkeypatch.setattr(api_mod.output, "define_csv", fake_define_csv)
+
+    args = types.SimpleNamespace(target="appl", output_file=None)
+
+    api_mod.host_util(None, args, "/tmp")
+
+    header = recorded["header"]
+    row = recorded["rows"][0]
+    index_map = {h: i for i, h in enumerate(header)}
+    for col in [
+        "Host.running_software_instances",
+        "Host.candidate_software_instances",
+        "Host.running_processes",
+        "Host.running_services",
+    ]:
+        assert isinstance(row[index_map[col]], int)
+    assert "Host.os_type" in header
+
+
+def test_outpost_creds_passes_endpoint_as_appliance(monkeypatch):
+    """Ensure outpost_creds uses the creds endpoint when no appliance attribute."""
+    dummy_creds = types.SimpleNamespace(get=lambda *a, **k: None)
+    dummy_search = object()
+    args = types.SimpleNamespace()
+    recorded = {}
+    def fake_outpost(creds_ep, search_ep, appliance, args_ep):
+        recorded['appliance'] = appliance
+    monkeypatch.setattr(api_mod.reporting, 'outpost_creds', fake_outpost)
+    api_mod.outpost_creds(dummy_creds, dummy_search, args, '/tmp')
+    assert recorded['appliance'] is dummy_creds
+
+
+def test_search_in_chunks_merges_results_and_uses_unique_cache(monkeypatch):
+    calls = []
+
+    def fake_search_results(
+        api_endpoint,
+        query,
+        limit=0,
+        use_cache=True,
+        cache_name=None,
+        page_size=500,
+    ):
+        calls.append((query, cache_name))
+        return [{"cache": cache_name}]
+
+    monkeypatch.setattr(api_mod, "search_results", fake_search_results)
+
+    base_query = "query {}"
+    chunks = ["A", "B"]
+    results = api_mod.search_in_chunks(None, base_query, chunks, cache_name="base")
+
+    assert results == [{"cache": "base-0"}, {"cache": "base-1"}]
+    assert calls == [("query A", "base-0"), ("query B", "base-1")]
+
+
+def test_search_in_chunks_formats_dict_queries(monkeypatch):
+    captured = []
+
+    def fake_search_results(
+        api_endpoint,
+        query,
+        limit=0,
+        use_cache=True,
+        cache_name=None,
+        page_size=500,
+    ):
+        captured.append(query["query"])
+        return []
+
+    monkeypatch.setattr(api_mod, "search_results", fake_search_results)
+
+    base = {"query": "search foo where start>={start} and end<{end}"}
+    windows = [{"start": 0, "end": 10}, {"start": 10, "end": 20}]
+
+    api_mod.search_in_chunks(None, base, windows)
+
+    assert captured == [
+        "search foo where start>=0 and end<10",
+        "search foo where start>=10 and end<20",
+    ]

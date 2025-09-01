@@ -156,3 +156,10 @@ cython_debug/
 *.csv
 .DS_Store
 output*/
+
+# Excel files
+*.xls
+*.xlsx
+
+# Local configuration
+config.yaml

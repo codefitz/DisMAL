@@ -17,59 +17,52 @@ def in_wsl() -> bool:
     """
     return 'Microsoft' in uname().release
 
-def getr(data,attribute,default_value=None):
-    return data.get(attribute) or default_value
+def getr(data, attribute, default_value=None):
+    """Return ``data[attribute]`` if present, else ``default_value``.
+
+    This avoids treating falsy values like ``0`` or ``""`` as missing.
+    """
+    return data[attribute] if attribute in data else default_value
 
 def range_to_ips(iprange):
-    list_of_ips = []
-    logger.info("Running range_to_ips function on %s"%iprange)
+    """Return a list of :class:`ipaddress.IPv4Network`/`IPv6Network` objects.
+
+    The previous implementation expanded ranges into individual IP addresses
+    which was expensive for large networks.  This helper now preserves the
+    ranges and returns ``ip_network`` objects instead.  Cloud end points and
+    the special "all" range are returned unchanged as strings.
+    """
+
+    networks = []
+    logger.info("Running range_to_ips function on %s" % iprange)
     if not iprange:
-        # Return empty list
-        return list_of_ips
-    if re.search('[a-zA-Z]', iprange):
+        return networks
+
+    if re.search("[a-zA-Z]", iprange):
         logger.debug("IP range is cloud endpoint!")
-        list_of_ips.append(iprange)
+        networks.append(iprange)
     elif iprange == "0.0.0.0/0,::/0":
-        list_of_ips.append(iprange)
-        logger.debug("All - List of IPs: %s"%list_of_ips)
-    elif iprange:
-        iprange = [ip for ip in iprange.split(",") if ip]
-        #timer_count = 0
-        for ip in iprange:
-            #timer_count = Transform.completage("Processing IP Range", len(iprange), timer_count)
+        networks.append(iprange)
+        logger.debug("All - List of Networks: %s" % networks)
+    else:
+        parts = [ip for ip in iprange.split(",") if ip]
+        for ip in parts:
             try:
-                ipaddr = ipaddress.ip_address(ip)
-                list_of_ips.append(ipaddr)
-                logger.debug("Single - List of IPs: %s"%list_of_ips)
-            except:
+                net = ipaddress.ip_network(ip, strict=False)
+                networks.append(net)
+                logger.debug("Network appended: %s", net)
+            except Exception:
                 try:
-                    subnet = ipaddress.ip_network(ip)
-                    for ipaddr in subnet:
-                        list_of_ips.append(ipaddr)
-                        logger.debug("Subnet - List of IPs: %s"%list_of_ips)
-                except:
-                    try:
-                        subnet = ipaddress.ip_network(ip,strict=False)
-                        msg = 'Address %s is not valid CIDR syntax, recommended CIDR: %s' % (ip, subnet)
-                        print(msg)
-                        logger.warning(msg)
-                        for ipaddr in subnet:
-                            list_of_ips.append(ipaddr)
-                            logger.debug("Subnet (not strict) - List of IPs: %s"%list_of_ips)
-                    except:
-                        try:
-                            cidrip = cidrize(ip)
-                            size = 0
-                            for cidr in cidrip:
-                                subnet = ipaddress.ip_network(cidr)
-                                for ipaddr in subnet:
-                                    list_of_ips.append(ipaddr)
-                                    logger.debug("CIDRize - List of IPs: %s"%list_of_ips)
-                        except:
-                            msg = 'Address %s is not valid CIDR syntax, cannot process!' % (ip)
-                            print(msg)
-                            logger.warning(msg)
-    return list_of_ips
+                    cidrip = cidrize(ip)
+                    for cidr in cidrip:
+                        net = ipaddress.ip_network(cidr, strict=False)
+                        networks.append(net)
+                        logger.debug("CIDRize - Network appended: %s", net)
+                except Exception:
+                    msg = "Address %s is not valid CIDR syntax, cannot process!" % ip
+                    print(msg)
+                    logger.warning(msg)
+    return networks
 
 def get_credential(data,uuid):
     credentials = data
@@ -116,7 +109,11 @@ def sortdic(lst):
 def completage(message, record_count, timer_count):
     timer_count += 1
     pc = (float(timer_count) / float(record_count))
-    print('%s: %d%%' % (message,100.0 * pc),end='\r')
+    if timer_count >= record_count:
+        end_char = '\n'
+    else:
+        end_char = '\r'
+    print('%s: %d%%' % (message,100.0 * pc), end=end_char)
     return timer_count
 
 def list_of_lists(ci,attr,list_to_append):
@@ -133,13 +130,75 @@ def list_of_lists(ci,attr,list_to_append):
     return list_to_append
 
 def session_get(results):
+    """Convert session/device info search results into a mapping.
+
+    Results may contain ``SessionResult.credential_or_slave`` (or the legacy
+    ``SessionResult.slave_or_credential``), ``DeviceInfo.last_credential`` or a
+    generic ``uuid`` field.  Any object
+    path prefixes are stripped so the returned dictionary uses raw credential
+    UUIDs as keys.  The stored value is a two-item list of the access method and
+    lookup count.
+
+    Previous implementations assumed ``results`` was always a list of
+    dictionaries returned from the search API.  When the API call failed (for
+    example with a 504 gateway timeout) a string or dictionary was supplied
+    instead which caused attribute errors when attempting to access ``get`` on
+    a non-dict object.  This helper now defensively checks input types and
+    gracefully skips any malformed entries.
+    """
+
     sessions = {}
+
+    if isinstance(results, dict):
+        results = results.get("results", [])
+
+    # Some API endpoints return tabular data as a list of lists where the
+    # first row contains headers.  Normalize this format into a list of
+    # dictionaries before processing so the function can operate on either
+    # representation transparently.
+    if isinstance(results, list) and results and isinstance(results[0], list):
+        results = list_table_to_json(results)
+
+    if not isinstance(results, list):
+        logger.warning(
+            "session_get expected list of results, got %s", type(results).__name__
+        )
+        logger.debug("session_get received payload: %r", results)
+        return sessions
+
     for result in results:
-        count = result.get('Count')
-        uuid = result.get('UUID')
-        restype = result.get('Session_Type')
+        if not isinstance(result, dict):
+            logger.warning("session_get skipping non-dict result: %r", result)
+            continue
+
+        # Cast count values to integers to ensure arithmetic works as expected
+        try:
+            count = int(result.get("Count", 0) or 0)
+        except (TypeError, ValueError):
+            count = 0
+
+        # Accept both SessionResult and DeviceInfo credential fields, falling
+        # back to a plain ``uuid`` field if neither is present.
+        uuid = (
+            result.get("SessionResult.credential_or_slave")
+            or result.get("SessionResult.slave_or_credential")
+            or result.get("DeviceInfo.last_credential")
+            or result.get("uuid")
+        )
+
+        # Pull the access/session type from whichever query populated the row
+        restype = result.get("SessionResult.session_type") or result.get(
+            "DeviceInfo.access_method"
+        )
+
         if uuid:
-            sessions[uuid] = [ restype, count ]
+            # Normalize credential identifiers: drop any object-path prefixes
+            # and perform case-insensitive comparisons by storing the UUID in
+            # lowercase. Casting to ``str`` also protects against UUID objects
+            # from third-party libraries.
+            uuid = str(uuid).split("/")[-1].lower()
+            sessions[uuid] = [restype, count]
+
     return sessions
 
 def ip_or_string(value):
@@ -190,19 +249,66 @@ def dequote(s):
         return s[1:-1]
     return s
 
-def json2csv(jsdata):
+
+def json2csv(jsdata, return_map=False):
     header = []
     data = []
     for jsitem in jsdata:
-        headers = jsitem.keys() # get the headers, unstructured
-        for label in headers:
-            # create a unique list of ALL possible headers
+        for label in jsitem.keys():
             header.append(label)
             header = sortlist(header)
+
     for jsitem in jsdata:
         values = []
         for key in header:
-            # Loop through the unique set of headers and get values if exist
-            values.append(getr(jsitem,key,"N/A")) # Substitute if missing
+            values.append(getr(jsitem, key, "N/A"))
         data.append(values)
-    return header, data
+
+    lookup = {h: h for h in header}
+    if return_map:
+        lookup = {h: h for h in header}
+        return header, data, lookup
+
+    return header, data, header
+
+def snake_to_title(value):
+    """Convert ``snake_case`` strings to Title Case with spaces.
+
+    Common abbreviations such as ``os`` and ``id`` are preserved in uppercase.
+    Non-string values or already formatted labels are returned unchanged.
+    """
+    if not isinstance(value, str):
+        return value
+
+    if not value.islower():
+        return value
+
+    abbreviations = {"os": "OS", "id": "ID"}
+    parts = value.split("_")
+    words = []
+    for part in parts:
+        if part in abbreviations:
+            words.append(abbreviations[part])
+            continue
+        for abbr, repl in abbreviations.items():
+            if part.endswith(abbr) and part != abbr:
+                prefix = part[:-len(abbr)]
+                if prefix:
+                    words.append(prefix.capitalize())
+                words.append(repl)
+                break
+        else:
+            words.append(part.capitalize())
+    return " ".join(words)
+
+def list_table_to_json(rows):
+    """Convert a list-of-lists table to a list of dictionaries.
+
+    The first row is treated as headers.  If ``rows`` is not a list of
+    lists, the value is returned unchanged.
+    """
+    if isinstance(rows, list) and rows and isinstance(rows[0], list):
+        headers = rows[0]
+        return [dict(zip(headers, r)) for r in rows[1:]]
+    return rows
+

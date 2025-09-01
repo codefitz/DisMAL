@@ -5,6 +5,7 @@ import os
 import sys
 import platform
 import getpass
+import subprocess
 
 # PIP Packages
 import tideway
@@ -42,19 +43,19 @@ def api_version(tw):
 def ping(target):
     current_os = platform.system().lower()
     if current_os == "windows":
-        parameters = "-n 1 -w 2"
-        null = "$null"
+        parameters = ["-n", "1", "-w", "2"]
     elif current_os == "linux":
-        parameters = "-c 1 -w2"
-        null = "/dev/null"
-    else: # Mac
-        parameters = "-c 1 -i2"
-        null = "/dev/null"
-    exit_code = os.system(f"ping {parameters} {target} > {null} 2>&1")
-    if os.path.exists("$null"):
-        # Windows outputs to a '$null' file instead of Null
-        os.remove("$null")
-    return exit_code
+        parameters = ["-c", "1", "-w", "2"]
+    else:  # Mac
+        parameters = ["-c", "1", "-i", "2"]
+
+    result = subprocess.run(
+        ["ping", *parameters, target],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+
+    return result.returncode
 
 def run_cmd(cmd, client):
     stdin, stdout, stderr = client.exec_command(cmd)

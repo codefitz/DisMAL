@@ -588,7 +588,22 @@ def successful_cli(client, args, sysuser, passwd, reporting_dir):
     headers.insert(0,"Discovery Instance")
     for row in data:
         row.insert(0, args.target)
-    output.csv_file(data, headers, reporting_dir+"/credentials.csv")
+    # Respect --preserve-existing during excavation runs
+    cred_out = os.path.join(reporting_dir, "credentials.csv")
+    try:
+        if (
+            getattr(args, "preserve_existing", False)
+            and getattr(args, "excavate", None) is not None
+            and os.path.exists(cred_out)
+        ):
+            msg = f"Preserving existing report: {cred_out}"
+            print(msg)
+            logger.info(msg)
+        else:
+            output.csv_file(data, headers, cred_out)
+    except Exception:
+        # Fall back to writing if any attribute checks fail
+        output.csv_file(data, headers, cred_out)
 
 @output._timer("Device Access Analysis")
 def devices(twsearch, twcreds, args, identities=None):

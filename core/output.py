@@ -180,6 +180,25 @@ def report(data, heads, args, name=None):
     excavate = getattr(args, "excavate", None)
     out_dir = getattr(args, "reporting_dir", None)
 
+    def _skip_write_if_preserved(outfile: str) -> bool:
+        """Return True if we should skip writing because file exists and
+        the user requested preservation during excavation.
+        """
+        try:
+            if (
+                getattr(args, "preserve_existing", False)
+                and excavate is not None
+                and outfile
+                and os.path.exists(outfile)
+            ):
+                msg = f"Preserving existing report: {outfile}"
+                print(msg)
+                logger.info(msg)
+                return True
+        except Exception:
+            pass
+        return False
+
     if len(data) > 0:
         logger.debug("Report Info:\n%s" % data)
 
@@ -200,7 +219,10 @@ def report(data, heads, args, name=None):
                 fancy_out(data, heads)
                 logger.info("Fancy output")
             elif excavate is not None and name and out_dir:
-                csv_file(data, heads, os.path.join(out_dir, f"{name}.csv"))
+                dest = os.path.join(out_dir, f"{name}.csv")
+                if _skip_write_if_preserved(dest):
+                    return
+                csv_file(data, heads, dest)
                 logger.info("Output to CSV file")
     else:
         msg = "No results found!"
@@ -213,10 +235,14 @@ def report(data, heads, args, name=None):
         note_row = ["No data returned"] + [""] * (len(heads) - 1 if heads else 0)
 
         if args.output_file:
+            # For explicit output_file, do not apply preserve-existing
             csv_file([note_row], heads, args.output_file)
             logger.info("Output to CSV file")
         elif excavate is not None and name and out_dir:
-            csv_file([note_row], heads, os.path.join(out_dir, f"{name}.csv"))
+            dest = os.path.join(out_dir, f"{name}.csv")
+            if _skip_write_if_preserved(dest):
+                return
+            csv_file([note_row], heads, dest)
             logger.info("Output to CSV file")
 
 def cmd2csv(header,result,seperator,filename,appliance):
@@ -291,7 +317,17 @@ def define_csv(args, head_ep, data, path, file, target, type, tku=None, query_na
             if cli_out:
                 print(data)
             else:
-                cmd2csv(head_ep, data, ":", path, target)
+                # Apply preserve-existing only for excavate outputs to path
+                if not (
+                    getattr(args, "preserve_existing", False)
+                    and getattr(args, "excavate", None) is not None
+                    and os.path.exists(path)
+                ):
+                    cmd2csv(head_ep, data, ":", path, target)
+                else:
+                    msg = f"Preserving existing report: {path}"
+                    print(msg)
+                    logger.info(msg)
     elif type == "csv":
         if args.output_file:
             save2csv(data, file, target, tku)
@@ -303,7 +339,16 @@ def define_csv(args, head_ep, data, path, file, target, type, tku=None, query_na
             if cli_out:
                 print(data)
             else:
-                save2csv(data, path, target, tku)
+                if not (
+                    getattr(args, "preserve_existing", False)
+                    and getattr(args, "excavate", None) is not None
+                    and os.path.exists(path)
+                ):
+                    save2csv(data, path, target, tku)
+                else:
+                    msg = f"Preserving existing report: {path}"
+                    print(msg)
+                    logger.info(msg)
     elif type == "query":
         if args.output_file:
             query2csv(head_ep, data, file, target, query_name)
@@ -319,7 +364,16 @@ def define_csv(args, head_ep, data, path, file, target, type, tku=None, query_na
                 logger.warning(msg)
                 print(msg)
             else:
-                query2csv(head_ep, data, path, target, query_name)
+                if not (
+                    getattr(args, "preserve_existing", False)
+                    and getattr(args, "excavate", None) is not None
+                    and os.path.exists(path)
+                ):
+                    query2csv(head_ep, data, path, target, query_name)
+                else:
+                    msg = f"Preserving existing report: {path}"
+                    print(msg)
+                    logger.info(msg)
     elif type == "csv_file":
         if args.output_file:
             csv_file(data, head_ep, file)
@@ -335,4 +389,13 @@ def define_csv(args, head_ep, data, path, file, target, type, tku=None, query_na
                 logger.warning(msg)
                 print(msg)
             else:
-                csv_file(data, head_ep, path)
+                if not (
+                    getattr(args, "preserve_existing", False)
+                    and getattr(args, "excavate", None) is not None
+                    and os.path.exists(path)
+                ):
+                    csv_file(data, head_ep, path)
+                else:
+                    msg = f"Preserving existing report: {path}"
+                    print(msg)
+                    logger.info(msg)

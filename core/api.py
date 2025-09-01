@@ -551,7 +551,16 @@ def show_runs(disco, args):
                 print(f" - {rid}: {status}")
 
 def sensitive(search, args, dir):
-    results = search_results(search, queries.sensitive_data)
+    try:
+        results = search_results(search, queries.sensitive_data)
+    except APITimeoutError as e:
+        msg = (
+            "Sensitive data query timed out (504) after multiple retries. "
+            "Continuing without this report."
+        )
+        print(msg)
+        logger.warning(msg)
+        results = []
     count = len(results) if isinstance(results, list) else 0
     tools.completage("Processing", count or 1, (count or 1) - 1)
     print(os.linesep, end="\r")

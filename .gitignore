@@ -163,3 +163,6 @@ output*/
 
 # Local configuration
 config.yaml
+
+# Ignore notebook backup files
+*.ipynb.bak.*

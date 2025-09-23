@@ -10,14 +10,27 @@ for nb in "${files[@]}"; do
   echo "Processing: $nb"
 
   python3 - "$nb" <<'PY'
-import json, sys, os, shutil, time
+import json, sys, os, shutil, time, pathlib
 
-p = sys.argv[1]
+p = pathlib.Path(sys.argv[1])
 ts = time.strftime("%Y%m%d-%H%M%S")
-bak = f"{p}.bak.{ts}"
-shutil.copy2(p, bak)
 
-with open(p, "r", encoding="utf-8") as f:
+backup_root = pathlib.Path("backups")
+rel = p
+if rel.parts and rel.parts[0] == ".":
+  rel = pathlib.Path(*rel.parts[1:])
+elif rel.is_absolute():
+  try:
+    rel = rel.relative_to(pathlib.Path.cwd())
+  except ValueError:
+    rel = rel.name
+
+backup_path = (backup_root / rel).with_suffix(p.suffix + f".bak.{ts}")
+backup_path.parent.mkdir(parents=True, exist_ok=True)
+
+shutil.copy2(p, backup_path)
+
+with p.open("r", encoding="utf-8") as f:
   nb = json.load(f)
 
 def clean_code_cell(c):
@@ -53,14 +66,14 @@ else:
 
 after = count_cells(nb)
 if after != before:
-  print(f"ABORT (cell count changed {before}->{after}): {p}. Backup at {bak}")
+  print(f"ABORT (cell count changed {before}->{after}): {p}. Backup at {backup_path}")
   sys.exit(1)
 
-tmp = p + ".tmp"
-with open(tmp, "w", encoding="utf-8") as f:
+p_tmp = p.with_suffix(p.suffix + ".tmp")
+with p_tmp.open("w", encoding="utf-8") as f:
   json.dump(nb, f, ensure_ascii=False, separators=(",", ":"))
-os.replace(tmp, p)
-print(f"Cleared outputs OK | cells: {after} | backup: {bak}")
+os.replace(p_tmp, p)
+print(f"Cleared outputs OK | cells: {after} | backup: {backup_path}")
 PY
 
 done

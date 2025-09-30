@@ -75,7 +75,7 @@ for csv_name in unique_csv_filenames:
         combined = pd.concat(dfs, ignore_index=True)
 
         # Drop duplicate rows to reduce sheet size
-        combined.drop_duplicates(inplace=True)
+        #combined.drop_duplicates(inplace=True)
 
         # Trim to Excel row limit if necessary
         if len(combined) > MAX_EXCEL_ROWS:

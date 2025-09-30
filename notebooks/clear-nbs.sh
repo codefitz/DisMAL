@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# clear-nbs-safe.sh — strip outputs from all .ipynb under CWD (v3 & v4), with backups.
+# clear-nbs.sh — strip outputs from all .ipynb under CWD (v3 & v4), with backups.
 set -euo pipefail
 shopt -s nullglob
 

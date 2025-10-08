@@ -500,6 +500,16 @@ show origin as 'Origin',
      extra_node_kinds as 'Extra_Node_Kinds',
      extra_rel_kinds as 'Extra_Rel_Kinds'</search>
 	</query>
+	<query title="Software Instance User Accounts">
+		<description>Software instances with associated host, type, version, and discovered usernames.</description>
+		<search>search SoftwareInstance
+show
+name as "Software_Instance",
+#RunningSoftware:HostedSoftware:Host:.name as 'Host',
+type as 'Type',
+product_version as 'Version',
+explode #InferredElement:Inference:Primary:DiscoveredProcess.username as 'User_Name'</search>
+	</query>
 	<query title="Recently Removed CIs">
 		<description>Hosts, printers, and storage systems destroyed in the last 7 days (excluding desktops).</description>
 		<search>search flags(include_destroyed, exclude_current, no_segment) Host, Printer, StorageSystem
@@ -520,6 +530,24 @@ fmt('%s (%s)', @ph, @pk) as 'Previous Found',
 fmt('%s (%s)', @nh, @nk) as 'Next Found',
 @nk as 'next kind', @pk as 'prv kind',
 time(destructionTime(#)) as 'Destroyed When'</search>
+	</query>
+	<query title="Unrecognised SNMP Devices">
+		<description>Unsupported discovery nodes with successful SNMP sessions but no inferred host.</description>
+		<search>search DiscoveryAccess where
+_last_marker defined
+and endtime defined
+and end_state = 'UnsupportedDevice'
+and nodecount(traverse flags(include_destroyed) ::InferredElement:Host) = 0
+and #DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.kind <> 'Host'
+and nodecount (traverse DiscoveryAccess:Metadata:Detail:SessionResult where session_type has subword "SNMP" and success) > 0
+show
+#DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.os_class as 'OS_Class',
+#DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.sysobjectid as 'SNMP_sysObjectId',
+(#DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.probed_os and 'Probe' or #DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.access_method) as 'Current_Access',
+#DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.os as 'Discovered_OS',
+#DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.os_type as 'OS_Type',
+#DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.os_version as 'OS_Version'
+process with countUnique()</search>
 	</query>
 	<query title="Missing VMs">
 		<description>Virtual machines without a discovered host relationship.</description>

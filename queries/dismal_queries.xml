@@ -227,14 +227,22 @@ process with countUnique(1,0)</search>
 	</query>
 	<query title="Scheduled Scan Ranges">
 		<description>Scheduled scan ranges with labels, ranges, and schedule details.</description>
-		<search>search ScanRange where scan_type = 'Scheduled' show range_id as 'ID', label as 'Label',
-            (range_strings or provider) as 'Scan_Range', scan_level as 'Level',
-            recurrenceDescription(schedule) as 'Date_Rules'</search>
+		<search>search ScanRange where scan_type = 'Scheduled'
+show
+  range_id as 'ID',
+  label as 'Label',
+  (range_strings or provider) as 'Scan_Range',
+  scan_level as 'Level',
+  recurrenceDescription(schedule) as 'Date_Rules'</search>
 	</query>
 	<query title="Exclude Ranges">
 		<description>Exclude range definitions from the _System dataset.</description>
-		<search>search in '_System' ExcludeRange show exrange_id as 'ID', name as 'Label',
-        range_strings as 'Scan_Range',recurrenceDescription(schedule) as 'Date_Rules'</search>
+		<search>search in '_System' ExcludeRange
+show
+  exrange_id as 'ID',
+  name as 'Label',
+  range_strings as 'Scan_Range',
+  recurrenceDescription(schedule) as 'Date_Rules'</search>
 	</query>
 	<query title="Exclude Ranges Detail">
 		<description>Exclude range metadata with schedule, description, and creator.</description>
@@ -439,6 +447,93 @@ product_version,
                                 and 'EOS more than 6 months away'
                                 or #ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_ext_support_date
                                     and 'EOES more than 6 months away')) as 'Lifecycle Risk'</search>
+	</query>
+	<query title="Near Removal Candidates">
+		<description>CI candidates approaching removal thresholds based on failed scans.</description>
+		<search>search flags(no_segment) Host, StorageSystem, Printer
+with value(getOption('MIN_FAILED_ACCESSES_BEFORE_DESTROY') + age_count) as scans,
+value(abs(last_update_success) / 10000000) as lus,
+value(currentTime() / 10000000 - getOption('MIN_SECONDS_SINCE_ACCESS_SUCCESS_BEFORE_DESTROY') + 2 * 24 * 3600) as time_threshold,
+value((getOption('MIN_SECONDS_SINCE_ACCESS_SUCCESS_BEFORE_DESTROY') + abs(last_update_success) / 10000000 - currentTime() / 10000000) / 3600) as time_to_doom
+where @scans < 3
+show
+kind(#) as 'CI Type',
+type as 'Product/Class',
+name as 'Name',
+hash(name) as 'Hashed Name',
+(os_type or instance) as 'Instance',
+(#InferredElement:Inference:Associate:DiscoveryAccess.endpoint or 'DDD Aged Out') as 'Last Successful IP',
+whenWasThat(last_update_success) as 'Last Successful Scan',
+last_update_success as 'Last Successful Scan Date',
+value(age_count * -1) as 'Consecutive Scan Failures',
+(@scans > 0 and @time_to_doom > 0 and #'%d scans, %d hours'(@scans,@time_to_doom)
+or @scans > 0 and #'%d scans'(@scans) or @time_to_doom > 0 and #'%d hours'(@time_to_doom)
+or 'Next unsuccessful scan') as 'Removal Eligibility'</search>
+	</query>
+	<query title="Orphaned VMs">
+		<description>Virtual hosts without a discovered virtual machine container relationship.</description>
+		<search>search Host
+where virtual
+and nodecount(traverse ContainedHost:HostContainment:HostContainer:VirtualMachine) = 0
+order by name
+show
+hostname,
+hash(hostname) as 'hashed_hostname',
+os,
+#InferredElement:Inference:Primary:DeviceInfo.os_type as 'OS_Type',
+virtual,
+cloud,
+#InferredElement:Inference:Associate:DiscoveryAccess.endpoint as 'endpoint',
+vendor,
+vm_class</search>
+	</query>
+	<query title="Pattern Modules">
+		<description>Pattern modules with origin, tree path, submission metadata, and extra node/relationship kinds.</description>
+		<search>search PatternModule
+show origin as 'Origin',
+     tree_path as 'Tree_Path',
+     name,
+     submitting_user,
+     submission_date as 'Submission_Date',
+     active as 'Active',
+     description as 'Description',
+     extra_node_kinds as 'Extra_Node_Kinds',
+     extra_rel_kinds as 'Extra_Rel_Kinds'</search>
+	</query>
+	<query title="Recently Removed CIs">
+		<description>Hosts, printers, and storage systems destroyed in the last 7 days (excluding desktops).</description>
+		<search>search flags(include_destroyed, exclude_current, no_segment) Host, Printer, StorageSystem
+with kind(#Previous:::.#) as pk,
+value(#Previous:EndpointIdentity:Next:.name) as ph,
+kind(#Next:::.#) as nk,
+value(#Next:EndpointIdentity:Previous:.name) as nh
+where not type matches 'Windows Desktop'
+and destructionTime(#) > (currentTime() - 7*24*3600*10000000)
+show
+kind(#) as 'kind',
+name as 'name',
+hash(name) as 'hashed_name',
+os as 'os',
+unique((#InferredElement:Inference:Associate:DiscoveryAccess.endpoint or 'DDD Aged Out')) as 'Last Successful IP',
+whenWasThat(last_update_success) as 'Last Successful Scan',
+fmt('%s (%s)', @ph, @pk) as 'Previous Found',
+fmt('%s (%s)', @nh, @nk) as 'Next Found',
+@nk as 'next kind', @pk as 'prv kind',
+time(destructionTime(#)) as 'Destroyed When'</search>
+	</query>
+	<query title="Missing VMs">
+		<description>Virtual machines without a discovered host relationship.</description>
+		<search>search VirtualMachine
+where nodecount(traverse HostContainer:HostContainment:ContainedHost:) = 0
+show
+vm_type as 'VirtualMachine.vm_type',
+(product_version or cloud_class) as 'VirtualMachine.product_version',
+#RunningSoftware:HostedSoftware:Host:.name as 'Host.name',
+#RunningSoftware:HostedSoftware:Host:.type as 'Host.type',
+vm_name as 'VirtualMachine.vm_name',
+vm_guest_os as 'VirtualMachine.vm_guest_os',
+guest_full_name as 'VirtualMachine.guest_full_name',
+(vm_status or cloud and "Cloud Hosted") as 'VirtualMachine.vm_status'</search>
 	</query>
 	<query title="Knowledge Upload Modules">
 		<description>Non-TKU knowledge upload modules with raw content for export.</description>

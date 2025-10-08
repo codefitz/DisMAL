@@ -357,14 +357,14 @@ show
     (#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_ext_support_date
         and formatTime(#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_ext_support_date, '%Y-%m-%d')) as 'End of Ext Support',
     (#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_ext_support_date
-        and (#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_ext_support_date < currentTime() and 'EOES Exceeded')
+        and (#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_ext_support_date &lt; currentTime() and 'EOES Exceeded')
         or #ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_support_date
-            and (#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_support_date < currentTime() and 'EOS Exceeded')
+            and (#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_support_date &lt; currentTime() and 'EOS Exceeded')
             or #ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.retirement_date
-                and (#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.retirement_date < currentTime() and 'EOL Exceeded')
-                or (#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.retirement_date and (#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.retirement_date < currentTime() + 182 * 864000000000 and 'EOL less than 6 months away')
-                    or #ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_support_date and (#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_support_date < currentTime() + 182 * 864000000000 and 'EOS less than 6 months away')
-                    or #ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_ext_support_date and (#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_ext_support_date < currentTime() + 182 * 864000000000 and 'EOES less than 6 months away'))
+                and (#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.retirement_date &lt; currentTime() and 'EOL Exceeded')
+                or (#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.retirement_date and (#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.retirement_date &lt; currentTime() + 182 * 864000000000 and 'EOL less than 6 months away')
+                    or #ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_support_date and (#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_support_date &lt; currentTime() + 182 * 864000000000 and 'EOS less than 6 months away')
+                    or #ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_ext_support_date and (#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_ext_support_date &lt; currentTime() + 182 * 864000000000 and 'EOES less than 6 months away'))
                 or (#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.retirement_date and 'EOL more than 6 months away'
                     or #ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_support_date and 'EOS more than 6 months away'
                     or #ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_ext_support_date and 'EOES more than 6 months away')) as 'Lifecycle Risk'</search>
@@ -384,21 +384,21 @@ show
     (#ElementWithDetail:SupportDetail:OSDetail:SupportDetail.end_ext_support_date
         and formatTime(#ElementWithDetail:SupportDetail:OSDetail:SupportDetail.end_ext_support_date, '%Y-%m-%d')) as 'End of Ext Support',
     (#ElementWithDetail:SupportDetail:OSDetail:SupportDetail.end_ext_support_date
-        and (#ElementWithDetail:SupportDetail:OSDetail:SupportDetail.end_ext_support_date < currentTime()
+        and (#ElementWithDetail:SupportDetail:OSDetail:SupportDetail.end_ext_support_date &lt; currentTime()
         and 'EOES Exceeded')
         or #ElementWithDetail:SupportDetail:OSDetail:SupportDetail.end_support_date
-            and (#ElementWithDetail:SupportDetail:OSDetail:SupportDetail.end_support_date < currentTime()
+            and (#ElementWithDetail:SupportDetail:OSDetail:SupportDetail.end_support_date &lt; currentTime()
             and 'EOS Exceeded') or #ElementWithDetail:SupportDetail:OSDetail:SupportDetail.retirement_date
-            and (#ElementWithDetail:SupportDetail:OSDetail:SupportDetail.retirement_date < currentTime()
+            and (#ElementWithDetail:SupportDetail:OSDetail:SupportDetail.retirement_date &lt; currentTime()
             and 'EOL Exceeded')
             or (#ElementWithDetail:SupportDetail:OSDetail:SupportDetail.retirement_date
-                and (#ElementWithDetail:SupportDetail:OSDetail:SupportDetail.retirement_date < currentTime() + 182 * 864000000000
+                and (#ElementWithDetail:SupportDetail:OSDetail:SupportDetail.retirement_date &lt; currentTime() + 182 * 864000000000
                 and 'EOL less than 6 months away')
                 or #ElementWithDetail:SupportDetail:OSDetail:SupportDetail.end_support_date
-                    and (#ElementWithDetail:SupportDetail:OSDetail:SupportDetail.end_support_date < currentTime() + 182 * 864000000000
+                    and (#ElementWithDetail:SupportDetail:OSDetail:SupportDetail.end_support_date &lt; currentTime() + 182 * 864000000000
                     and 'EOS less than 6 months away')
                     or #ElementWithDetail:SupportDetail:OSDetail:SupportDetail.end_ext_support_date
-                        and (#ElementWithDetail:SupportDetail:OSDetail:SupportDetail.end_ext_support_date < currentTime() + 182 * 864000000000
+                        and (#ElementWithDetail:SupportDetail:OSDetail:SupportDetail.end_ext_support_date &lt; currentTime() + 182 * 864000000000
                         and 'EOES less than 6 months away'))
                         or (#ElementWithDetail:SupportDetail:OSDetail:SupportDetail.retirement_date
                             and 'EOL more than 6 months away'
@@ -409,7 +409,7 @@ show
 	</query>
 	<query title="Software Lifecycle Report">
 		<description>Lifecycle dates and risk classifications for software instances.</description>
-		<search>search SoftwareInstance
+			<search>search SoftwareInstance
 where
 #ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.retirement_date
     or #ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_support_date
@@ -424,22 +424,22 @@ product_version,
 (#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_ext_support_date
     and formatTime(#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_ext_support_date, '%Y-%m-%d')) as 'End of Ext Support',
 (#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_ext_support_date
-    and (#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_ext_support_date < currentTime()
+    and (#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_ext_support_date &lt; currentTime()
     and 'EOES Exceeded')
     or #ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_support_date
-        and (#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_support_date < currentTime()
+        and (#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_support_date &lt; currentTime()
         and 'EOS Exceeded')
         or #ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.retirement_date
-            and (#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.retirement_date < currentTime()
+            and (#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.retirement_date &lt; currentTime()
             and 'EOL Exceeded')
             or (#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.retirement_date
-                and (#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.retirement_date < currentTime() + 182 * 864000000000
+                and (#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.retirement_date &lt; currentTime() + 182 * 864000000000
                 and 'EOL less than 6 months away')
                 or #ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_support_date
-                    and (#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_support_date < currentTime() + 182 * 864000000000
+                    and (#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_support_date &lt; currentTime() + 182 * 864000000000
                     and 'EOS less than 6 months away')
                     or #ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_ext_support_date
-                        and (#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_ext_support_date < currentTime() + 182 * 864000000000
+                        and (#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_ext_support_date &lt; currentTime() + 182 * 864000000000
                         and 'EOES less than 6 months away'))
                         or (#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.retirement_date
                             and 'EOL more than 6 months away'
@@ -450,12 +450,12 @@ product_version,
 	</query>
 	<query title="Near Removal Candidates">
 		<description>CI candidates approaching removal thresholds based on failed scans.</description>
-		<search>search flags(no_segment) Host, StorageSystem, Printer
+			<search>search flags(no_segment) Host, StorageSystem, Printer
 with value(getOption('MIN_FAILED_ACCESSES_BEFORE_DESTROY') + age_count) as scans,
 value(abs(last_update_success) / 10000000) as lus,
 value(currentTime() / 10000000 - getOption('MIN_SECONDS_SINCE_ACCESS_SUCCESS_BEFORE_DESTROY') + 2 * 24 * 3600) as time_threshold,
 value((getOption('MIN_SECONDS_SINCE_ACCESS_SUCCESS_BEFORE_DESTROY') + abs(last_update_success) / 10000000 - currentTime() / 10000000) / 3600) as time_to_doom
-where @scans < 3
+where @scans &lt; 3
 show
 kind(#) as 'CI Type',
 type as 'Product/Class',
@@ -466,8 +466,8 @@ hash(name) as 'Hashed Name',
 whenWasThat(last_update_success) as 'Last Successful Scan',
 last_update_success as 'Last Successful Scan Date',
 value(age_count * -1) as 'Consecutive Scan Failures',
-(@scans > 0 and @time_to_doom > 0 and #'%d scans, %d hours'(@scans,@time_to_doom)
-or @scans > 0 and #'%d scans'(@scans) or @time_to_doom > 0 and #'%d hours'(@time_to_doom)
+(@scans &gt; 0 and @time_to_doom &gt; 0 and #'%d scans, %d hours'(@scans,@time_to_doom)
+or @scans &gt; 0 and #'%d scans'(@scans) or @time_to_doom &gt; 0 and #'%d hours'(@time_to_doom)
 or 'Next unsuccessful scan') as 'Removal Eligibility'</search>
 	</query>
 	<query title="Orphaned VMs">
@@ -517,8 +517,8 @@ with kind(#Previous:::.#) as pk,
 value(#Previous:EndpointIdentity:Next:.name) as ph,
 kind(#Next:::.#) as nk,
 value(#Next:EndpointIdentity:Previous:.name) as nh
-where not type matches 'Windows Desktop'
-and destructionTime(#) > (currentTime() - 7*24*3600*10000000)
+	where not type matches 'Windows Desktop'
+	and destructionTime(#) &gt; (currentTime() - 7*24*3600*10000000)
 show
 kind(#) as 'kind',
 name as 'name',
@@ -536,10 +536,10 @@ time(destructionTime(#)) as 'Destroyed When'</search>
 		<search>search DiscoveryAccess where
 _last_marker defined
 and endtime defined
-and end_state = 'UnsupportedDevice'
-and nodecount(traverse flags(include_destroyed) ::InferredElement:Host) = 0
-and #DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.kind <> 'Host'
-and nodecount (traverse DiscoveryAccess:Metadata:Detail:SessionResult where session_type has subword "SNMP" and success) > 0
+	and end_state = 'UnsupportedDevice'
+	and nodecount(traverse flags(include_destroyed) ::InferredElement:Host) = 0
+	and #DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.kind &lt;&gt; 'Host'
+	and nodecount (traverse DiscoveryAccess:Metadata:Detail:SessionResult where session_type has subword "SNMP" and success) &gt; 0
 show
 #DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.os_class as 'OS_Class',
 #DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.sysobjectid as 'SNMP_sysObjectId',

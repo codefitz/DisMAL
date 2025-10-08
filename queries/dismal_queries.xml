@@ -331,6 +331,115 @@ processwith connectionsToUnseen</search>
 		<description>Cloud-attributed SoftwareInstance/VirtualMachine nodes.</description>
 		<search>search SoftwareInstance,VirtualMachine where __resource_unit = 'cloud' process with unique(0)</search>
 	</query>
+	<query title="Database Lifecycle Report">
+		<description>Lifecycle dates and risk for database software instances inferred from patterns.</description>
+		<search>search Pattern
+where 'Relational Database Management Systems' in categories
+traverse Pattern:Maintainer:Element:SoftwareInstance
+    where #ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.retirement_date
+       or #ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_support_date
+       or #ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_ext_support_date
+show
+    type as "SoftwareInstance.type",
+    product_version as "SoftwareInstance.product_version",
+    (#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.retirement_date
+        and formatTime(#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.retirement_date, '%Y-%m-%d')) as 'End of Life',
+    (#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_support_date
+        and formatTime(#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_support_date, '%Y-%m-%d')) as 'End of Support',
+    (#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_ext_support_date
+        and formatTime(#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_ext_support_date, '%Y-%m-%d')) as 'End of Ext Support',
+    (#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_ext_support_date
+        and (#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_ext_support_date < currentTime() and 'EOES Exceeded')
+        or #ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_support_date
+            and (#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_support_date < currentTime() and 'EOS Exceeded')
+            or #ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.retirement_date
+                and (#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.retirement_date < currentTime() and 'EOL Exceeded')
+                or (#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.retirement_date and (#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.retirement_date < currentTime() + 182 * 864000000000 and 'EOL less than 6 months away')
+                    or #ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_support_date and (#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_support_date < currentTime() + 182 * 864000000000 and 'EOS less than 6 months away')
+                    or #ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_ext_support_date and (#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_ext_support_date < currentTime() + 182 * 864000000000 and 'EOES less than 6 months away'))
+                or (#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.retirement_date and 'EOL more than 6 months away'
+                    or #ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_support_date and 'EOS more than 6 months away'
+                    or #ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_ext_support_date and 'EOES more than 6 months away')) as 'Lifecycle Risk'</search>
+	</query>
+	<query title="OS Lifecycle Report">
+		<description>Lifecycle dates and risk classifications for host operating systems.</description>
+		<search>search Host
+where #ElementWithDetail:SupportDetail:OSDetail:SupportDetail.retirement_date
+    or #ElementWithDetail:SupportDetail:OSDetail:SupportDetail.end_support_date
+        or #ElementWithDetail:SupportDetail:OSDetail:SupportDetail.end_ext_support_date
+show
+    name,
+    (#ElementWithDetail:SupportDetail:OSDetail:SupportDetail.retirement_date
+        and formatTime(#ElementWithDetail:SupportDetail:OSDetail:SupportDetail.retirement_date, '%Y-%m-%d')) as 'End of Life',
+    (#ElementWithDetail:SupportDetail:OSDetail:SupportDetail.end_support_date
+        and formatTime(#ElementWithDetail:SupportDetail:OSDetail:SupportDetail.end_support_date, '%Y-%m-%d')) as 'End of Support',
+    (#ElementWithDetail:SupportDetail:OSDetail:SupportDetail.end_ext_support_date
+        and formatTime(#ElementWithDetail:SupportDetail:OSDetail:SupportDetail.end_ext_support_date, '%Y-%m-%d')) as 'End of Ext Support',
+    (#ElementWithDetail:SupportDetail:OSDetail:SupportDetail.end_ext_support_date
+        and (#ElementWithDetail:SupportDetail:OSDetail:SupportDetail.end_ext_support_date < currentTime()
+        and 'EOES Exceeded')
+        or #ElementWithDetail:SupportDetail:OSDetail:SupportDetail.end_support_date
+            and (#ElementWithDetail:SupportDetail:OSDetail:SupportDetail.end_support_date < currentTime()
+            and 'EOS Exceeded') or #ElementWithDetail:SupportDetail:OSDetail:SupportDetail.retirement_date
+            and (#ElementWithDetail:SupportDetail:OSDetail:SupportDetail.retirement_date < currentTime()
+            and 'EOL Exceeded')
+            or (#ElementWithDetail:SupportDetail:OSDetail:SupportDetail.retirement_date
+                and (#ElementWithDetail:SupportDetail:OSDetail:SupportDetail.retirement_date < currentTime() + 182 * 864000000000
+                and 'EOL less than 6 months away')
+                or #ElementWithDetail:SupportDetail:OSDetail:SupportDetail.end_support_date
+                    and (#ElementWithDetail:SupportDetail:OSDetail:SupportDetail.end_support_date < currentTime() + 182 * 864000000000
+                    and 'EOS less than 6 months away')
+                    or #ElementWithDetail:SupportDetail:OSDetail:SupportDetail.end_ext_support_date
+                        and (#ElementWithDetail:SupportDetail:OSDetail:SupportDetail.end_ext_support_date < currentTime() + 182 * 864000000000
+                        and 'EOES less than 6 months away'))
+                        or (#ElementWithDetail:SupportDetail:OSDetail:SupportDetail.retirement_date
+                            and 'EOL more than 6 months away'
+                            or #ElementWithDetail:SupportDetail:OSDetail:SupportDetail.end_support_date
+                                and 'EOS more than 6 months away'
+                                or #ElementWithDetail:SupportDetail:OSDetail:SupportDetail.end_ext_support_date
+                                    and 'EOES more than 6 months away')) as 'Lifecycle Risk'</search>
+	</query>
+	<query title="Software Lifecycle Report">
+		<description>Lifecycle dates and risk classifications for software instances.</description>
+		<search>search SoftwareInstance
+where
+#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.retirement_date
+    or #ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_support_date
+        or #ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_ext_support_date
+show
+type,
+product_version,
+(#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.retirement_date
+    and formatTime(#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.retirement_date, '%Y-%m-%d')) as 'End of Life',
+(#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_support_date
+    and formatTime(#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_support_date, '%Y-%m-%d')) as 'End of Support',
+(#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_ext_support_date
+    and formatTime(#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_ext_support_date, '%Y-%m-%d')) as 'End of Ext Support',
+(#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_ext_support_date
+    and (#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_ext_support_date < currentTime()
+    and 'EOES Exceeded')
+    or #ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_support_date
+        and (#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_support_date < currentTime()
+        and 'EOS Exceeded')
+        or #ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.retirement_date
+            and (#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.retirement_date < currentTime()
+            and 'EOL Exceeded')
+            or (#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.retirement_date
+                and (#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.retirement_date < currentTime() + 182 * 864000000000
+                and 'EOL less than 6 months away')
+                or #ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_support_date
+                    and (#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_support_date < currentTime() + 182 * 864000000000
+                    and 'EOS less than 6 months away')
+                    or #ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_ext_support_date
+                        and (#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_ext_support_date < currentTime() + 182 * 864000000000
+                        and 'EOES less than 6 months away'))
+                        or (#ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.retirement_date
+                            and 'EOL more than 6 months away'
+                            or #ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_support_date
+                                and 'EOS more than 6 months away'
+                                or #ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_ext_support_date
+                                    and 'EOES more than 6 months away')) as 'Lifecycle Risk'</search>
+	</query>
 	<query title="Knowledge Upload Modules">
 		<description>Non-TKU knowledge upload modules with raw content for export.</description>
 		<search>search KnowledgeUpload

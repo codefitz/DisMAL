@@ -246,6 +246,91 @@ recurrenceDescription(schedule) as 'Date Rules',
 description as 'Description',
 fullFoundationName(created_by) as 'User'</search>
 	</query>
+	<query title="DiscoveryAccess Schedule Counts">
+		<description>Endpoints and the number of scheduled discovery runs covering them.</description>
+		<search>search DiscoveryAccess
+show endpoint,
+nodecount(traverse Member:List:List:DiscoveryRun where scan_type = 'Scheduled') as 'schedules'
+process with unique()</search>
+	</query>
+	<query title="Unscanned Connections">
+		<description>Endpoints observed via network connections but not currently scheduled.</description>
+		<search>search Host
+traverse InferredElement:Inference:Associate:DiscoveryAccess
+traverse DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:NetworkConnectionList
+traverse List:List:Member:DiscoveredNetworkConnection
+order by remote_ip_addr
+show remote_ip_addr as 'endpoint'
+processwith connectionsToUnseen</search>
+	</query>
+	<query title="Count Hosts (All)">
+		<description>Total Host nodes for KPI baselines.</description>
+		<search>search Host process with unique(0)</search>
+	</query>
+	<query title="Count Network Devices">
+		<description>Total NetworkDevice nodes discovered.</description>
+		<search>search NetworkDevice process with unique(0)</search>
+	</query>
+	<query title="Count Printers">
+		<description>Total Printer nodes discovered.</description>
+		<search>search Printer process with unique(0)</search>
+	</query>
+	<query title="Count Storage Systems">
+		<description>Total StorageSystem nodes discovered.</description>
+		<search>search StorageSystem process with unique(0)</search>
+	</query>
+	<query title="Count Storage Devices">
+		<description>Total StorageDevice nodes discovered.</description>
+		<search>search StorageDevice process with unique(0)</search>
+	</query>
+	<query title="Count Software Instances">
+		<description>Total SoftwareInstance nodes discovered.</description>
+		<search>search SoftwareInstance process with unique(0)</search>
+	</query>
+	<query title="Count Virtual Machines">
+		<description>Total VirtualMachine nodes discovered.</description>
+		<search>search VirtualMachine process with unique(0)</search>
+	</query>
+	<query title="Count SNMP Managed Devices">
+		<description>Total SNMPManagedDevice nodes discovered.</description>
+		<search>search SNMPManagedDevice process with unique(0)</search>
+	</query>
+	<query title="Count Management Controllers">
+		<description>Total ManagementController nodes discovered.</description>
+		<search>search ManagementController process with unique(0)</search>
+	</query>
+	<query title="Count Storage Ports">
+		<description>Total StoragePort nodes discovered.</description>
+		<search>search StoragePort process with unique(0)</search>
+	</query>
+	<query title="Count Containers or Pods">
+		<description>Total container/pod software nodes discovered.</description>
+		<search>search SoftwarePod process with unique(0)</search>
+	</query>
+	<query title="Count Software Containers">
+		<description>Total SoftwareContainer nodes discovered.</description>
+		<search>search SoftwareContainer process with unique(0)</search>
+	</query>
+	<query title="Count Cloud Resources">
+		<description>Total CloudResource nodes discovered.</description>
+		<search>search CloudResource process with unique(0)</search>
+	</query>
+	<query title="Count Cloud Services">
+		<description>Total CloudService nodes discovered.</description>
+		<search>search CloudService process with unique(0)</search>
+	</query>
+	<query title="Tracked Hosts (Non-Desktop)">
+		<description>Hosts to count toward licensing, excluding desktops/clients and cloud-only nodes.</description>
+		<search>search Host where not (host_type has subword 'desktop' or host_type has subword 'client') and not (cloud and nodecount(traverse ContainedHost:HostContainment:HostContainer:VirtualMachine where cloud)) and (nodecount(traverse InferredElement:Inference::DiscoveryAccess)) process with unique(0)</search>
+	</query>
+	<query title="Windows Desktops">
+		<description>Host endpoints classified as desktops or laptops.</description>
+		<search>search Host where host_type has subword 'desktop' or host_type has subword 'laptop' process with unique(0)</search>
+	</query>
+	<query title="Cloud Resource Units">
+		<description>Cloud-attributed SoftwareInstance/VirtualMachine nodes.</description>
+		<search>search SoftwareInstance,VirtualMachine where __resource_unit = 'cloud' process with unique(0)</search>
+	</query>
 	<query title="Knowledge Upload Modules">
 		<description>Non-TKU knowledge upload modules with raw content for export.</description>
 		<search>search KnowledgeUpload

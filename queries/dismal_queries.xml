@@ -177,10 +177,6 @@ show (last_credential or last_slave) as 'DeviceInfo.last_credential',
      access_method as 'DeviceInfo.access_method'
 process with countUnique(1,0)</search>
 	</query>
-	<query title="Devices to Model">
-		<description>SNMP managed devices require modelling.</description>
-		<search>search DiscoveryAccess where end_state = &quot;UnsupportedDevice&quot; and _last_marker traverse DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo where sysobjectid show access_method, request_time, hostname, os, failure_reason, syscontact, syslocation , sysdescr, sysobjectid</search>
-	</query>
 	<query title="Devices Report - Identities">
 		<description>Collect identity-centric DiscoveryAccess fields for the devices deep dive.</description>
 		<search>search DiscoveryAccess
@@ -225,18 +221,9 @@ whenWasThat(discovery_endtime) as 'DiscoveryAccess.when_last_scan',
 end_state as 'DiscoveryAccess.end_state',
 result as 'DiscoveryAccess.result'</search>
 	</query>
-	<query title="Discovery Analysis - Key Map">
-		<description>Link DiscoveryAccess records to related identifiers used for joins across datasets.</description>
-		<search>search DiscoveryAccess where endtime
-show
-#id as &quot;DiscoveryAccess.id&quot;,
-#Next:Sequential:Previous:DiscoveryAccess.#id as &quot;DiscoveryAccess.previous_id&quot;,
-#Previous:Sequential:Next:DiscoveryAccess.#id as &quot;DiscoveryAccess.next_id&quot;,
-#DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.#id as &quot;DeviceInfo.id&quot;,
-#Member:List:List:DiscoveryRun.#id as &quot;DiscoveryRun.id&quot;,
-#::InferredElement:.#id as &quot;InferredElement.id&quot;,
-#DiscoveryAccess:Metadata:Detail:SessionResult.#id as &quot;SessionResult.id&quot;,
-explode #::InferredElement:.#DeviceWithInterface:DeviceInterface:InterfaceOfDevice:NetworkInterface.#id as &quot;NetworkInterface.id&quot;</search>
+	<query title="Devices to Model">
+		<description>SNMP managed devices require modelling.</description>
+		<search>search DiscoveryAccess where end_state = &quot;UnsupportedDevice&quot; and _last_marker traverse DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo where sysobjectid show access_method, request_time, hostname, os, failure_reason, syscontact, syslocation , sysdescr, sysobjectid</search>
 	</query>
 	<query title="Discovery Analysis - Access Summary">
 		<description>DiscoveryAccess timeline and status metrics used in the discovery analysis deep dive.</description>
@@ -290,29 +277,6 @@ label as 'DiscoveryRun.label',
 friendlyTime(starttime) as 'DiscoveryRun.starttime',
 friendlyTime(endtime) as 'DiscoveryRun.endtime'</search>
 	</query>
-	<query title="Discovery Analysis - Session Results">
-		<description>SessionResult records summarising success, type, and provider.</description>
-		<search>search SessionResult
-show
-#id as &quot;SessionResult.id&quot;,
-success as &quot;SessionResult.success&quot;,
-session_type as &quot;SessionResult.session_type&quot;,
-provider as &quot;SessionResult.provider&quot;</search>
-	</query>
-	<query title="Discovery Analysis - Inferred Elements">
-		<description>InferredElement identifiers with their aggregated IP address list.</description>
-		<search>search InferredElement
-show
-#id as &quot;InferredElement.id&quot;,
-__all_ip_addrs as 'InferredElement.__all_ip_addrs'</search>
-	</query>
-	<query title="Discovery Analysis - Network Interfaces">
-		<description>NetworkInterface identifiers and associated IP addresses.</description>
-		<search>search NetworkInterface
-show
-#id as &quot;NetworkInterface.id&quot;,
-ip_addr as 'NetworkInterface.ip_addr'</search>
-	</query>
 	<query title="Discovery Analysis - Dropped Endpoints">
 		<description>DroppedEndpoints details highlighting endpoints removed from discovery runs.</description>
 		<search>search DroppedEndpoints
@@ -325,53 +289,41 @@ endtime as 'End_Raw',
 whenWasThat(endtime) as 'When_Last_Scan',
 #EndpointRange:EndpointRange:DiscoveryRun:DiscoveryRun.label as &quot;Run&quot;</search>
 	</query>
-	<query title="Open Ports - Default Services">
-		<description>Discovered listening ports mapped to common default service names.</description>
-		<search>search DiscoveredListeningPort
-with
-((local_port  = 161) and 'SNMP'
-or (local_port  = 21) and 'FTP'
-or (local_port  = 22) and 'SSH'
-or (local_port  = 23) and 'Telnet'
-or (local_port  = 25) and 'SMTP'
-or (local_port  = 53) and 'DNS'
-or (local_port  = 69) and 'TFTP'
-or (local_port  = 110) and 'POP3'
-or (local_port  = 119) and 'NNTP'
-or (local_port  = 137) and 'NetBios'
-or (local_port  = 143) and 'IMAP'
-or (local_port  and 'other')) as openports
-where @openports not in 'other'
+	<query title="Discovery Analysis - Inferred Elements">
+		<description>InferredElement identifiers with their aggregated IP address list.</description>
+		<search>search InferredElement
 show
-#Member:List:List:NetworkConnectionList.#DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.#DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:HostInfo.#Primary:Inference:InferredElement:Host.name as 'hostname',
-#Member:List:List:NetworkConnectionList.#DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.endpoint as 'endpoint',
-@openports as 'Default Service Port Open'</search>
+#id as &quot;InferredElement.id&quot;,
+__all_ip_addrs as 'InferredElement.__all_ip_addrs'</search>
 	</query>
-	<query title="Outpost Credentials">
-		<description>Discovery outposts mapped to credential UUIDs used via SessionResult records.</description>
+	<query title="Discovery Analysis - Key Map">
+		<description>Link DiscoveryAccess records to related identifiers used for joins across datasets.</description>
+		<search>search DiscoveryAccess where endtime
+show
+#id as &quot;DiscoveryAccess.id&quot;,
+#Next:Sequential:Previous:DiscoveryAccess.#id as &quot;DiscoveryAccess.previous_id&quot;,
+#Previous:Sequential:Next:DiscoveryAccess.#id as &quot;DiscoveryAccess.next_id&quot;,
+#DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.#id as &quot;DeviceInfo.id&quot;,
+#Member:List:List:DiscoveryRun.#id as &quot;DiscoveryRun.id&quot;,
+#::InferredElement:.#id as &quot;InferredElement.id&quot;,
+#DiscoveryAccess:Metadata:Detail:SessionResult.#id as &quot;SessionResult.id&quot;,
+explode #::InferredElement:.#DeviceWithInterface:DeviceInterface:InterfaceOfDevice:NetworkInterface.#id as &quot;NetworkInterface.id&quot;</search>
+	</query>
+	<query title="Discovery Analysis - Network Interfaces">
+		<description>NetworkInterface identifiers and associated IP addresses.</description>
+		<search>search NetworkInterface
+show
+#id as &quot;NetworkInterface.id&quot;,
+ip_addr as 'NetworkInterface.ip_addr'</search>
+	</query>
+	<query title="Discovery Analysis - Session Results">
+		<description>SessionResult records summarising success, type, and provider.</description>
 		<search>search SessionResult
-show credential, credential as 'uuid', outpost</search>
-	</query>
-	<query title="Suggested Cred Opt - Session Results Map">
-		<description>SessionResult credential-to-outpost pairs for suggested credential optimisation.</description>
-		<search>search SessionResult show credential, credential as 'uuid', outpost process with unique(0)</search>
-	</query>
-	<query title="Sensitive Data Processes">
-		<description>Processes with arguments that appear to embed usernames and passwords.</description>
-		<search>search DiscoveredProcess
-where ((args has subword 'user' or args has substring 'username')
-    and (args has subword 'pass' or args has substring 'password'))
-  or (args matches regex '(?i)\s-u(\s+|=)\S+'
-    and args matches regex '(?i)\s-p(\s+|=)\S+')
 show
-  #Member:List:List:ProcessList.#DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.#DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.hostname as 'Host',
-  #Member:List:List:ProcessList.#DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.endpoint as 'Endpoint',
-  username,
-  cmd,
-  args,
-  (extract(args, regex '(?i)(user(name)?.*?\S+)', raw '\1')
-      or extract(args, regex '(?i)(-u.*?\S+)', raw '\1')) as 'Matched Username String',
-  extract(args, regex '(?i)(password.*?\S+|\s-p.*?\S+)', raw '\1') as 'Matched Password String'</search>
+#id as &quot;SessionResult.id&quot;,
+success as &quot;SessionResult.success&quot;,
+session_type as &quot;SessionResult.session_type&quot;,
+provider as &quot;SessionResult.provider&quot;</search>
 	</query>
 	<query title="Discovery Run Analysis">
 		<description>Effective scan penetration</description>
@@ -491,8 +443,7 @@ nodecount(traverse :::DiscoveryAccess where _last_marker traverse :::ServiceList
 	</query>
 	<query title="Hosts with 0..1 SI">
 		<description>Supect Hosts where RemQuery failed.</description>
-		<search>search Host where nodecount(traverse Host:HostedSoftware:RunningSoftware:SoftwareInstance) &lt; 2 show name, os, vendor, virtual, partition, cloud, #InferredElement:Inference:Associate:DiscoveryAccess.endpoint as 'Scanned via', nodecount(traverse Host:HostedSoftware:RunningSoftware:SoftwareInstance) as 'Software Instance Count' processwith show name as 'Name', os as 'OS', vendor as 'Hardware Vendor', virtual as 'Virtual', #InferredElement:Inference:Associate:DiscoveryAccess.endpoint as 'Scanned via', nodecount(traverse InferredElement:Inference:Associate:DiscoveryAccess traverse DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:ProcessList traverse List:List:Member:DiscoveredProcess) as 'Discovered Process Count', @7 as 'Software Instance Count' processwith show name as 'Name', os_type as 'OS Type', os as 'OS', vendor as 'Hardware Vendor', virtual as 'Virtual', #InferredElement:Inference:Associate:DiscoveryAccess.endpoint as 'Scanned via', @5 as 'Discovered Process Count', @6 as 'Software Instance Count'
-</search>
+		<search>search Host where nodecount(traverse Host:HostedSoftware:RunningSoftware:SoftwareInstance) &lt; 2 show name, os, vendor, virtual, partition, cloud, #InferredElement:Inference:Associate:DiscoveryAccess.endpoint as 'Scanned via', nodecount(traverse Host:HostedSoftware:RunningSoftware:SoftwareInstance) as 'Software Instance Count' processwith show name as 'Name', os as 'OS', vendor as 'Hardware Vendor', virtual as 'Virtual', #InferredElement:Inference:Associate:DiscoveryAccess.endpoint as 'Scanned via', nodecount(traverse InferredElement:Inference:Associate:DiscoveryAccess traverse DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:ProcessList traverse List:List:Member:DiscoveredProcess) as 'Discovered Process Count', @7 as 'Software Instance Count' processwith show name as 'Name', os_type as 'OS Type', os as 'OS', vendor as 'Hardware Vendor', virtual as 'Virtual', #InferredElement:Inference:Associate:DiscoveryAccess.endpoint as 'Scanned via', @5 as 'Discovered Process Count', @6 as 'Software Instance Count'</search>
 	</query>
 	<query title="Hypervisors with VMs and State">
 		<description>Hypervisors with VMs and State</description>
@@ -544,6 +495,47 @@ vm_guest_os as 'VirtualMachine.vm_guest_os',
 guest_full_name as 'VirtualMachine.guest_full_name',
 (vm_status or cloud and &quot;Cloud Hosted&quot;) as 'VirtualMachine.vm_status'</search>
 	</query>
+	<query title="ML Outposts">
+		<description>ML Outposts</description>
+		<search>search SoftwareInstance where type = &quot;BMC Discovery Outpost&quot;
+show
+&quot;prod&quot; as environment,
+outpost_id as ID,
+version,
+#RunningSoftware:HostedSoftware:Host:Host.hostname as Hostname</search>
+	</query>
+	<query title="ML Training">
+		<description>ML Training</description>
+		<search>SEARCH Host
+SHOW 
+  &quot;prod&quot; as environment,
+  local_fqdn,
+  hostname,
+  __all_ip_addrs AS __all_ip_addrs,
+  __all_dns_names AS __all_dns_names,
+  num_processors AS &quot;Number of Processors&quot;,
+  num_logical_processors AS &quot;Number of Logical Processors&quot;,
+  os,
+  os_class AS &quot;OS Class&quot;,
+  os_type AS &quot;OS Type&quot;,
+  os_version AS &quot;OS Version&quot;,
+  ram AS &quot;Physical RAM&quot;,
+  virtual AS Virtual,
+  dns_domain AS &quot;DNS Domain&quot;,
+  firmware_date AS &quot;Firmware Date&quot;,
+  firmware_version AS &quot;Firmware Version&quot;,
+  management_ip_addr,
+  logical_ram AS &quot;Logical RAM&quot;,
+  model,
+  name,
+  num_cores AS &quot;Num Cores&quot;,
+  processor_type AS &quot;Processor Type&quot;,
+  processor_speed AS &quot;Processor Speed&quot;,
+  threads_per_core AS &quot;Threads per Processor Core&quot;,
+nodecount(traverse Host:HostedSoftware:RunningSoftware:) as &quot;Running Count&quot;,
+ #InferredElement:Inference:Primary:DeviceInfo.last_outpost AS &quot;Last Outpost ID&quot;
+</search>
+	</query>
 	<query title="Near Removal Candidates">
 		<description>CI candidates approaching removal thresholds based on failed scans.</description>
 		<search>search flags(no_segment) Host, StorageSystem, Printer
@@ -565,6 +557,28 @@ value(age_count * -1) as 'Consecutive Scan Failures',
 (@scans &gt; 0 and @time_to_doom &gt; 0 and #'%d scans, %d hours'(@scans,@time_to_doom)
 or @scans &gt; 0 and #'%d scans'(@scans) or @time_to_doom &gt; 0 and #'%d hours'(@time_to_doom)
 or 'Next unsuccessful scan') as 'Removal Eligibility'</search>
+	</query>
+	<query title="Open Ports - Default Services">
+		<description>Discovered listening ports mapped to common default service names.</description>
+		<search>search DiscoveredListeningPort
+with
+((local_port  = 161) and 'SNMP'
+or (local_port  = 21) and 'FTP'
+or (local_port  = 22) and 'SSH'
+or (local_port  = 23) and 'Telnet'
+or (local_port  = 25) and 'SMTP'
+or (local_port  = 53) and 'DNS'
+or (local_port  = 69) and 'TFTP'
+or (local_port  = 110) and 'POP3'
+or (local_port  = 119) and 'NNTP'
+or (local_port  = 137) and 'NetBios'
+or (local_port  = 143) and 'IMAP'
+or (local_port  and 'other')) as openports
+where @openports not in 'other'
+show
+#Member:List:List:NetworkConnectionList.#DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.#DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:HostInfo.#Primary:Inference:InferredElement:Host.name as 'hostname',
+#Member:List:List:NetworkConnectionList.#DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.endpoint as 'endpoint',
+@openports as 'Default Service Port Open'</search>
 	</query>
 	<query title="Orphaned VMs">
 		<description>Virtual hosts without a discovered virtual machine container relationship.</description>
@@ -654,10 +668,14 @@ show
                                 or #ElementWithDetail:SupportDetail:OSDetail:SupportDetail.end_ext_support_date
                                     and 'EOES more than 6 months away')) as 'Lifecycle Risk'</search>
 	</query>
+	<query title="Outpost Credentials">
+		<description>Discovery outposts mapped to credential UUIDs used via SessionResult records.</description>
+		<search>search SessionResult
+show credential, credential as 'uuid', outpost</search>
+	</query>
 	<query title="Outpost Runs">
 		<description>Details of scans per Outpost</description>
-		<search>search DiscoveryRun as DiscoveryRun show outpost_name as 'Outpost Name', valid_ranges as 'Explicit Ranges', label as 'Scan Label', range_summary as 'Range Summary', total as 'Total Endpoints', starttime as 'Start', endtime as 'End'
-</search>
+		<search>search DiscoveryRun as DiscoveryRun show outpost_name as 'Outpost Name', valid_ranges as 'Explicit Ranges', label as 'Scan Label', range_summary as 'Range Summary', total as 'Total Endpoints', starttime as 'Start', endtime as 'End'</search>
 	</query>
 	<query title="Outposts with IPs">
 		<description>Outpost IP throughput</description>
@@ -706,6 +724,23 @@ time(destructionTime(#)) as 'Destroyed When'</search>
 		<search>search ScanRange where scan_type = 'Scheduled' show range_id as 'ID', label as 'Label',
             (range_strings or provider) as 'Scan_Range', scan_level as 'Level',
             recurrenceDescription(schedule) as 'Date_Rules'</search>
+	</query>
+	<query title="Sensitive Data Processes">
+		<description>Processes with arguments that appear to embed usernames and passwords.</description>
+		<search>search DiscoveredProcess
+where ((args has subword 'user' or args has substring 'username')
+    and (args has subword 'pass' or args has substring 'password'))
+  or (args matches regex '(?i)\s-u(\s+|=)\S+'
+    and args matches regex '(?i)\s-p(\s+|=)\S+')
+show
+  #Member:List:List:ProcessList.#DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.#DiscoveryAccess:DiscoveryAccessResult:DiscoveryResult:DeviceInfo.hostname as 'Host',
+  #Member:List:List:ProcessList.#DiscoveryResult:DiscoveryAccessResult:DiscoveryAccess:DiscoveryAccess.endpoint as 'Endpoint',
+  username,
+  cmd,
+  args,
+  (extract(args, regex '(?i)(user(name)?.*?\S+)', raw '\1')
+      or extract(args, regex '(?i)(-u.*?\S+)', raw '\1')) as 'Matched Username String',
+  extract(args, regex '(?i)(password.*?\S+|\s-p.*?\S+)', raw '\1') as 'Matched Password String'</search>
 	</query>
 	<query title="ServiceNow Sync Nodes">
 		<description>Get the list of nodes (where key defined)</description>
@@ -766,6 +801,10 @@ product_version,
                                 and 'EOS more than 6 months away'
                                 or #ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail.end_ext_support_date
                                     and 'EOES more than 6 months away')) as 'Lifecycle Risk'</search>
+	</query>
+	<query title="Suggested Cred Opt - Session Results Map">
+		<description>SessionResult credential-to-outpost pairs for suggested credential optimisation.</description>
+		<search>search SessionResult show credential, credential as 'uuid', outpost process with unique(0)</search>
 	</query>
 	<query title="Tracked Hosts (Non-Desktop)">
 		<description>Hosts to count toward licensing, excluding desktops/clients and cloud-only nodes.</description>

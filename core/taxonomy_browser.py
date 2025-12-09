@@ -49,6 +49,64 @@ def ensure_taxonomy_cache(api_target, cache_path: str, refresh: bool = False) ->
     return cache_path
 
 
+def crawl_all(api_target, cache_path: str, refresh: bool = False) -> Dict[str, int]:
+    """Fetch and cache every nodekind. Returns summary counts."""
+
+    if not cache_path:
+        return {"fetched": 0, "cached": 0, "total": 0}
+
+    cache_dir = os.path.dirname(cache_path) or "."
+    os.makedirs(cache_dir, exist_ok=True)
+
+    cache_data: Dict[str, Any] = {"nodekinds": [], "nodes": {}}
+    if os.path.exists(cache_path) and not refresh:
+        try:
+            with open(cache_path, "r") as f:
+                loaded = json.load(f)
+                if isinstance(loaded, dict):
+                    cache_data.update(loaded)
+        except Exception:
+            logger.warning("Failed to read existing taxonomy cache; rebuilding.")
+
+    taxonomy_client = _taxonomy_client(api_target)
+
+    node_list = cache_data.get("nodekinds") or []
+    if refresh or not node_list:
+        try:
+            node_list_raw = api_client.get_json(taxonomy_client.get_taxonomy_nodekind())
+            if isinstance(node_list_raw, list):
+                node_list = [str(n) for n in node_list_raw]
+            elif isinstance(node_list_raw, dict):
+                node_list = [str(k) for k in node_list_raw.keys()]
+            cache_data["nodekinds"] = node_list
+        except Exception as exc:
+            logger.error("Failed to retrieve taxonomy nodekinds list: %s", exc)
+            return {"fetched": 0, "cached": len(cache_data.get("nodes", {})), "total": len(node_list)}
+
+    nodes_cache = cache_data.get("nodes") or {}
+    fetched = 0
+    for kind in node_list:
+        if not refresh and kind in nodes_cache and nodes_cache.get(kind):
+            continue
+        try:
+            node_payload = api_client.get_json(
+                taxonomy_client.get_taxonomy_nodekind(kind=kind)
+            )
+            nodes_cache[kind] = node_payload
+            fetched += 1
+        except Exception as exc:
+            logger.warning("Failed to fetch taxonomy nodekind %s: %s", kind, exc)
+
+    cache_data["nodes"] = nodes_cache
+    try:
+        with open(cache_path, "w") as f:
+            json.dump(cache_data, f, indent=2)
+    except Exception as exc:
+        logger.warning("Failed to write taxonomy cache to %s: %s", cache_path, exc)
+
+    return {"fetched": fetched, "cached": len(nodes_cache), "total": len(node_list)}
+
+
 def _taxonomy_client(api_target):
     """Return a taxonomy client derived from the current appliance object."""
 

@@ -306,6 +306,13 @@ taxonomy.add_argument(
     required=False,
     help='Refresh taxonomy cache before running the taxonomy browser.',
 )
+taxonomy.add_argument(
+    '--taxonomy-crawl',
+    dest='taxonomy_crawl',
+    action='store_true',
+    required=False,
+    help='Download and cache all taxonomy nodekinds locally.',
+)
 
 # Apply configuration defaults before final parsing so CLI overrides them
 parser.set_defaults(
@@ -354,6 +361,8 @@ def run_for_args(args):
         ]
     )
     taxonomy_only = bool(args.taxonomy) and not other_work_requested
+    crawl_only = bool(getattr(args, "taxonomy_crawl", False)) and not args.taxonomy and not other_work_requested
+    refresh_only = bool(getattr(args, "taxonomy_refresh", False)) and not args.taxonomy and not getattr(args, "taxonomy_crawl", False) and not other_work_requested
 
     # Detect if --excavate was provided with no report or with 'default'
     excavate_default = False
@@ -428,6 +437,18 @@ def run_for_args(args):
             getattr(args, "taxonomy_cache", None),
             refresh=getattr(args, "taxonomy_refresh", False),
         )
+        if getattr(args, "taxonomy_crawl", False):
+            summary = taxonomy_browser.crawl_all(
+                api_target,
+                getattr(args, "taxonomy_cache", None),
+                refresh=getattr(args, "taxonomy_refresh", False),
+            )
+            msg = (
+                f"Taxonomy crawl complete: fetched {summary.get('fetched')} new, "
+                f"{summary.get('cached')} cached, total kinds {summary.get('total')}"
+            )
+            print(msg)
+            logger.info(msg)
 
     ## Client
     if args.access_method=="cli":
@@ -453,6 +474,28 @@ def run_for_args(args):
         logger.error(msg)
         return
 
+    if crawl_only and api_target:
+        if cli_target:
+            cli_target.close()
+        elapsed = time.time() - start_time
+        formatted = output.format_duration(elapsed)
+        msg = f"Completed in {formatted}"
+        print(msg)
+        logger.info(msg)
+        print(os.linesep)
+        return
+
+    if refresh_only and api_target:
+        if cli_target:
+            cli_target.close()
+        elapsed = time.time() - start_time
+        formatted = output.format_duration(elapsed)
+        msg = f"Completed in {formatted}"
+        print(msg)
+        logger.info(msg)
+        print(os.linesep)
+        return
+
     if taxonomy_only and api_target:
         taxonomy_browser.run(api_target, args, reporting_dir)
         if cli_target:
@@ -464,6 +507,8 @@ def run_for_args(args):
         logger.info(msg)
         print(os.linesep)
         return
+
+    # No extra crawl-only guard needed here; handled above.
 
     identities = None
     # Only build identity cache when we will actually generate devices or

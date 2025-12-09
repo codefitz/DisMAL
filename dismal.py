@@ -15,7 +15,7 @@ import sys
 import yaml
 from argparse import RawTextHelpFormatter
 
-from core import access, api, builder, cli, curl, output, reporting, tools, cache, defaults
+from core import access, api, builder, cli, curl, output, reporting, tools, cache, defaults, taxonomy_browser
 
 logfile = 'dismal_%s.log'%( str(datetime.date.today() ))
 
@@ -257,6 +257,63 @@ excavation.add_argument(
     metavar='<num>',
 )
 
+# Taxonomy Browser
+taxonomy = parser.add_argument_group("Taxonomy Browser")
+taxonomy.add_argument(
+    '--taxonomy',
+    dest='taxonomy',
+    type=str,
+    required=False,
+    help='Browse taxonomy details for a node name (e.g. SoftwareInstance).',
+    metavar='<node>',
+)
+taxonomy.add_argument(
+    '--taxonomy-mode',
+    dest='taxonomy_mode',
+    choices=['attributes', 'relationships', 'expressions'],
+    default='attributes',
+    required=False,
+    help='What to list for the taxonomy node (default: attributes).',
+)
+taxonomy.add_argument(
+    '--taxonomy-related',
+    dest='taxonomy_related',
+    type=str,
+    required=False,
+    help='When listing relationships, limit results to those involving this related node.',
+    metavar='<node>',
+)
+taxonomy.add_argument(
+    '--taxonomy-role',
+    dest='taxonomy_role',
+    type=str,
+    required=False,
+    help='Additional role/relationship filter to refine relationship results.',
+    metavar='<role>',
+)
+taxonomy.add_argument(
+    '--taxonomy-cache',
+    dest='taxonomy_cache',
+    type=str,
+    required=False,
+    help='Path to store taxonomy cache (defaults to output_<target>/taxonomy_cache.json).',
+    metavar='<file>',
+)
+taxonomy.add_argument(
+    '--taxonomy-refresh',
+    dest='taxonomy_refresh',
+    action='store_true',
+    required=False,
+    help='Refresh taxonomy cache before running the taxonomy browser.',
+)
+taxonomy.add_argument(
+    '--taxonomy-crawl',
+    dest='taxonomy_crawl',
+    action='store_true',
+    required=False,
+    help='Download and cache all taxonomy nodekinds locally.',
+)
+
 # Apply configuration defaults before final parsing so CLI overrides them
 parser.set_defaults(
     access_method=config.get('access_method', 'all'),
@@ -281,6 +338,31 @@ cache.configure(getattr(args, "cache_dir", None), enabled=not getattr(args, "no_
 
 def run_for_args(args):
     start_time = time.time()
+
+    # Determine whether we should run only the taxonomy browser and skip default reports.
+    other_work_requested = any(
+        [
+            args.excavate,
+            args.sysadmin,
+            args.tideway,
+            getattr(args, "queries", False),
+            args.clear_queue,
+            args.tw_user,
+            args.servicecctl,
+            args.a_query,
+            args.a_enable,
+            args.f_enablelist,
+            args.a_opt,
+            args.a_removal,
+            args.f_remlist,
+            args.a_kill_run,
+            args.schedule_timezone,
+            args.reset_schedule_timezone,
+        ]
+    )
+    taxonomy_only = bool(args.taxonomy) and not other_work_requested
+    crawl_only = bool(getattr(args, "taxonomy_crawl", False)) and not args.taxonomy and not other_work_requested
+    refresh_only = bool(getattr(args, "taxonomy_refresh", False)) and not args.taxonomy and not getattr(args, "taxonomy_crawl", False) and not other_work_requested
 
     # Detect if --excavate was provided with no report or with 'default'
     excavate_default = False
@@ -312,6 +394,10 @@ def run_for_args(args):
         if not os.path.exists(reporting_dir):
             os.makedirs(reporting_dir)
         args.reporting_dir = reporting_dir
+
+    # Default taxonomy cache path if not provided (repo root / taxonomy directory)
+    if not getattr(args, "taxonomy_cache", None):
+        args.taxonomy_cache = os.path.join(pwd, taxonomy_browser.DEFAULT_CACHE_NAME)
 
     logging.basicConfig(level=logging.INFO, filename=logfile, filemode='w', force=True)
     logger = logging.getLogger("_dismal_")
@@ -345,6 +431,24 @@ def run_for_args(args):
         api_target = access.api_target(args)
         disco, search, creds, vault, knowledge = api.init_endpoints(api_target, args)
         system_user, system_passwd = access.login_target(None, args)
+        # Auto-download taxonomy cache on first API run if missing
+        taxonomy_browser.ensure_taxonomy_cache(
+            api_target,
+            getattr(args, "taxonomy_cache", None),
+            refresh=getattr(args, "taxonomy_refresh", False),
+        )
+        if getattr(args, "taxonomy_crawl", False):
+            summary = taxonomy_browser.crawl_all(
+                api_target,
+                getattr(args, "taxonomy_cache", None),
+                refresh=getattr(args, "taxonomy_refresh", False),
+            )
+            msg = (
+                f"Taxonomy crawl complete: fetched {summary.get('fetched')} new, "
+                f"{summary.get('cached')} cached, total kinds {summary.get('total')}"
+            )
+            print(msg)
+            logger.info(msg)
 
     ## Client
     if args.access_method=="cli":
@@ -358,6 +462,53 @@ def run_for_args(args):
         disco, search, creds, vault, knowledge = api.init_endpoints(api_target, args)
         cli_target, tw_passwd = access.cli_target(args)
         system_user, system_passwd = access.login_target(cli_target, args)
+        taxonomy_browser.ensure_taxonomy_cache(
+            api_target,
+            getattr(args, "taxonomy_cache", None),
+            refresh=getattr(args, "taxonomy_refresh", False),
+        )
+
+    if args.taxonomy and not api_target:
+        msg = "API access is required for the taxonomy browser."
+        print(msg)
+        logger.error(msg)
+        return
+
+    if crawl_only and api_target:
+        if cli_target:
+            cli_target.close()
+        elapsed = time.time() - start_time
+        formatted = output.format_duration(elapsed)
+        msg = f"Completed in {formatted}"
+        print(msg)
+        logger.info(msg)
+        print(os.linesep)
+        return
+
+    if refresh_only and api_target:
+        if cli_target:
+            cli_target.close()
+        elapsed = time.time() - start_time
+        formatted = output.format_duration(elapsed)
+        msg = f"Completed in {formatted}"
+        print(msg)
+        logger.info(msg)
+        print(os.linesep)
+        return
+
+    if taxonomy_only and api_target:
+        taxonomy_browser.run(api_target, args, reporting_dir)
+        if cli_target:
+            cli_target.close()
+        elapsed = time.time() - start_time
+        formatted = output.format_duration(elapsed)
+        msg = f"Completed in {formatted}"
+        print(msg)
+        logger.info(msg)
+        print(os.linesep)
+        return
+
+    # No extra crawl-only guard needed here; handled above.
 
     identities = None
     # Only build identity cache when we will actually generate devices or
@@ -392,6 +543,9 @@ def run_for_args(args):
                 args.endpoint_prefix,
                 getattr(args, "max_identities", None),
             )
+
+    if api_target and args.taxonomy:
+        taxonomy_browser.run(api_target, args, reporting_dir)
 
     if getattr(args, "queries", False):
         if "search" in locals() and search:

@@ -1,0 +1,7 @@
+appliances:
+  - name: prod
+    target: geodisams-disc-itom.onbmc.com
+    token_file: ./prod.token
+access_method: api
+noping: true
+debug: true

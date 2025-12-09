@@ -5,6 +5,7 @@ from collections import OrderedDict
 import pandas as pd
 
 # Expected reports mapping in insertion order
+# TODO: Fix these descriptions
 EXPECTED_REPORTS = OrderedDict([
     ("credential_success", "Summary of credential successes and failures"),
     ("device_ids", "List of unique device identifiers"),

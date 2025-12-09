@@ -141,28 +141,19 @@ def _filter_relationships(
         return entries
 
     filtered: List[Dict[str, Any]] = []
+    related_lc = related_node.lower() if related_node else None
     for entry in entries:
         data = entry if isinstance(entry, dict) else {"name": str(entry)}
 
         if related_node:
-            target_fields = [
-                data.get("target_kind"),
-                data.get("target"),
-                data.get("range"),
-                data.get("range_kind"),
-                data.get("kind"),
-                data.get("related"),
-                data.get("related_kind"),
-                data.get("destination"),
-                data.get("destination_kind"),
-                data.get("node_kind"),
-                data.get("to"),
-                data.get("from"),
-                data.get("name"),
-                data.get("role"),
-                data.get("relationship"),
-            ]
-            if not any(_matches(field, related_node) for field in target_fields):
+            spec = data.get("spec")
+            tail_match = False
+            if isinstance(spec, str):
+                tail = spec.split(":")[-1].lower()
+                tail_match = tail == related_lc
+
+            # When related_node is supplied, require the spec tail to match.
+            if not tail_match:
                 continue
 
         if role:
@@ -218,8 +209,9 @@ def render_taxonomy(
     mode: str = "attributes",
     related_node: Optional[str] = None,
     role: Optional[str] = None,
+    output_json: bool = True,
 ) -> str:
-    """Return a formatted taxonomy report for the selected node."""
+    """Return taxonomy details for the selected node (JSON by default)."""
 
     taxonomy_client = _taxonomy_client(api_target)
     # Build node list for fuzzy matching
@@ -246,6 +238,14 @@ def render_taxonomy(
                 selected_kind = fuzzy[0]
             elif len(fuzzy) > 1:
                 suggestions = "\n".join(sorted(fuzzy))
+                if output_json:
+                    return json.dumps(
+                        {
+                            "message": f"No exact match for '{node_name}'.",
+                            "candidates": sorted(fuzzy),
+                        },
+                        indent=2,
+                    )
                 return "\n".join(
                     [
                         f"No exact match for '{node_name}'. Found {len(fuzzy)} candidates:",
@@ -329,10 +329,42 @@ def render_taxonomy(
     )
     expressions = _expressions(node_payload)
 
+    if related_node and (mode is None or mode.lower() == "attributes"):
+        mode = "relationships"
+
     mode_key = (mode or "attributes").lower()
     if mode_key not in ("attributes", "relationships", "expressions"):
         mode_key = "attributes"
 
+    if output_json:
+        filters = {}
+        if related_node:
+            filters["related_node"] = related_node
+        if role:
+            filters["role"] = role
+        result = {
+            "selected_kind": selected_kind,
+            "source": f"/taxonomy/nodekinds/{selected_kind}",
+            "mode": mode_key,
+            "filters": filters or None,
+        }
+
+        if mode_key == "relationships":
+            result["relationships"] = relationships
+            result["count"] = len(relationships)
+        elif mode_key == "expressions":
+            result["expressions"] = expressions
+        else:
+            result["attributes"] = attributes
+
+        # Only attach the full payload when no relationship filter is in play to
+        # avoid dumping the entire taxonomy when a targeted lookup was requested.
+        if not related_node and not role:
+            result["payload"] = node_payload or {}
+
+        return json.dumps(result, indent=2)
+
+    # Legacy table output path
     if mode_key == "relationships":
         entries = relationships
         preferred = [
@@ -391,6 +423,7 @@ def run(api_target, args, reporting_dir: Optional[str]):
         mode=getattr(args, "taxonomy_mode", "attributes"),
         related_node=getattr(args, "taxonomy_related", None),
         role=getattr(args, "taxonomy_role", None),
+        output_json=True,
     )
 
     safe_name = node_name.replace("/", "_")

@@ -1,0 +1,7 @@
+appliances:
+  - name: dev
+    target: geodisams-disc-itom-dev.onbmc.com
+    token_file: ./dev.token
+access_method: api
+noping: true
+debug: true

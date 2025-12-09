@@ -15,7 +15,7 @@ import sys
 import yaml
 from argparse import RawTextHelpFormatter
 
-from core import access, api, builder, cli, curl, output, reporting, tools, cache, defaults
+from core import access, api, builder, cli, curl, output, reporting, tools, cache, defaults, taxonomy_browser
 
 logfile = 'dismal_%s.log'%( str(datetime.date.today() ))
 
@@ -257,6 +257,41 @@ excavation.add_argument(
     metavar='<num>',
 )
 
+# Taxonomy Browser
+taxonomy = parser.add_argument_group("Taxonomy Browser")
+taxonomy.add_argument(
+    '--taxonomy',
+    dest='taxonomy',
+    type=str,
+    required=False,
+    help='Browse taxonomy details for a node name (e.g. SoftwareInstance).',
+    metavar='<node>',
+)
+taxonomy.add_argument(
+    '--taxonomy-mode',
+    dest='taxonomy_mode',
+    choices=['attributes', 'relationships', 'expressions'],
+    default='attributes',
+    required=False,
+    help='What to list for the taxonomy node (default: attributes).',
+)
+taxonomy.add_argument(
+    '--taxonomy-related',
+    dest='taxonomy_related',
+    type=str,
+    required=False,
+    help='When listing relationships, limit results to those involving this related node.',
+    metavar='<node>',
+)
+taxonomy.add_argument(
+    '--taxonomy-role',
+    dest='taxonomy_role',
+    type=str,
+    required=False,
+    help='Additional role/relationship filter to refine relationship results.',
+    metavar='<role>',
+)
+
 # Apply configuration defaults before final parsing so CLI overrides them
 parser.set_defaults(
     access_method=config.get('access_method', 'all'),
@@ -281,6 +316,29 @@ cache.configure(getattr(args, "cache_dir", None), enabled=not getattr(args, "no_
 
 def run_for_args(args):
     start_time = time.time()
+
+    # Determine whether we should run only the taxonomy browser and skip default reports.
+    other_work_requested = any(
+        [
+            args.excavate,
+            args.sysadmin,
+            args.tideway,
+            getattr(args, "queries", False),
+            args.clear_queue,
+            args.tw_user,
+            args.servicecctl,
+            args.a_query,
+            args.a_enable,
+            args.f_enablelist,
+            args.a_opt,
+            args.a_removal,
+            args.f_remlist,
+            args.a_kill_run,
+            args.schedule_timezone,
+            args.reset_schedule_timezone,
+        ]
+    )
+    taxonomy_only = bool(args.taxonomy) and not other_work_requested
 
     # Detect if --excavate was provided with no report or with 'default'
     excavate_default = False
@@ -359,6 +417,24 @@ def run_for_args(args):
         cli_target, tw_passwd = access.cli_target(args)
         system_user, system_passwd = access.login_target(cli_target, args)
 
+    if args.taxonomy and not api_target:
+        msg = "API access is required for the taxonomy browser."
+        print(msg)
+        logger.error(msg)
+        return
+
+    if taxonomy_only and api_target:
+        taxonomy_browser.run(api_target, args, reporting_dir)
+        if cli_target:
+            cli_target.close()
+        elapsed = time.time() - start_time
+        formatted = output.format_duration(elapsed)
+        msg = f"Completed in {formatted}"
+        print(msg)
+        logger.info(msg)
+        print(os.linesep)
+        return
+
     identities = None
     # Only build identity cache when we will actually generate devices or
     # device_ids and those outputs are not preserved.
@@ -392,6 +468,9 @@ def run_for_args(args):
                 args.endpoint_prefix,
                 getattr(args, "max_identities", None),
             )
+
+    if api_target and args.taxonomy:
+        taxonomy_browser.run(api_target, args, reporting_dir)
 
     if getattr(args, "queries", False):
         if "search" in locals() and search:

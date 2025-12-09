@@ -151,6 +151,20 @@ to stop processing after ``N`` originating endpoints have been collected.
 This acts as a hard limit on the unique identities gathered and can
 significantly reduce execution time on large appliances.
 
+### Taxonomy browser
+
+Use the new taxonomy browser to inspect the latest model definitions via the
+`tideway` library (`/taxonomy/sections`). Supply a node name with `--taxonomy`
+and choose what to list with `--taxonomy-mode` (`attributes` | `relationships`
+| `expressions`). When exploring relationships you can further narrow the list
+using `--taxonomy-related <node>` and optionally `--taxonomy-role <role>`.
+
+```bash
+python3 dismal.py --access_method api -i <appliance> -t <token> \
+    --taxonomy SoftwareInstance --taxonomy-mode relationships \
+    --taxonomy-related Host --taxonomy-role hosted
+```
+
 ## Reports
 
 The toolkit now offers a broad range of reports. Selected examples include:

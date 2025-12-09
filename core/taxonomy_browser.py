@@ -12,6 +12,42 @@ from . import api as api_client, output
 
 logger = logging.getLogger("_taxonomy_browser_")
 
+DEFAULT_CACHE_NAME = os.path.join("taxonomy", "taxonomy_cache.json")
+
+
+def ensure_taxonomy_cache(api_target, cache_path: str, refresh: bool = False) -> Optional[str]:
+    """Fetch and store the nodekinds list if the cache is missing or refresh is requested."""
+
+    if not cache_path:
+        return None
+
+    if not refresh and os.path.exists(cache_path):
+        return cache_path
+
+    taxonomy_client = _taxonomy_client(api_target)
+    node_list: List[str] = []
+    try:
+        node_list_raw = api_client.get_json(taxonomy_client.get_taxonomy_nodekind())
+        if isinstance(node_list_raw, list):
+            node_list = [str(n) for n in node_list_raw]
+        elif isinstance(node_list_raw, dict):
+            node_list = [str(k) for k in node_list_raw.keys()]
+    except Exception as exc:  # pragma: no cover - network errors
+        logger.warning("Failed to fetch taxonomy nodekinds for cache: %s", exc)
+        return None
+
+    cache_data = {"nodekinds": node_list, "nodes": {}}
+    try:
+        cache_dir = os.path.dirname(cache_path) or "."
+        os.makedirs(cache_dir, exist_ok=True)
+        with open(cache_path, "w") as f:
+            json.dump(cache_data, f, indent=2)
+    except Exception as exc:
+        logger.warning("Failed to write taxonomy cache to %s: %s", cache_path, exc)
+        return None
+
+    return cache_path
+
 
 def _taxonomy_client(api_target):
     """Return a taxonomy client derived from the current appliance object."""
@@ -210,21 +246,39 @@ def render_taxonomy(
     related_node: Optional[str] = None,
     role: Optional[str] = None,
     output_json: bool = True,
+    cache_path: Optional[str] = None,
+    refresh_cache: bool = False,
 ) -> str:
     """Return taxonomy details for the selected node (JSON by default)."""
 
+    cache_data: Dict[str, Any] = {"nodekinds": [], "nodes": {}}
+    cache_dirty = False
+
+    if cache_path and not refresh_cache and os.path.exists(cache_path):
+        try:
+            with open(cache_path, "r") as f:
+                loaded = json.load(f)
+                if isinstance(loaded, dict):
+                    cache_data.update(loaded)
+        except Exception:
+            logger.warning("Failed to read taxonomy cache at %s; will refresh.", cache_path)
+            cache_data = {"nodekinds": [], "nodes": {}}
+
     taxonomy_client = _taxonomy_client(api_target)
     # Build node list for fuzzy matching
-    try:
-        node_list_raw = api_client.get_json(taxonomy_client.get_taxonomy_nodekind())
-        node_list = []
-        if isinstance(node_list_raw, list):
-            node_list = [str(n) for n in node_list_raw]
-        elif isinstance(node_list_raw, dict):
-            node_list = [str(k) for k in node_list_raw.keys()]
-    except Exception as exc:  # pragma: no cover - network errors
-        logger.error("Failed to retrieve /taxonomy/nodekinds list: %s", exc)
-        node_list = []
+    node_list = cache_data.get("nodekinds") or []
+    if refresh_cache or not node_list:
+        try:
+            node_list_raw = api_client.get_json(taxonomy_client.get_taxonomy_nodekind())
+            if isinstance(node_list_raw, list):
+                node_list = [str(n) for n in node_list_raw]
+            elif isinstance(node_list_raw, dict):
+                node_list = [str(k) for k in node_list_raw.keys()]
+            cache_data["nodekinds"] = node_list
+            cache_dirty = True
+        except Exception as exc:  # pragma: no cover - network errors
+            logger.error("Failed to retrieve /taxonomy/nodekinds list: %s", exc)
+            node_list = cache_data.get("nodekinds") or []
 
     selected_kind = None
     if node_list:
@@ -256,13 +310,21 @@ def render_taxonomy(
     if selected_kind is None:
         selected_kind = node_name
 
-    try:
-        node_payload = api_client.get_json(
-            taxonomy_client.get_taxonomy_nodekind(kind=selected_kind)
-        )
-    except Exception as exc:  # pragma: no cover - network errors
-        logger.error("Failed to retrieve nodekind for %s: %s", selected_kind, exc)
-        node_payload = {}
+    node_cache = cache_data.get("nodes") or {}
+    node_payload = None if refresh_cache else node_cache.get(selected_kind)
+
+    if node_payload is None:
+        try:
+            node_payload = api_client.get_json(
+                taxonomy_client.get_taxonomy_nodekind(kind=selected_kind)
+            )
+            if isinstance(node_cache, dict):
+                node_cache[selected_kind] = node_payload
+                cache_data["nodes"] = node_cache
+                cache_dirty = True
+        except Exception as exc:  # pragma: no cover - network errors
+            logger.error("Failed to retrieve nodekind for %s: %s", selected_kind, exc)
+            node_payload = node_cache.get(selected_kind, {})
 
     def _attributes(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
         results: List[Dict[str, Any]] = []
@@ -362,6 +424,15 @@ def render_taxonomy(
         if not related_node and not role:
             result["payload"] = node_payload or {}
 
+        if cache_dirty and cache_path:
+            try:
+                cache_dir = os.path.dirname(cache_path) or "."
+                os.makedirs(cache_dir, exist_ok=True)
+                with open(cache_path, "w") as f:
+                    json.dump(cache_data, f, indent=2)
+            except Exception as exc:
+                logger.warning("Failed to save taxonomy cache to %s: %s", cache_path, exc)
+
         return json.dumps(result, indent=2)
 
     # Legacy table output path
@@ -417,6 +488,10 @@ def run(api_target, args, reporting_dir: Optional[str]):
     """Generate a taxonomy report and honour DisMAL output options."""
 
     node_name = args.taxonomy
+    cache_path = getattr(args, "taxonomy_cache", None) or os.path.join(
+        os.getcwd(), DEFAULT_CACHE_NAME
+    )
+
     report = render_taxonomy(
         api_target,
         node_name,
@@ -424,6 +499,8 @@ def run(api_target, args, reporting_dir: Optional[str]):
         related_node=getattr(args, "taxonomy_related", None),
         role=getattr(args, "taxonomy_role", None),
         output_json=True,
+        cache_path=cache_path,
+        refresh_cache=getattr(args, "taxonomy_refresh", False),
     )
 
     safe_name = node_name.replace("/", "_")

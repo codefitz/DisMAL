@@ -291,6 +291,21 @@ taxonomy.add_argument(
     help='Additional role/relationship filter to refine relationship results.',
     metavar='<role>',
 )
+taxonomy.add_argument(
+    '--taxonomy-cache',
+    dest='taxonomy_cache',
+    type=str,
+    required=False,
+    help='Path to store taxonomy cache (defaults to output_<target>/taxonomy_cache.json).',
+    metavar='<file>',
+)
+taxonomy.add_argument(
+    '--taxonomy-refresh',
+    dest='taxonomy_refresh',
+    action='store_true',
+    required=False,
+    help='Refresh taxonomy cache before running the taxonomy browser.',
+)
 
 # Apply configuration defaults before final parsing so CLI overrides them
 parser.set_defaults(
@@ -371,6 +386,10 @@ def run_for_args(args):
             os.makedirs(reporting_dir)
         args.reporting_dir = reporting_dir
 
+    # Default taxonomy cache path if not provided (repo root / taxonomy directory)
+    if not getattr(args, "taxonomy_cache", None):
+        args.taxonomy_cache = os.path.join(pwd, taxonomy_browser.DEFAULT_CACHE_NAME)
+
     logging.basicConfig(level=logging.INFO, filename=logfile, filemode='w', force=True)
     logger = logging.getLogger("_dismal_")
     if args.debugging:
@@ -403,6 +422,12 @@ def run_for_args(args):
         api_target = access.api_target(args)
         disco, search, creds, vault, knowledge = api.init_endpoints(api_target, args)
         system_user, system_passwd = access.login_target(None, args)
+        # Auto-download taxonomy cache on first API run if missing
+        taxonomy_browser.ensure_taxonomy_cache(
+            api_target,
+            getattr(args, "taxonomy_cache", None),
+            refresh=getattr(args, "taxonomy_refresh", False),
+        )
 
     ## Client
     if args.access_method=="cli":
@@ -416,6 +441,11 @@ def run_for_args(args):
         disco, search, creds, vault, knowledge = api.init_endpoints(api_target, args)
         cli_target, tw_passwd = access.cli_target(args)
         system_user, system_passwd = access.login_target(cli_target, args)
+        taxonomy_browser.ensure_taxonomy_cache(
+            api_target,
+            getattr(args, "taxonomy_cache", None),
+            refresh=getattr(args, "taxonomy_refresh", False),
+        )
 
     if args.taxonomy and not api_target:
         msg = "API access is required for the taxonomy browser."

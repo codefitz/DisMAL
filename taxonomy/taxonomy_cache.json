@@ -1,0 +1,2310 @@
+{
+  "nodekinds": [
+    "Certificate",
+    "ContainerImage",
+    "NetworkRoutingGroup",
+    "ContainedSoftwareInstance",
+    "Configuration",
+    "UserQuery",
+    "DirectlyDiscoveredData",
+    "DirectlyDiscoveredList",
+    "DiscoveredCloudAPIResultList",
+    "FoundationUser",
+    "DiscoveredWBEMEnumInstances",
+    "DirectlyDiscoveredListMember",
+    "DiscoveredMQDetail",
+    "LoadBalancerPool",
+    "DiscoveredDatabaseDetail",
+    "DiscoveredChassisList",
+    "DiscoveryRun",
+    "Category",
+    "RecoveryTime",
+    "SupportDetail",
+    "IntegrationResult",
+    "ManagedElement",
+    "NetworkService",
+    "Collection",
+    "AdminCollection",
+    "Deployment",
+    "DiscoveredWBEMQuery",
+    "DiscoveredSysplex",
+    "ModelDefinition",
+    "DiscoveredVirtualMachine",
+    "DiscoveredStorageSubsystemList",
+    "DiscoveredMFPartList",
+    "FQDNList",
+    "File",
+    "DiscoveredCard",
+    "DiscoveredFQDN",
+    "ActivityResult",
+    "DiscoveredTransaction",
+    "DiscoveredTransactionList",
+    "UIPatternDefinition",
+    "DiscoveredStorageSubsystem",
+    "StorageCollection",
+    "DiscoveredDirectoryEntry",
+    "DiscoveredSoftware",
+    "SoftwareInstance",
+    "DiscoveredPatches",
+    "DiscoveredWMI",
+    "Subnet",
+    "AuditRecord",
+    "DiscoveredService",
+    "DroppedEndpoints",
+    "DiskDrive",
+    "HardwareReferenceData",
+    "OrganisationalUnit",
+    "DiscoveredIPAddressList",
+    "StorageSystemGroup",
+    "Patch",
+    "BusinessService",
+    "CouplingFacility",
+    "DiscoveredSNMPRow",
+    "DiscoveredNetworkConnection",
+    "DiscoveredNetworkInterfaceList",
+    "SNMPManagedDevice",
+    "CommandFailure",
+    "DiscoveredCouplingFacility",
+    "MFPart",
+    "DiscoveredFile",
+    "PatternDefine",
+    "ScriptFailure",
+    "DiscoveredNetworkInterface",
+    "Attachment",
+    "DiscoveredProcess",
+    "ECAError",
+    "DiscoveredWBEMInstance",
+    "ServiceList",
+    "DiscoveredSNMP",
+    "Family",
+    "ExcludeRange",
+    "DeviceInfo",
+    "GenericElement",
+    "DiscoveredAPIProviderResult",
+    "PatternExecution",
+    "DiscoveredListeningPort",
+    "DiscoveredCardList",
+    "FibreChannelNode",
+    "ProcessorInfo",
+    "DiscoveredManagedDeviceList",
+    "RuntimeEnvironment",
+    "CloudManagementGroup",
+    "RootNodeKeyInfo",
+    "DiscoveredManagedDevice",
+    "ClusterResource",
+    "DiscoveredCouplingFacilityList",
+    "HardwareComponent",
+    "Package",
+    "DataSourceAccess",
+    "ProviderAccess",
+    "ImportRecord",
+    "DiscoveredWBEMAssociators",
+    "RuleModule",
+    "ExternalEventSource",
+    "DiscoveryAccess",
+    "TechnicalService",
+    "Detail",
+    "DiscoveredSoftwareList",
+    "SessionLog",
+    "DocumentInfo",
+    "ScanRange",
+    "AttachmentCategory",
+    "DirectoryListing",
+    "DiscoveredProgramList",
+    "IPAddress",
+    "DiscoveredChassis",
+    "PatternDefinitions",
+    "DiscoveredDiskDriveList",
+    "FibreChannelPort",
+    "IntegrationPoint",
+    "LoadBalancerGroup",
+    "StorageVolume",
+    "VirtualMachine",
+    "DiscoveredMainframeViewResult",
+    "DiscoveredSNMPTable",
+    "DiscoveredAPIResult",
+    "DiscoveredTapeDrive",
+    "RegistryListing",
+    "Host",
+    "SoftwareContainer",
+    "IntegrationResultMember",
+    "SQLResultRow",
+    "ClusterService",
+    "DiscoveredDependencyList",
+    "Location",
+    "CloudRegion",
+    "StoragePool",
+    "NetworkInterface",
+    "Printer",
+    "DiscoveredDiskDrive",
+    "Pattern",
+    "CloudResource",
+    "DiscoveredProgram",
+    "Storage",
+    "BusinessApplicationInstance",
+    "CloudProvider",
+    "HardwareContainer",
+    "DiscoveredHBA",
+    "DiscoveredMainframeViewResultList",
+    "CloudService",
+    "ModelRule",
+    "Group",
+    "DiscoveredMFPart",
+    "NetworkDevice",
+    "VirtualMachineList",
+    "StorageVolumeMirror",
+    "DiscoveredWBEMQueryResult",
+    "Namespace",
+    "DiscoveredMainframeList",
+    "ExternalEvent",
+    "UnassignedConnections",
+    "ManagementController",
+    "DiscoveredAPIResultList",
+    "DiscoveredRegistryValue",
+    "NetworkConnectionList",
+    "SoftwarePod",
+    "ExternalElement",
+    "StorageDevice",
+    "DiscoveredMQDetailList",
+    "DiscoveredCertificate",
+    "DiscoveredDependency",
+    "AutomaticGroup",
+    "LifecycleStatus",
+    "HardwareDetail",
+    "DiscoveredCommandResult",
+    "DiscoveredDNSDetail",
+    "StorageSystem",
+    "DatabaseDetail",
+    "FileSystemList",
+    "DiscoveredIPAddress",
+    "LoadBalancerInstance",
+    "CandidateSoftwareInstance",
+    "Database",
+    "ClusterMember",
+    "SoftwareComponent",
+    "DiscoveredSQLQuery",
+    "DiscoveredFileSystem",
+    "Mainframe",
+    "DiscoveredSysplexList",
+    "Cluster",
+    "FibreChannelHBA",
+    "StorageProcessor",
+    "ActivityRecord",
+    "PatternModule",
+    "SessionResult",
+    "UserEventAuditRecord",
+    "TapeDrive",
+    "DiscoveredTapeDriveList",
+    "LoadBalancerMember",
+    "StorageConnection",
+    "DiscoveredMACAddresses",
+    "DiscoveredDatabaseList",
+    "DiscoveredMainframe",
+    "FunctionalComponentDefinition",
+    "DiscoveredAPIProviderResultList",
+    "Endpoint",
+    "DiscoveredWBEMAssociatorsResult",
+    "KnowledgeUpload",
+    "LoadBalancerService",
+    "HostInfo",
+    "DiscoveredDatabaseDetailList",
+    "SoftwareCluster",
+    "HBAInfoList",
+    "CMDBSyncBlackoutWindow",
+    "DiscoveredDatabase",
+    "Person",
+    "DiscoveredApplicationComponent",
+    "DiscoveredApplicationComponentList",
+    "DiscoveredCloudAPIResult",
+    "HostContainer",
+    "vSphereIntegrationResult",
+    "DiscoveredWMIQuery",
+    "FileSystem",
+    "ProcessList",
+    "DiscoveryCondition",
+    "DiscoveredRegistryEntry",
+    "StorageNamespace",
+    "PatternConfiguration",
+    "DiscoveredPackages",
+    "FunctionalComponent",
+    "MonitorAgent",
+    "MonitoredDevice",
+    "MonitoredObject",
+    "OptimizeSystem",
+    "ContainerInfo",
+    "DiscoveredOSNamespace",
+    "DiscoveredOSNamespaceList"
+  ],
+  "nodes": {
+    "SoftwareInstance": {
+      "name": "SoftwareInstance",
+      "display_name": "Software Instance",
+      "display_plural": "Software Instances",
+      "category": "Software & Databases",
+      "description": "An identified item of software running on a host",
+      "long_description": "An instance of a software entity running in the environment. Often corresponds to one or more processes running on a Host.",
+      "section": "inferred",
+      "parent_class": "",
+      "child_classes": [],
+      "attrs": [
+        {
+          "name": "name",
+          "description": "Name of the Software Instance",
+          "type": "string",
+          "display_name": "Name"
+        },
+        {
+          "name": "short_name",
+          "description": "Short name of the Software Instance",
+          "type": "string",
+          "display_name": "Short Name"
+        },
+        {
+          "name": "type",
+          "description": "Type of the Software Instance",
+          "type": "string",
+          "display_name": "Type"
+        },
+        {
+          "name": "count",
+          "description": "Number of instances grouped together",
+          "type": "int",
+          "display_name": "Instance Count"
+        },
+        {
+          "name": "key",
+          "description": "Globally unique key",
+          "type": "string",
+          "display_name": "Key"
+        },
+        {
+          "name": "cloud",
+          "description": "When set, this flag indicates that the Software instance runs directly on a cloud service",
+          "type": "boolean",
+          "display_name": "Cloud Hosted"
+        },
+        {
+          "name": "cloud_class",
+          "description": "Vendor classification of cloud software",
+          "type": "string",
+          "display_name": "Cloud Class"
+        },
+        {
+          "name": "cloud_id",
+          "description": "Unique cloud identifier",
+          "type": "string",
+          "display_name": "Cloud Identifier"
+        },
+        {
+          "name": "instance",
+          "description": "The product's own name for this instance",
+          "type": "string",
+          "display_name": "Instance"
+        },
+        {
+          "name": "cluster_id",
+          "description": "The internal identifier of the cluster this element is contributing to",
+          "type": "string",
+          "display_name": "Cluster Identifier"
+        },
+        {
+          "name": "cluster_name",
+          "description": "The internal name of the cluster this element is contributing to",
+          "type": "string",
+          "display_name": "Cluster Internal Name"
+        },
+        {
+          "name": "listening_ports",
+          "description": "Ports this element is configured to listen on",
+          "type": "list:int",
+          "display_name": "Listening Ports"
+        },
+        {
+          "name": "publisher",
+          "description": "The publisher of the Software Instance. Only populated in cases that a Pattern identifies products from more than one publisher. This information is normally found in the Pattern node's publishers attribute.",
+          "type": "string",
+          "display_name": "Publisher"
+        },
+        {
+          "name": "product",
+          "description": "The product name. Only populated in cases that a Pattern identifies more than one product. This information is normally found in the Pattern node's products attribute.",
+          "type": "string",
+          "display_name": "Product Name"
+        },
+        {
+          "name": "version",
+          "description": "Full-resolution version",
+          "type": "string",
+          "display_name": "Full Version"
+        },
+        {
+          "name": "product_version",
+          "description": "Version publicised by the vendor",
+          "type": "string",
+          "display_name": "Product Version"
+        },
+        {
+          "name": "release",
+          "description": "Release number",
+          "type": "string",
+          "display_name": "Release"
+        },
+        {
+          "name": "edition",
+          "description": "Edition",
+          "type": "string",
+          "display_name": "Edition"
+        },
+        {
+          "name": "service_pack",
+          "description": "Service pack",
+          "type": "string",
+          "display_name": "Service Pack"
+        },
+        {
+          "name": "build",
+          "description": "Build number",
+          "type": "string",
+          "display_name": "Build"
+        },
+        {
+          "name": "patch",
+          "description": "Patch level",
+          "type": "string",
+          "display_name": "Patch"
+        },
+        {
+          "name": "revision",
+          "description": "Revision",
+          "type": "string",
+          "display_name": "Revision"
+        },
+        {
+          "name": "install_root",
+          "description": "Install root for this instance",
+          "type": "string",
+          "display_name": "Install Root"
+        },
+        {
+          "name": "age_count",
+          "description": "The number of consecutive successful (positive) or failed (negative) times the Software Instance has been seen during host scans",
+          "type": "int",
+          "display_name": "Age Count"
+        },
+        {
+          "name": "last_update_success",
+          "description": "The time at which a scan was last successfully associated with this Software Instance",
+          "type": "date",
+          "display_name": "Last Update Success"
+        },
+        {
+          "name": "last_update_failure",
+          "description": "The time at which a scan associated with this Software Instance failed",
+          "type": "date",
+          "display_name": "Last Update Failure"
+        },
+        {
+          "name": "configipedia",
+          "description": "Link to Discovery Content Reference page (formerly Configipedia)",
+          "type": "string",
+          "display_name": "Discovery Content Reference Page"
+        },
+        {
+          "name": "__explicit_removal",
+          "description": "Pattern that has taken over removal in place of standard removal",
+          "type": "string",
+          "display_name": "Explicit Removal"
+        },
+        {
+          "name": "_shared",
+          "description": "When set, this flag indicates that the Software Instance should always be regarded as shared or not shared for purposes of visualization and service modelling. This is a user controlled flag.",
+          "type": "boolean",
+          "display_name": "Shared flag override"
+        },
+        {
+          "name": "tag_set",
+          "description": "Tag set",
+          "type": "dictionary",
+          "display_name": "Tags"
+        },
+        {
+          "name": "external_ids",
+          "description": "Identifiers in other systems",
+          "type": "list:string",
+          "display_name": "External Identifiers"
+        }
+      ],
+      "inherited_attrs": [],
+      "extension_attrs": [
+        "__database_dir",
+        "__ddd_source",
+        "__directory_per_db",
+        "__node_addrs_list",
+        "__obs_conns",
+        "__obs_ports",
+        "__obs_remote",
+        "_installed_modules_str",
+        "_runmqsc_path",
+        "_tw_meta_data_attrs",
+        "actual_health",
+        "actual_impacting_sub_services",
+        "admin_domain",
+        "administration_server",
+        "adminuser",
+        "advertise_client_urls",
+        "agent_name",
+        "backup_directory",
+        "base_directory",
+        "bea_home",
+        "bin_dir",
+        "bind_address",
+        "catalina_base",
+        "catalina_home",
+        "cdm_component_alias_suffix",
+        "clients",
+        "cluster_aliases",
+        "cluster_enabled",
+        "cluster_multicast_socket",
+        "clustered",
+        "communication_ports",
+        "compatibility",
+        "conf_dir",
+        "config_file",
+        "config_path",
+        "configuration_file",
+        "cpe_id",
+        "cpe_string",
+        "cpe_string_23",
+        "crs_home",
+        "data_dir",
+        "data_directory",
+        "data_path",
+        "db_domain",
+        "db_id",
+        "db_list",
+        "db_name",
+        "db_path",
+        "db_unique_name",
+        "dbbp_version",
+        "dbs",
+        "default_protocol",
+        "default_secure_protocol",
+        "delivery_group_name",
+        "delivery_group_uuid",
+        "description",
+        "desktop_catalog_id",
+        "desktop_catalog_name",
+        "directory",
+        "disk_groups",
+        "distribution_type",
+        "domain",
+        "domain_base",
+        "domain_controller",
+        "domain_name",
+        "domain_root",
+        "eap_version",
+        "edb_instance",
+        "errorlog_file",
+        "etcd_servers",
+        "farm_id",
+        "farm_name",
+        "full_process",
+        "global_db_name",
+        "health",
+        "heap_max_size",
+        "heap_min_size",
+        "heavy_forwarder",
+        "host_controller_name",
+        "id",
+        "ignite_config_url",
+        "ignite_nodes_addresses",
+        "ignite_prog_name",
+        "impactNodeCount",
+        "impactingSubService",
+        "impacting_sub_services",
+        "install_dir",
+        "installed_modules",
+        "instance_root",
+        "instance_uuid",
+        "ipv4_addrs",
+        "ipv6_addrs",
+        "is_cluster_node",
+        "jmx_authenticate",
+        "jmx_enabled",
+        "jmx_port",
+        "jmx_ssl",
+        "jmx_ssl_need_client_auth",
+        "key_group",
+        "key_id",
+        "license_key",
+        "licensing_mode",
+        "listen_client_urls",
+        "listen_peer_urls",
+        "listen_ssl_tcp_sockets",
+        "listen_tcp_sockets",
+        "listen_tcp_sockets_raw",
+        "listener_ora_file_path",
+        "listening_sockets",
+        "local_nodes",
+        "master_host",
+        "master_port",
+        "media_servers",
+        "member_of_clusters",
+        "message_files_folder",
+        "message_logger_folder",
+        "mode",
+        "net_service_names",
+        "node_health_scores",
+        "node_id",
+        "node_name",
+        "node_role",
+        "node_type",
+        "nvd_failure",
+        "nvd_url_part",
+        "ora_home",
+        "outpost_id",
+        "patches",
+        "pkg_name",
+        "port",
+        "ports",
+        "principal_port",
+        "private_queues",
+        "product_dir",
+        "protocols",
+        "psu_version",
+        "public_queues",
+        "rac_host_nodes",
+        "rac_instances",
+        "remote_nodes",
+        "replica_member_state",
+        "role",
+        "roles",
+        "rpc_bind_address",
+        "ru_version",
+        "scan_listen_tcp_sockets",
+        "scan_listeners",
+        "scan_name",
+        "scope",
+        "secure_port",
+        "served_oracle_instances",
+        "served_oracle_services",
+        "server_aliases",
+        "server_base",
+        "server_group",
+        "server_home",
+        "server_hosts",
+        "server_name",
+        "server_num",
+        "server_root",
+        "service_cluster_ip_range",
+        "service_name",
+        "service_names",
+        "severity",
+        "shard_id",
+        "shard_role",
+        "sid_to_service_map",
+        "site_name",
+        "site_server",
+        "site_uuid",
+        "slots",
+        "socket_file",
+        "ssl_port",
+        "stable_instance",
+        "state",
+        "status",
+        "subtype",
+        "success_login_credential",
+        "transaction_logger_folder",
+        "virtual_directory",
+        "webserver_port",
+        "wm_home",
+        "worker_ports",
+        "writable",
+        "ycql_db_address",
+        "ycql_db_port",
+        "yedis_db_address",
+        "yedis_db_port",
+        "ysql_db_address",
+        "ysql_db_port",
+        "zone_name",
+        "zookeeper_connect_string"
+      ],
+      "label_attr": "name",
+      "exprs": [
+        {
+          "name": "host_link",
+          "description": "Link to host",
+          "value": "nodeLink(#RunningSoftware:HostedSoftware:Host:,#RunningSoftware:HostedSoftware:Host:.name)",
+          "display_name": "Host"
+        }
+      ],
+      "inherited_exprs": [],
+      "rels": [
+        {
+          "spec": "ActedUpon:Activity:ActivityRecord:ActivityRecord",
+          "description": "Record of model activity associated with this Software Instance",
+          "display_name": "Activity Records"
+        },
+        {
+          "spec": "ElementWithCertificate:Certificate:Certificate:Certificate",
+          "description": "Certificates belonging to this Software Instance",
+          "display_name": "Certificates"
+        },
+        {
+          "spec": "Member:Collection:Collection:Deployment",
+          "description": "Deployments this Software Instance is a member of",
+          "display_name": "Deployments",
+          "impact_to": true
+        },
+        {
+          "spec": "Member:Collection:Collection:Namespace",
+          "description": "Namespace this Software Instance is in",
+          "display_name": "Namespace",
+          "impact_to": true
+        },
+        {
+          "spec": "Member:Collection:Collection:AdminCollection",
+          "description": "Administrative Collections this Software Instance is a member of",
+          "display_name": "Administrative Collections",
+          "impact_from": true
+        },
+        {
+          "spec": "Member:Collection:Collection:Collection",
+          "description": "Collections this Software Instance is a member of",
+          "display_name": "Collections",
+          "impact_from": true
+        },
+        {
+          "spec": "Member:Collection:Collection:Subnet",
+          "description": "Subnets this Software Instance is a member of",
+          "display_name": "Subnets",
+          "impact_from": true
+        },
+        {
+          "spec": "Server:Communication:Client:ContainedSoftwareInstance",
+          "description": "Client Contained Software Instances",
+          "display_name": "Client Contained Software Instances",
+          "impact_to": true
+        },
+        {
+          "spec": "Server:Communication:Client:ExternalElement",
+          "description": "Client External Elements",
+          "display_name": "Client External Elements",
+          "impact_to": true
+        },
+        {
+          "spec": "Server:Communication:Client:SoftwareCluster",
+          "description": "Client Software Clusters",
+          "display_name": "Client Software Clusters",
+          "impact_to": true
+        },
+        {
+          "spec": "Server:Communication:Client:SoftwareComponent",
+          "description": "Client Software Components",
+          "display_name": "Client Software Components",
+          "impact_to": true
+        },
+        {
+          "spec": "Server:Communication:Client:SoftwareContainer",
+          "description": "Client Software Containers",
+          "display_name": "Client Software Containers",
+          "impact_to": true
+        },
+        {
+          "spec": "Client:Communication:Server:ContainedSoftwareInstance",
+          "description": "Server Contained Software Instances",
+          "display_name": "Server Contained Software Instances",
+          "impact_from": true
+        },
+        {
+          "spec": "Client:Communication:Server:Database",
+          "description": "Server Databases",
+          "display_name": "Server Databases",
+          "impact_from": true
+        },
+        {
+          "spec": "Client:Communication:Server:DatabaseDetail",
+          "description": "Server Database Details",
+          "display_name": "Server Database Details",
+          "impact_from": true
+        },
+        {
+          "spec": "Client:Communication:Server:ExternalElement",
+          "description": "Server External Elements",
+          "display_name": "Server External Elements",
+          "impact_from": true
+        },
+        {
+          "spec": "Client:Communication:Server:LoadBalancerService",
+          "description": "Server Load Balancer Services",
+          "display_name": "Server Load Balancer Services",
+          "impact_from": true
+        },
+        {
+          "spec": "Client:Communication:Server:SoftwareCluster",
+          "description": "Server Software Clusters",
+          "display_name": "Server Software Clusters",
+          "impact_from": true
+        },
+        {
+          "spec": "Client:Communication:Server:SoftwareComponent",
+          "description": "Server Software Components",
+          "display_name": "Server Software Components",
+          "impact_from": true
+        },
+        {
+          "spec": "Client:Communication:Server:SoftwareContainer",
+          "description": "Server Software Containers",
+          "display_name": "Server Software Containers",
+          "impact_from": true
+        },
+        {
+          "spec": "Client:Communication:Server:SoftwareInstance",
+          "description": "Server Software Instances",
+          "display_name": "Server Software Instances",
+          "impact_from": true
+        },
+        {
+          "spec": "Server:Communication:Client:SoftwareInstance",
+          "description": "Client Software Instances",
+          "display_name": "Client Software Instances",
+          "impact_to": true
+        },
+        {
+          "spec": "Peer:Communication:Peer:ContainedSoftwareInstance",
+          "description": "Communicating Peer Contained Software Instances",
+          "display_name": "Peer Contained Software Instances"
+        },
+        {
+          "spec": "Peer:Communication:Peer:ExternalElement",
+          "description": "Communicating Peer External Elements",
+          "display_name": "Peer External Elements"
+        },
+        {
+          "spec": "Peer:Communication:Peer:SoftwareCluster",
+          "description": "Communicating Peer Software Clusters",
+          "display_name": "Peer Software Clusters"
+        },
+        {
+          "spec": "Peer:Communication:Peer:SoftwareComponent",
+          "description": "Communicating Peer Software Components",
+          "display_name": "Peer Software Components"
+        },
+        {
+          "spec": "Peer:Communication:Peer:SoftwareContainer",
+          "description": "Communicating Peer Software Containers",
+          "display_name": "Peer Software Containers"
+        },
+        {
+          "spec": "Peer:Communication:Peer:SoftwareInstance",
+          "description": "Communicating Peer Software Instances",
+          "display_name": "Peer Software Instances"
+        },
+        {
+          "spec": "ElementWithConfiguration:Configuration:Configuration:Configuration",
+          "description": "Configurations used to configure this Software Instance",
+          "display_name": "Configurations"
+        },
+        {
+          "spec": "ExcludedItem:DefinitionContainment:Definition:ModelDefinition",
+          "description": "Model Definitions this Software Instance has been excluded from",
+          "display_name": "Excluded from Model Definitions"
+        },
+        {
+          "spec": "IncludedItem:DefinitionContainment:Definition:ModelDefinition",
+          "description": "Model Definitions this Software Instance is included in",
+          "display_name": "Included in Model Definitions"
+        },
+        {
+          "spec": "DependedUpon:Dependency:Dependant:Cluster",
+          "description": "Clusters that depend on this Software Instance",
+          "display_name": "Clusters Depending Upon This",
+          "impact_to": true
+        },
+        {
+          "spec": "DependedUpon:Dependency:Dependant:ContainedSoftwareInstance",
+          "description": "Contained Software Instances that depend on this Software Instance",
+          "display_name": "Contained Software Instances Depending Upon This",
+          "impact_to": true
+        },
+        {
+          "spec": "DependedUpon:Dependency:Dependant:Database",
+          "description": "Databases that depend on this Software Instance",
+          "display_name": "Databases Depending Upon This",
+          "impact_to": true
+        },
+        {
+          "spec": "DependedUpon:Dependency:Dependant:Detail",
+          "description": "Details that depend on this Software Instance",
+          "display_name": "Details Depending Upon This",
+          "impact_to": true
+        },
+        {
+          "spec": "DependedUpon:Dependency:Dependant:HardwareDetail",
+          "description": "Details that depend on this Software Instance",
+          "display_name": "Dependant",
+          "impact_to": true
+        },
+        {
+          "spec": "DependedUpon:Dependency:Dependant:DatabaseDetail",
+          "description": "Details that depend on this Software Instance",
+          "display_name": "Dependant",
+          "impact_to": true
+        },
+        {
+          "spec": "DependedUpon:Dependency:Dependant:SoftwareCluster",
+          "description": "Software Clusters that depend on this Software Instance",
+          "display_name": "Software Clusters Depending Upon This",
+          "impact_to": true
+        },
+        {
+          "spec": "DependedUpon:Dependency:Dependant:SoftwareComponent",
+          "description": "Software Components that depend on this Software Instance",
+          "display_name": "Software Components Depending Upon This",
+          "impact_to": true
+        },
+        {
+          "spec": "DependedUpon:Dependency:Dependant:SoftwareContainer",
+          "description": "Software Containers that depend on this Software Instance",
+          "display_name": "Software Containers Depending Upon This",
+          "impact_to": true
+        },
+        {
+          "spec": "Dependant:Dependency:DependedUpon:Cluster",
+          "description": "Clusters that this Software Instance depends on",
+          "display_name": "Clusters This Depends On",
+          "impact_from": true
+        },
+        {
+          "spec": "Dependant:Dependency:DependedUpon:ContainedSoftwareInstance",
+          "description": "Contained Software Instances that this Software Instance depends on",
+          "display_name": "Contained Software Instances This Depends On",
+          "impact_from": true
+        },
+        {
+          "spec": "Dependant:Dependency:DependedUpon:Database",
+          "description": "Databases that this Software Instance depends on",
+          "display_name": "Databases This Depends On",
+          "impact_from": true
+        },
+        {
+          "spec": "Dependant:Dependency:DependedUpon:DatabaseDetail",
+          "description": "Database Details that this Software Instance depends on",
+          "display_name": "Database Details This Depends On",
+          "impact_from": true
+        },
+        {
+          "spec": "Dependant:Dependency:DependedUpon:Detail",
+          "description": "Details that this Software Instance depends on",
+          "display_name": "Details This Depends On",
+          "impact_from": true
+        },
+        {
+          "spec": "Dependant:Dependency:DependedUpon:HardwareDetail",
+          "description": "Details that this Software Instance depends on",
+          "display_name": "DependedUpon",
+          "impact_from": true
+        },
+        {
+          "spec": "Dependant:Dependency:DependedUpon:File",
+          "description": "Files that this Software Instance depends on",
+          "display_name": "Files This Depends On",
+          "impact_from": true
+        },
+        {
+          "spec": "Dependant:Dependency:DependedUpon:RuntimeEnvironment",
+          "description": "Runtime Environments that this Software Instance depends on",
+          "display_name": "Runtime Environments This Depends On",
+          "impact_from": true
+        },
+        {
+          "spec": "Dependant:Dependency:DependedUpon:SoftwareCluster",
+          "description": "Software Clusters that this Software Instance depends on",
+          "display_name": "Software Clusters This Depends On",
+          "impact_from": true
+        },
+        {
+          "spec": "Dependant:Dependency:DependedUpon:SoftwareComponent",
+          "description": "Software Components that this Software Instance depends on",
+          "display_name": "Software Components This Depends On",
+          "impact_from": true
+        },
+        {
+          "spec": "Dependant:Dependency:DependedUpon:SoftwareInstance",
+          "description": "Software Instances that this Software Instance depends on",
+          "display_name": "Software Instances This Depends On",
+          "impact_from": true
+        },
+        {
+          "spec": "DependedUpon:Dependency:Dependant:SoftwareInstance",
+          "description": "Software Instances that depend on this Software Instance",
+          "display_name": "Software Instances Depending Upon This",
+          "impact_to": true
+        },
+        {
+          "spec": "Dependant:Dependency:DependedUpon:SoftwarePod",
+          "description": "Software Pods that this Software Instance depends on",
+          "display_name": "Software Pods This Depends On",
+          "impact_from": true
+        },
+        {
+          "spec": "Dependant:Dependency:DependedUpon:VirtualMachine",
+          "description": "Virtual Machines that this Software Instance depends on",
+          "display_name": "Virtual Machines This Depends On",
+          "impact_from": true
+        },
+        {
+          "spec": "DependedUpon:Dependency:Dependant:SoftwarePod",
+          "description": "Software Pods that depend on this Software Instance",
+          "display_name": "Software Pods Depending Upon This",
+          "impact_to": true
+        },
+        {
+          "spec": "DependedUpon:Dependency:Dependant:VirtualMachine",
+          "description": "Virtual Machines that depend on this Software Instance",
+          "display_name": "Virtual Machines Depending Upon This",
+          "impact_to": true
+        },
+        {
+          "spec": "ElementWithDetail:Detail:Detail:Detail",
+          "description": "Details belonging to this Software Instance",
+          "display_name": "Details",
+          "impact_to": true
+        },
+        {
+          "spec": "ElementWithDetail:Detail:Detail:HardwareDetail",
+          "description": "Hardware Details belonging to this Software Instance",
+          "display_name": "Hardware Details",
+          "impact_to": true
+        },
+        {
+          "spec": "ElementWithDetail:Detail:Detail:DatabaseDetail",
+          "description": "Database Details belonging to this Software Instance",
+          "display_name": "Database Details",
+          "impact_to": true
+        },
+        {
+          "spec": "ElementWithDetail:Detail:Detail:Database",
+          "description": "Databases belonging to this Software Instance",
+          "display_name": "Databases",
+          "impact_to": true
+        },
+        {
+          "spec": "ElementWithCondition:DiscoveryCondition:DiscoveryCondition:DiscoveryCondition",
+          "description": "Discovery Conditions affecting this Software Instance",
+          "display_name": "Discovery Conditions"
+        },
+        {
+          "spec": "ElementInCategory:ElementCategory:Category:Category",
+          "description": "Category",
+          "display_name": "Category"
+        },
+        {
+          "spec": "ElementInCategory:ElementCategory:Category:RecoveryTime",
+          "description": "Recovery Time",
+          "display_name": "Recovery Time"
+        },
+        {
+          "spec": "ElementInCategory:ElementCategory:Category:OrganisationalUnit",
+          "description": "Category",
+          "display_name": "Category"
+        },
+        {
+          "spec": "ElementInCategory:ElementCategory:Category:Family",
+          "description": "Family",
+          "display_name": "Family"
+        },
+        {
+          "spec": "ElementInCategory:ElementCategory:Category:AttachmentCategory",
+          "description": "Category",
+          "display_name": "Category"
+        },
+        {
+          "spec": "ElementInCategory:ElementCategory:Category:Location",
+          "description": "Category",
+          "display_name": "Category"
+        },
+        {
+          "spec": "ElementInCategory:ElementCategory:Category:LifecycleStatus",
+          "description": "Lifecycle Status",
+          "display_name": "Lifecycle Status"
+        },
+        {
+          "spec": "ContainedFunctionality:FunctionalContainment:FunctionalContainer:FunctionalComponent",
+          "description": "Functional Component that contains this Software Instance",
+          "display_name": "Functional Component",
+          "impact_to": true
+        },
+        {
+          "spec": "AggregateSoftware:HostedSoftware:Host:CloudService",
+          "description": "Cloud Services where this Aggregate Software Instance is running",
+          "display_name": "Cloud Services",
+          "impact_from": true
+        },
+        {
+          "spec": "AggregateSoftware:HostedSoftware:Host:Host",
+          "description": "Hosts where this Aggregate Software Instance is running",
+          "display_name": "Hosts",
+          "impact_from": true
+        },
+        {
+          "spec": "AggregateSoftware:HostedSoftware:Host:MFPart",
+          "description": "MF Parts where this Aggregate Software Instance is running",
+          "display_name": "MF Parts",
+          "impact_from": true
+        },
+        {
+          "spec": "ClusteredSoftware:HostedSoftware:Host:Host",
+          "description": "Hosts on which this clustered Software Instance is running",
+          "display_name": "Hosts",
+          "impact_from": true
+        },
+        {
+          "spec": "RunningSoftware:HostedSoftware:Host:CloudService",
+          "description": "Cloud Service on which this Software Instance is running",
+          "display_name": "Cloud Service",
+          "impact_from": true
+        },
+        {
+          "spec": "RunningSoftware:HostedSoftware:Host:Cluster",
+          "description": "Cluster on which this Software Instance is running",
+          "display_name": "Cluster",
+          "impact_from": true
+        },
+        {
+          "spec": "RunningSoftware:HostedSoftware:Host:Host",
+          "description": "Host on which this Software Instance is running",
+          "display_name": "Host",
+          "impact_from": true
+        },
+        {
+          "spec": "RunningSoftware:HostedSoftware:Host:MFPart",
+          "description": "MF Part on which this Software Instance is running",
+          "display_name": "MF Part",
+          "impact_from": true
+        },
+        {
+          "spec": "RunningSoftware:HostedSoftware:Host:NetworkDevice",
+          "description": "Network Device on which this Software Instance is running",
+          "display_name": "Network Device",
+          "impact_from": true
+        },
+        {
+          "spec": "RunningSoftware:HostedSoftware:Host:Deployment",
+          "description": "Deployment for this Stable Software Instance",
+          "display_name": "Deployment",
+          "impact_to": true
+        },
+        {
+          "spec": "StrongIdentity:Identification:WeakIdentity:ExternalElement",
+          "description": "Weakly identified External Element",
+          "display_name": "Weakly Identified External Element",
+          "impact_from": true
+        },
+        {
+          "spec": "StableIdentity:Identification:EphemeralIdentity:ContainedSoftwareInstance",
+          "description": "Ephemeral identities for Contained Software Instance",
+          "display_name": "Ephemeral Identity"
+        },
+        {
+          "spec": "InferredElement:Inference:Associate:BusinessApplicationInstance",
+          "description": "Business Applications associated in some way with this Software Instance",
+          "display_name": "Associated Business Applications"
+        },
+        {
+          "spec": "InferredElement:Inference:Associate:ContainedSoftwareInstance",
+          "description": "Contained Software Instances associated in some way with this Software Instance",
+          "display_name": "Associated Contained Software Instances"
+        },
+        {
+          "spec": "InferredElement:Inference:Associate:DiscoveredAPIResult",
+          "description": "Discovered API Results associated in some way with this Software Instance",
+          "display_name": "Associated Discovered API Results"
+        },
+        {
+          "spec": "InferredElement:Inference:Associate:vSphereIntegrationResult",
+          "description": "Discovered API Results associated in some way with this Software Instance",
+          "display_name": "Associate"
+        },
+        {
+          "spec": "InferredElement:Inference:Associate:DiscoveredCommandResult",
+          "description": "Discovered Command Results associated in some way with this Software Instance",
+          "display_name": "Associated Discovered Command Results"
+        },
+        {
+          "spec": "InferredElement:Inference:Associate:DiscoveredDNSDetail",
+          "description": "Discovered DNS Details associated in some way with this Software Instance",
+          "display_name": "Associated Discovered DNS Details"
+        },
+        {
+          "spec": "InferredElement:Inference:Associate:DiscoveredDirectoryEntry",
+          "description": "Discovered Directory Entries associated in some way with this Software Instance",
+          "display_name": "Associated Discovered Directory Entries"
+        },
+        {
+          "spec": "InferredElement:Inference:Associate:DiscoveredFile",
+          "description": "Discovered Files associated in some way with this Software Instance",
+          "display_name": "Associated Discovered Files"
+        },
+        {
+          "spec": "InferredElement:Inference:Associate:DiscoveredListeningPort",
+          "description": "Listening Ports associated in some way with this Software Instance",
+          "display_name": "Associated Listening Ports"
+        },
+        {
+          "spec": "InferredElement:Inference:Associate:DiscoveredNetworkConnection",
+          "description": "Network Connections associated in some way with this Software Instance",
+          "display_name": "Associated Network Connections"
+        },
+        {
+          "spec": "InferredElement:Inference:Associate:DiscoveredPackages",
+          "description": "Discovered Package Lists associated in some way with this Software Instance",
+          "display_name": "Associated Discovered Package Lists"
+        },
+        {
+          "spec": "InferredElement:Inference:Associate:DiscoveredProcess",
+          "description": "Discovered Processes associated in some way with this Software Instance",
+          "display_name": "Associated Discovered Processes"
+        },
+        {
+          "spec": "InferredElement:Inference:Associate:DiscoveredRegistryEntry",
+          "description": "Discovered Registry Entries associated in some way with this Software Instance",
+          "display_name": "Associated Discovered Registry Entries"
+        },
+        {
+          "spec": "InferredElement:Inference:Associate:DiscoveredRegistryValue",
+          "description": "Discovered Registry Values associated in some way with this Software Instance",
+          "display_name": "Associated Discovered Registry Values"
+        },
+        {
+          "spec": "InferredElement:Inference:Associate:DiscoveredSNMP",
+          "description": "Discovered SNMP Values associated in some way with this Software Instance",
+          "display_name": "Associated Discovered SNMP Values"
+        },
+        {
+          "spec": "InferredElement:Inference:Associate:DiscoveredSNMPRow",
+          "description": "Discovered SNMP Table Rows associated in some way with this Software Instance",
+          "display_name": "Associated Discovered SNMP Table Rows"
+        },
+        {
+          "spec": "InferredElement:Inference:Associate:DiscoveredService",
+          "description": "Discovered Services associated in some way with this Software Instance",
+          "display_name": "Associated Discovered Services"
+        },
+        {
+          "spec": "InferredElement:Inference:Associate:DiscoveredSoftware",
+          "description": "Discovered Software associated in some way with this Software Instance",
+          "display_name": "Associated Discovered Software"
+        },
+        {
+          "spec": "InferredElement:Inference:Associate:DiscoveredVirtualMachine",
+          "description": "Discovered Virtual Machines associated in some way with this Software Instance",
+          "display_name": "Associated Discovered Virtual Machines"
+        },
+        {
+          "spec": "InferredElement:Inference:Associate:DiscoveredWBEMAssociatorsResult",
+          "description": "Discovered WBEM Associators Results associated in some way with this Software Instance",
+          "display_name": "Associated Discovered WBEM Associators Results"
+        },
+        {
+          "spec": "InferredElement:Inference:Associate:DiscoveredWBEMInstance",
+          "description": "Discovered WBEM Instances associated in some way with this Software Instance",
+          "display_name": "Associated Discovered WBEM Instances"
+        },
+        {
+          "spec": "InferredElement:Inference:Associate:DiscoveredWBEMQueryResult",
+          "description": "Discovered WBEM Query Results associated in some way with this Software Instance",
+          "display_name": "Associated Discovered WBEM Query Results"
+        },
+        {
+          "spec": "InferredElement:Inference:Associate:DiscoveredWMI",
+          "description": "Discovered WMI Query Results associated in some way with this Software Instance",
+          "display_name": "Associated Discovered WMI Query Results"
+        },
+        {
+          "spec": "InferredElement:Inference:Associate:HardwareDetail",
+          "description": "Hardware Details associated in some way with this Software Instance",
+          "display_name": "Associated Hardware Details"
+        },
+        {
+          "spec": "InferredElement:Inference:Associate:Host",
+          "description": "Hosts associated in some way with this Software Instance",
+          "display_name": "Associated Hosts"
+        },
+        {
+          "spec": "InferredElement:Inference:Associate:Package",
+          "description": "Packages associated in some way with this Software Instance",
+          "display_name": "Associated Packages"
+        },
+        {
+          "spec": "InferredElement:Inference:Associate:SoftwareComponent",
+          "description": "Software Components associated in some way with this Software Instance",
+          "display_name": "Associated Software Components"
+        },
+        {
+          "spec": "InferredElement:Inference:Associate:SoftwareContainer",
+          "description": "Software Containers associated in some way with this Software Instance",
+          "display_name": "Associated Software Containers"
+        },
+        {
+          "spec": "Associate:Inference:InferredElement:BusinessApplicationInstance",
+          "description": "Business Application associated in some way to this Software Instance",
+          "display_name": "Associated To Business Applications"
+        },
+        {
+          "spec": "Associate:Inference:InferredElement:BusinessService",
+          "description": "Business Service associated in some way to this Software Instance",
+          "display_name": "Associated To Business Services"
+        },
+        {
+          "spec": "Associate:Inference:InferredElement:TechnicalService",
+          "description": "Technical Service associated in some way to this Software Instance",
+          "display_name": "Associated To Technical Services"
+        },
+        {
+          "spec": "Associate:Inference:InferredElement:CandidateSoftwareInstance",
+          "description": "Candidate Software Instance associated in some way to this Software Instance",
+          "display_name": "Associated To Candidate Software Instances"
+        },
+        {
+          "spec": "Associate:Inference:InferredElement:ContainedSoftwareInstance",
+          "description": "Contained Software Instance associated in some way to this Software Instance",
+          "display_name": "Associated To Contained Software Instances"
+        },
+        {
+          "spec": "Associate:Inference:InferredElement:Host",
+          "description": "Host associated in some way to this Software Instance",
+          "display_name": "Associated To Hosts"
+        },
+        {
+          "spec": "Associate:Inference:InferredElement:MFPart",
+          "description": "MF Part associated in some way to this Software Instance",
+          "display_name": "Associated To MF Parts"
+        },
+        {
+          "spec": "Associate:Inference:InferredElement:Mainframe",
+          "description": "Mainframe associated in some way to this Software Instance",
+          "display_name": "Associated To Mainframes"
+        },
+        {
+          "spec": "Associate:Inference:InferredElement:ManagementController",
+          "description": "Management Controller associated in some way to this Software Instance",
+          "display_name": "Associated To Management Controllers"
+        },
+        {
+          "spec": "Associate:Inference:InferredElement:NetworkDevice",
+          "description": "Network Device associated in some way to this Software Instance",
+          "display_name": "Associated To Network Devices"
+        },
+        {
+          "spec": "Associate:Inference:InferredElement:Printer",
+          "description": "Printer associated in some way to this Software Instance",
+          "display_name": "Associated To Printers"
+        },
+        {
+          "spec": "Associate:Inference:InferredElement:RuntimeEnvironment",
+          "description": "Runtime Environment associated in some way to this Software Instance",
+          "display_name": "Associated To Runtime Environments"
+        },
+        {
+          "spec": "Associate:Inference:InferredElement:SNMPManagedDevice",
+          "description": "SNMP Managed Device associated in some way to this Software Instance",
+          "display_name": "Associated To SNMP Managed Devices"
+        },
+        {
+          "spec": "Associate:Inference:InferredElement:SoftwareComponent",
+          "description": "Software Component associated in some way to this Software Instance",
+          "display_name": "Associated To Software Components"
+        },
+        {
+          "spec": "Associate:Inference:InferredElement:SoftwareContainer",
+          "description": "Software Container associated in some way to this Software Instance",
+          "display_name": "Associated To Software Containers"
+        },
+        {
+          "spec": "Associate:Inference:InferredElement:SoftwareInstance",
+          "description": "Software Instance associated in some way to this Software Instance",
+          "display_name": "Associated To Software Instances"
+        },
+        {
+          "spec": "InferredElement:Inference:Associate:SoftwareInstance",
+          "description": "Software Instances associated in some way with this Software Instance",
+          "display_name": "Associated Software Instances"
+        },
+        {
+          "spec": "Associate:Inference:InferredElement:StorageDevice",
+          "description": "Storage Device associated in some way to this Software Instance",
+          "display_name": "Associated To Storage Devices"
+        },
+        {
+          "spec": "Associate:Inference:InferredElement:VirtualMachine",
+          "description": "Virtual Machine associated in some way to this Software Instance",
+          "display_name": "Associated To Virtual Machines"
+        },
+        {
+          "spec": "InferredElement:Inference:Contributor:BusinessApplicationInstance",
+          "description": "Business Applications contributing to this Software Instance's attributes",
+          "display_name": "Contributor Business Applications"
+        },
+        {
+          "spec": "InferredElement:Inference:Contributor:BusinessService",
+          "description": "Business Services contributing to this Software Instance's attributes",
+          "display_name": "Contributor Business Services"
+        },
+        {
+          "spec": "InferredElement:Inference:Contributor:TechnicalService",
+          "description": "Technical Services contributing to this Software Instance's attributes",
+          "display_name": "Contributor Technical Services"
+        },
+        {
+          "spec": "InferredElement:Inference:Contributor:ContainedSoftwareInstance",
+          "description": "Contained Software Instances contributing to this Software Instance's attributes",
+          "display_name": "Contributor Contained Software Instances"
+        },
+        {
+          "spec": "InferredElement:Inference:Contributor:DiscoveredAPIResult",
+          "description": "Discovered API Results contributing to this Software Instance's attributes",
+          "display_name": "Contributor Discovered API Results"
+        },
+        {
+          "spec": "InferredElement:Inference:Contributor:vSphereIntegrationResult",
+          "description": "Discovered API Results contributing to this Software Instance's attributes",
+          "display_name": "Contributor"
+        },
+        {
+          "spec": "InferredElement:Inference:Contributor:DiscoveredCommandResult",
+          "description": "Discovered Command Results contributing to this Software Instance's attributes",
+          "display_name": "Contributor Discovered Command Results"
+        },
+        {
+          "spec": "InferredElement:Inference:Contributor:DiscoveredDNSDetail",
+          "description": "Discovered DNS Details contributing to this Software Instance's attributes",
+          "display_name": "Contributor Discovered DNS Details"
+        },
+        {
+          "spec": "InferredElement:Inference:Contributor:DiscoveredDirectoryEntry",
+          "description": "Discovered Directory Entries contributing to this Software Instance's attributes",
+          "display_name": "Contributor Discovered Directory Entries"
+        },
+        {
+          "spec": "InferredElement:Inference:Contributor:DiscoveredFQDN",
+          "description": "Discovered FQDNs contributing to this Software Instance's attributes",
+          "display_name": "Contributor Discovered FQDNs"
+        },
+        {
+          "spec": "InferredElement:Inference:Contributor:DiscoveredFile",
+          "description": "Discovered Files contributing to this Software Instance's attributes",
+          "display_name": "Contributor Discovered Files"
+        },
+        {
+          "spec": "InferredElement:Inference:Contributor:DiscoveredListeningPort",
+          "description": "Listening Ports contributing to this Software Instance's attributes",
+          "display_name": "Contributor Listening Ports"
+        },
+        {
+          "spec": "InferredElement:Inference:Contributor:DiscoveredNetworkConnection",
+          "description": "Network Connections contributing to this Software Instance's attributes",
+          "display_name": "Contributor Network Connections"
+        },
+        {
+          "spec": "InferredElement:Inference:Contributor:DiscoveredPackages",
+          "description": "Discovered Package Lists contributing to this Software Instance's attributes",
+          "display_name": "Contributor Discovered Package Lists"
+        },
+        {
+          "spec": "InferredElement:Inference:Contributor:DiscoveredPatches",
+          "description": "Discovered Patches contributing to this Software Instance's attributes",
+          "display_name": "Contributor Discovered Patches"
+        },
+        {
+          "spec": "InferredElement:Inference:Contributor:DiscoveredProcess",
+          "description": "Discovered Processes contributing to this Software Instance's attributes",
+          "display_name": "Contributor Discovered Processes"
+        },
+        {
+          "spec": "InferredElement:Inference:Contributor:DiscoveredRegistryEntry",
+          "description": "Discovered Registry Entries contributing to this Software Instance's attributes",
+          "display_name": "Contributor Discovered Registry Entries"
+        },
+        {
+          "spec": "InferredElement:Inference:Contributor:DiscoveredRegistryValue",
+          "description": "Discovered Registry Values contributing to this Software Instance's attributes",
+          "display_name": "Contributor Discovered Registry Values"
+        },
+        {
+          "spec": "InferredElement:Inference:Contributor:DiscoveredSNMP",
+          "description": "Discovered SNMP Values contributing to this Software Instance's attributes",
+          "display_name": "Contributor Discovered SNMP Values"
+        },
+        {
+          "spec": "InferredElement:Inference:Contributor:DiscoveredSNMPRow",
+          "description": "Discovered SNMP Table Rows contributing to this Software Instance's attributes",
+          "display_name": "Contributor Discovered SNMP Table Rows"
+        },
+        {
+          "spec": "InferredElement:Inference:Contributor:DiscoveredService",
+          "description": "Discovered Services contributing to this Software Instance's attributes",
+          "display_name": "Contributor Discovered Services"
+        },
+        {
+          "spec": "InferredElement:Inference:Contributor:DiscoveredSoftware",
+          "description": "Discovered Software contributing to this Software Instance's attributes",
+          "display_name": "Contributor Discovered Software"
+        },
+        {
+          "spec": "InferredElement:Inference:Contributor:DiscoveredVirtualMachine",
+          "description": "Discovered Virtual Machines contributing to this Software Instance's attributes",
+          "display_name": "Contributor Discovered Virtual Machines"
+        },
+        {
+          "spec": "InferredElement:Inference:Contributor:DiscoveredWBEMAssociatorsResult",
+          "description": "Discovered WBEM Associators Results contributing to this Software Instance's attributes",
+          "display_name": "Contributor Discovered WBEM Associators Results"
+        },
+        {
+          "spec": "InferredElement:Inference:Contributor:DiscoveredWBEMInstance",
+          "description": "Discovered WBEM Instances contributing to this Software Instance's attributes",
+          "display_name": "Contributor Discovered WBEM Instances"
+        },
+        {
+          "spec": "InferredElement:Inference:Contributor:DiscoveredWBEMQueryResult",
+          "description": "Discovered WBEM Query Results contributing to this Software Instance's attributes",
+          "display_name": "Contributor Discovered WBEM Query Results"
+        },
+        {
+          "spec": "InferredElement:Inference:Contributor:DiscoveredWMI",
+          "description": "Discovered WMI Query Results contributing to this Software Instance's attributes",
+          "display_name": "Contributor Discovered WMI Query Results"
+        },
+        {
+          "spec": "InferredElement:Inference:Contributor:Host",
+          "description": "Hosts contributing to this Software Instance's attributes",
+          "display_name": "Contributor Hosts"
+        },
+        {
+          "spec": "InferredElement:Inference:Contributor:MFPart",
+          "description": "MF Parts contributing to this Software Instance's attributes",
+          "display_name": "Contributor MF Parts"
+        },
+        {
+          "spec": "InferredElement:Inference:Contributor:Package",
+          "description": "Packages contributing to this Software Instance's attributes",
+          "display_name": "Contributor Packages"
+        },
+        {
+          "spec": "InferredElement:Inference:Contributor:Pattern",
+          "description": "Patterns contributing to this Software Instance's attributes",
+          "display_name": "Contributor Patterns"
+        },
+        {
+          "spec": "InferredElement:Inference:Contributor:SoftwareComponent",
+          "description": "Software Components contributing to this Software Instance's attributes",
+          "display_name": "Contributor Software Components"
+        },
+        {
+          "spec": "InferredElement:Inference:Contributor:SoftwareContainer",
+          "description": "Software Containers contributing to this Software Instance's attributes",
+          "display_name": "Contributor Software Containers"
+        },
+        {
+          "spec": "Contributor:Inference:InferredElement:BusinessApplicationInstance",
+          "description": "Business Application whose attributes have been partly or wholly determined from this Software Instance",
+          "display_name": "Contributes To Business Application"
+        },
+        {
+          "spec": "Contributor:Inference:InferredElement:BusinessService",
+          "description": "Business Service whose attributes have been partly or wholly determined from this Software Instance",
+          "display_name": "Contributes To Business Service"
+        },
+        {
+          "spec": "Contributor:Inference:InferredElement:TechnicalService",
+          "description": "Technical Service whose attributes have been partly or wholly determined from this Software Instance",
+          "display_name": "Contributes To Technical Service"
+        },
+        {
+          "spec": "Contributor:Inference:InferredElement:ContainedSoftwareInstance",
+          "description": "Contained Software Instance whose attributes have been partly or wholly determined from this Software Instance",
+          "display_name": "Contributes To Contained Software Instance"
+        },
+        {
+          "spec": "Contributor:Inference:InferredElement:Host",
+          "description": "Host whose attributes have been partly or wholly determined from this Software Instance",
+          "display_name": "Contributes To Host"
+        },
+        {
+          "spec": "Contributor:Inference:InferredElement:IPAddress",
+          "description": "IP Address whose attributes have been partly or wholly determined from this Software Instance",
+          "display_name": "Contributes To IP Address"
+        },
+        {
+          "spec": "Contributor:Inference:InferredElement:RuntimeEnvironment",
+          "description": "Runtime Environment whose attributes have been partly or wholly determined from this Software Instance",
+          "display_name": "Contributes To Runtime Environment"
+        },
+        {
+          "spec": "Contributor:Inference:InferredElement:SoftwareComponent",
+          "description": "Software Component whose attributes have been partly or wholly determined from this Software Instance",
+          "display_name": "Contributes To Software Component"
+        },
+        {
+          "spec": "Contributor:Inference:InferredElement:SoftwareContainer",
+          "description": "Software Container whose attributes have been partly or wholly determined from this Software Instance",
+          "display_name": "Contributes To Software Container"
+        },
+        {
+          "spec": "Contributor:Inference:InferredElement:SoftwareInstance",
+          "description": "Software Instance whose attributes have been partly or wholly determined from this Software Instance",
+          "display_name": "Contributes To Software Instance"
+        },
+        {
+          "spec": "InferredElement:Inference:Contributor:SoftwareInstance",
+          "description": "Software Instances contributing to this Software Instance's attributes",
+          "display_name": "Contributor Software Instances"
+        },
+        {
+          "spec": "Contributor:Inference:InferredElement:VirtualMachine",
+          "description": "Virtual Machine whose attributes have been partly or wholly determined from this Software Instance",
+          "display_name": "Contributes To Virtual Machine"
+        },
+        {
+          "spec": "InferredElement:Inference:Primary:BusinessApplicationInstance",
+          "description": "Business Application from which the existence of this Software Instance was inferred",
+          "display_name": "Primary Business Application"
+        },
+        {
+          "spec": "InferredElement:Inference:Primary:BusinessService",
+          "description": "Business Service from which the existence of this Software Instance was inferred",
+          "display_name": "Primary Business Service"
+        },
+        {
+          "spec": "InferredElement:Inference:Primary:TechnicalService",
+          "description": "Technical Service from which the existence of this Software Instance was inferred",
+          "display_name": "Primary Technical Service"
+        },
+        {
+          "spec": "InferredElement:Inference:Primary:ContainerInfo",
+          "description": "Container from which the existence of this Software Instance was inferred",
+          "display_name": "Primary Container"
+        },
+        {
+          "spec": "InferredElement:Inference:Primary:ContainedSoftwareInstance",
+          "description": "Contained Software Instance from which the existence of this Software Instance was inferred",
+          "display_name": "Primary Contained Software Instance"
+        },
+        {
+          "spec": "InferredElement:Inference:Primary:DeviceInfo",
+          "description": "Device Info from which the existence of this Software Instance was inferred",
+          "display_name": "Primary Device Info"
+        },
+        {
+          "spec": "InferredElement:Inference:Primary:DiscoveredApplicationComponent",
+          "description": "Discovered Application Component from which the existence of this Software Instance was inferred",
+          "display_name": "Primary Discovered Application Component"
+        },
+        {
+          "spec": "InferredElement:Inference:Primary:DiscoveredCloudAPIResultList",
+          "description": "Discovered Cloud API Result List from which the existence of this Software Instance was inferred",
+          "display_name": "Primary Discovered Cloud API Result List"
+        },
+        {
+          "spec": "InferredElement:Inference:Primary:DiscoveredCouplingFacility",
+          "description": "Discovered Coupling Facility from which the existence of this Software Instance was inferred",
+          "display_name": "Primary Discovered Coupling Facility"
+        },
+        {
+          "spec": "InferredElement:Inference:Primary:DiscoveredDatabase",
+          "description": "Discovered Database from which the existence of this Software Instance was inferred",
+          "display_name": "Primary Discovered Database"
+        },
+        {
+          "spec": "InferredElement:Inference:Primary:DiscoveredDatabaseDetail",
+          "description": "Discovered Database Detail from which the existence of this Software Instance was inferred",
+          "display_name": "Primary Discovered Database Detail"
+        },
+        {
+          "spec": "InferredElement:Inference:Primary:DiscoveredDirectoryEntry",
+          "description": "Discovered Directory Entry from which the existence of this Software Instance was inferred",
+          "display_name": "Primary Discovered Directory Entry"
+        },
+        {
+          "spec": "InferredElement:Inference:Primary:DiscoveredDiskDrive",
+          "description": "Discovered Disk Drive from which the existence of this Software Instance was inferred",
+          "display_name": "Primary Discovered Disk Drive"
+        },
+        {
+          "spec": "InferredElement:Inference:Primary:DiscoveredFile",
+          "description": "Discovered File from which the existence of this Software Instance was inferred",
+          "display_name": "Primary Discovered File"
+        },
+        {
+          "spec": "InferredElement:Inference:Primary:DiscoveredFileSystem",
+          "description": "Discovered File System from which the existence of this Software Instance was inferred",
+          "display_name": "Primary Discovered File System"
+        },
+        {
+          "spec": "InferredElement:Inference:Primary:DiscoveredHBA",
+          "description": "Discovered HBA from which the existence of this Software Instance was inferred",
+          "display_name": "Primary Discovered HBA"
+        },
+        {
+          "spec": "InferredElement:Inference:Primary:DiscoveredIPAddress",
+          "description": "Discovered IP Address from which the existence of this Software Instance was inferred",
+          "display_name": "Primary Discovered IP Address"
+        },
+        {
+          "spec": "InferredElement:Inference:Primary:DiscoveredListeningPort",
+          "description": "Listening Port from which the existence of this Software Instance was inferred",
+          "display_name": "Primary Listening Port"
+        },
+        {
+          "spec": "InferredElement:Inference:Primary:DiscoveredMFPart",
+          "description": "Discovered MFPart from which the existence of this Software Instance was inferred",
+          "display_name": "Primary Discovered MFPart"
+        },
+        {
+          "spec": "InferredElement:Inference:Primary:DiscoveredMQDetail",
+          "description": "Discovered MQ Detail from which the existence of this Software Instance was inferred",
+          "display_name": "Primary Discovered MQ Detail"
+        },
+        {
+          "spec": "InferredElement:Inference:Primary:DiscoveredMainframe",
+          "description": "Discovered Mainframe from which the existence of this Software Instance was inferred",
+          "display_name": "Primary Discovered Mainframe"
+        },
+        {
+          "spec": "InferredElement:Inference:Primary:DiscoveredMainframeViewResult",
+          "description": "Discovered Mainframe View Result from which the existence of this Software Instance was inferred",
+          "display_name": "Primary Discovered Mainframe View Result"
+        },
+        {
+          "spec": "InferredElement:Inference:Primary:DiscoveredNetworkInterface",
+          "description": "Discovered Network Interface from which the existence of this Software Instance was inferred",
+          "display_name": "Primary Discovered Network Interface"
+        },
+        {
+          "spec": "InferredElement:Inference:Primary:DiscoveredProcess",
+          "description": "Discovered Process from which the existence of this Software Instance was inferred",
+          "display_name": "Primary Discovered Process"
+        },
+        {
+          "spec": "InferredElement:Inference:Primary:DiscoveredProgram",
+          "description": "Discovered Program from which the existence of this Software Instance was inferred",
+          "display_name": "Primary Discovered Program"
+        },
+        {
+          "spec": "InferredElement:Inference:Primary:DiscoveredRegistryEntry",
+          "description": "Discovered Registry Entry from which the existence of this Software Instance was inferred",
+          "display_name": "Primary Discovered Registry Entry"
+        },
+        {
+          "spec": "InferredElement:Inference:Primary:DiscoveredService",
+          "description": "Discovered Service from which the existence of this Software Instance was inferred",
+          "display_name": "Primary Discovered Service"
+        },
+        {
+          "spec": "InferredElement:Inference:Primary:DiscoveredSoftware",
+          "description": "Discovered Software from which the existence of this Software Instance was inferred",
+          "display_name": "Primary Discovered Software"
+        },
+        {
+          "spec": "InferredElement:Inference:Primary:DiscoveredStorageSubsystem",
+          "description": "Discovered Storage Subsystem from which the existence of this Software Instance was inferred",
+          "display_name": "Primary Discovered Storage Subsystem"
+        },
+        {
+          "spec": "InferredElement:Inference:Primary:DiscoveredSysplex",
+          "description": "Discovered Sysplex from which the existence of this Software Instance was inferred",
+          "display_name": "Primary Discovered Sysplex"
+        },
+        {
+          "spec": "InferredElement:Inference:Primary:DiscoveredTapeDrive",
+          "description": "Discovered Tape Drive from which the existence of this Software Instance was inferred",
+          "display_name": "Primary Discovered Tape Drive"
+        },
+        {
+          "spec": "InferredElement:Inference:Primary:DiscoveredTransaction",
+          "description": "Discovered Transaction from which the existence of this Software Instance was inferred",
+          "display_name": "Primary Discovered Transaction"
+        },
+        {
+          "spec": "InferredElement:Inference:Primary:DiscoveredVirtualMachine",
+          "description": "Discovered Virtual Machine from which the existence of this Software Instance was inferred",
+          "display_name": "Primary Discovered Virtual Machine"
+        },
+        {
+          "spec": "InferredElement:Inference:Primary:HostInfo",
+          "description": "Host Info from which the existence of this Software Instance was inferred",
+          "display_name": "Primary Host Info"
+        },
+        {
+          "spec": "InferredElement:Inference:Primary:MFPart",
+          "description": "MF Part from which the existence of this Software Instance was inferred",
+          "display_name": "Primary MF Part"
+        },
+        {
+          "spec": "InferredElement:Inference:Primary:NetworkConnectionList",
+          "description": "Network Connection List from which the existence of this Software Instance was inferred",
+          "display_name": "Primary Network Connection List"
+        },
+        {
+          "spec": "InferredElement:Inference:Primary:SoftwareComponent",
+          "description": "Software Component from which the existence of this Software Instance was inferred",
+          "display_name": "Primary Software Component"
+        },
+        {
+          "spec": "InferredElement:Inference:Primary:SoftwareContainer",
+          "description": "Software Container from which the existence of this Software Instance was inferred",
+          "display_name": "Primary Software Container"
+        },
+        {
+          "spec": "Primary:Inference:InferredElement:BusinessApplicationInstance",
+          "description": "Business Application whose existence was inferred from this Software Instance",
+          "display_name": "Created Business Application"
+        },
+        {
+          "spec": "Primary:Inference:InferredElement:BusinessService",
+          "description": "Business Service whose existence was inferred from this Software Instance",
+          "display_name": "Created Business Service"
+        },
+        {
+          "spec": "Primary:Inference:InferredElement:TechnicalService",
+          "description": "Technical Service whose existence was inferred from this Software Instance",
+          "display_name": "Created Technical Service"
+        },
+        {
+          "spec": "Primary:Inference:InferredElement:CandidateSoftwareInstance",
+          "description": "Candidate Software Instance whose existence was inferred from this Software Instance",
+          "display_name": "Created Candidate Software Instance"
+        },
+        {
+          "spec": "Primary:Inference:InferredElement:CloudProvider",
+          "description": "Cloud Provider whose existence was inferred from this Software Instance",
+          "display_name": "Created Cloud Provider"
+        },
+        {
+          "spec": "Primary:Inference:InferredElement:CloudRegion",
+          "description": "Cloud Region whose existence was inferred from this Software Instance",
+          "display_name": "Created Cloud Region"
+        },
+        {
+          "spec": "Primary:Inference:InferredElement:CloudService",
+          "description": "Cloud Service whose existence was inferred from this Software Instance",
+          "display_name": "Created Cloud Service"
+        },
+        {
+          "spec": "Primary:Inference:InferredElement:Cluster",
+          "description": "Cluster whose existence was inferred from this Software Instance",
+          "display_name": "Created Cluster"
+        },
+        {
+          "spec": "Primary:Inference:InferredElement:ContainedSoftwareInstance",
+          "description": "Contained Software Instance whose existence was inferred from this Software Instance",
+          "display_name": "Created Contained Software Instance"
+        },
+        {
+          "spec": "Primary:Inference:InferredElement:CouplingFacility",
+          "description": "Coupling Facility whose existence was inferred from this Software Instance",
+          "display_name": "Created Coupling Facility"
+        },
+        {
+          "spec": "Primary:Inference:InferredElement:Database",
+          "description": "Database whose existence was inferred from this Software Instance",
+          "display_name": "Created Database"
+        },
+        {
+          "spec": "Primary:Inference:InferredElement:DatabaseDetail",
+          "description": "Database Detail whose existence was inferred from this Software Instance",
+          "display_name": "Created Database Detail"
+        },
+        {
+          "spec": "Primary:Inference:InferredElement:Detail",
+          "description": "Detail whose existence was inferred from this Software Instance",
+          "display_name": "Created Detail"
+        },
+        {
+          "spec": "Primary:Inference:InferredElement:HardwareDetail",
+          "description": "Detail whose existence was inferred from this Software Instance",
+          "display_name": "InferredElement"
+        },
+        {
+          "spec": "Primary:Inference:InferredElement:FibreChannelHBA",
+          "description": "Fibre Channel HBA whose existence was inferred from this Software Instance",
+          "display_name": "Created Fibre Channel HBA"
+        },
+        {
+          "spec": "Primary:Inference:InferredElement:FibreChannelNode",
+          "description": "Fibre Channel Node whose existence was inferred from this Software Instance",
+          "display_name": "Created Fibre Channel Node"
+        },
+        {
+          "spec": "Primary:Inference:InferredElement:FibreChannelPort",
+          "description": "Fibre Channel Port whose existence was inferred from this Software Instance",
+          "display_name": "Created Fibre Channel Port"
+        },
+        {
+          "spec": "Primary:Inference:InferredElement:FileSystem",
+          "description": "File System whose existence was inferred from this Software Instance",
+          "display_name": "Created File System"
+        },
+        {
+          "spec": "Primary:Inference:InferredElement:Host",
+          "description": "Host whose existence was inferred from this Software Instance",
+          "display_name": "Created Host"
+        },
+        {
+          "spec": "Primary:Inference:InferredElement:IPAddress",
+          "description": "IP Address whose existence was inferred from this Software Instance",
+          "display_name": "Created IP Address"
+        },
+        {
+          "spec": "Primary:Inference:InferredElement:MFPart",
+          "description": "MF Part whose existence was inferred from this Software Instance",
+          "display_name": "Created MF Part"
+        },
+        {
+          "spec": "Primary:Inference:InferredElement:Mainframe",
+          "description": "Mainframe whose existence was inferred from this Software Instance",
+          "display_name": "Created Mainframe"
+        },
+        {
+          "spec": "Primary:Inference:InferredElement:ManagementController",
+          "description": "Management Controller whose existence was inferred from this Software Instance",
+          "display_name": "Created Management Controller"
+        },
+        {
+          "spec": "Primary:Inference:InferredElement:NetworkDevice",
+          "description": "Network Device whose existence was inferred from this Software Instance",
+          "display_name": "Created Network Device"
+        },
+        {
+          "spec": "Primary:Inference:InferredElement:NetworkInterface",
+          "description": "Network Interface whose existence was inferred from this Software Instance",
+          "display_name": "Created Network Interface"
+        },
+        {
+          "spec": "Primary:Inference:InferredElement:Printer",
+          "description": "Printer whose existence was inferred from this Software Instance",
+          "display_name": "Created Printer"
+        },
+        {
+          "spec": "Primary:Inference:InferredElement:RuntimeEnvironment",
+          "description": "Runtime Environment whose existence was inferred from this Software Instance",
+          "display_name": "Created Runtime Environment"
+        },
+        {
+          "spec": "Primary:Inference:InferredElement:SNMPManagedDevice",
+          "description": "SNMP Managed Device whose existence was inferred from this Software Instance",
+          "display_name": "Created SNMP Managed Device"
+        },
+        {
+          "spec": "Primary:Inference:InferredElement:SoftwareComponent",
+          "description": "Software Component whose existence was inferred from this Software Instance",
+          "display_name": "Created Software Component"
+        },
+        {
+          "spec": "Primary:Inference:InferredElement:SoftwareContainer",
+          "description": "Software Container whose existence was inferred from this Software Instance",
+          "display_name": "Created Software Container"
+        },
+        {
+          "spec": "Primary:Inference:InferredElement:SoftwareInstance",
+          "description": "Software Instance whose existence was inferred from this Software Instance",
+          "display_name": "Created Software Instance"
+        },
+        {
+          "spec": "InferredElement:Inference:Primary:SoftwareInstance",
+          "description": "Software Instance from which the existence of this Software Instance was inferred",
+          "display_name": "Primary Software Instance"
+        },
+        {
+          "spec": "Primary:Inference:InferredElement:Storage",
+          "description": "Storage whose existence was inferred from this Software Instance",
+          "display_name": "Created Storage"
+        },
+        {
+          "spec": "Primary:Inference:InferredElement:StorageCollection",
+          "description": "Storage Collection whose existence was inferred from this Software Instance",
+          "display_name": "Created Storage Collection"
+        },
+        {
+          "spec": "Primary:Inference:InferredElement:StorageDevice",
+          "description": "Storage Device whose existence was inferred from this Software Instance",
+          "display_name": "Created Storage Device"
+        },
+        {
+          "spec": "Primary:Inference:InferredElement:Subnet",
+          "description": "Subnet whose existence was inferred from this Software Instance",
+          "display_name": "Created Subnet"
+        },
+        {
+          "spec": "Primary:Inference:InferredElement:UnassignedConnections",
+          "description": "Unassigned Connections whose existence was inferred from this Software Instance",
+          "display_name": "Created Unassigned Connections"
+        },
+        {
+          "spec": "Primary:Inference:InferredElement:VirtualMachine",
+          "description": "Virtual Machine whose existence was inferred from this Software Instance",
+          "display_name": "Created Virtual Machine"
+        },
+        {
+          "spec": "Element:Maintainer:Pattern:Pattern",
+          "description": "Pattern maintaining this Software Instance",
+          "display_name": "Maintaining Pattern"
+        },
+        {
+          "spec": "Manager:Management:ManagedElement:Cluster",
+          "description": "Clusters that this Software Instance manages",
+          "display_name": "Managed Clusters",
+          "impact_to": true
+        },
+        {
+          "spec": "Manager:Management:ManagedElement:Collection",
+          "description": "Collections that this Software Instance manages",
+          "display_name": "Managed Collections",
+          "impact_to": true
+        },
+        {
+          "spec": "Manager:Management:ManagedElement:AdminCollection",
+          "description": "Administrative Collections that this Software Instance manages",
+          "display_name": "Managed Administrative Collections",
+          "impact_to": true
+        },
+        {
+          "spec": "Manager:Management:ManagedElement:Deployment",
+          "description": "Collections that this Software Instance manages",
+          "display_name": "ManagedElement",
+          "impact_to": true
+        },
+        {
+          "spec": "Manager:Management:ManagedElement:Namespace",
+          "description": "Collections that this Software Instance manages",
+          "display_name": "ManagedElement",
+          "impact_to": true
+        },
+        {
+          "spec": "Manager:Management:ManagedElement:HardwareContainer",
+          "description": "Hardware Containers that this Software Instance manages",
+          "display_name": "Managed Hardware Containers",
+          "impact_to": true
+        },
+        {
+          "spec": "Manager:Management:ManagedElement:Host",
+          "description": "Hosts that this Software Instance manages",
+          "display_name": "Managed Hosts",
+          "impact_to": true
+        },
+        {
+          "spec": "Manager:Management:ManagedElement:HostContainer",
+          "description": "Host Containers that this Software Instance manages",
+          "display_name": "Managed Host Containers",
+          "impact_to": true
+        },
+        {
+          "spec": "Manager:Management:ManagedElement:LoadBalancerInstance",
+          "description": "Load Balancer Instances that this Software Instance manages",
+          "display_name": "Managed Load Balancer Instances",
+          "impact_to": true
+        },
+        {
+          "spec": "Manager:Management:ManagedElement:ManagementController",
+          "description": "Management Controllers that this Software Instance manages",
+          "display_name": "Managed Management Controllers",
+          "impact_to": true
+        },
+        {
+          "spec": "Manager:Management:ManagedElement:NetworkDevice",
+          "description": "Network Devices that this Software Instance manages",
+          "display_name": "Managed Network Devices",
+          "impact_to": true
+        },
+        {
+          "spec": "Manager:Management:ManagedElement:SNMPManagedDevice",
+          "description": "SNMP Managed Devices that this Software Instance manages",
+          "display_name": "Managed SNMP Managed Devices",
+          "impact_to": true
+        },
+        {
+          "spec": "Manager:Management:ManagedElement:ContainedSoftwareInstance",
+          "description": "Contained Software Instances that this Software Instance manages",
+          "display_name": "Managed Contained Software Instances",
+          "impact_to": true
+        },
+        {
+          "spec": "Manager:Management:ManagedElement:SoftwareCluster",
+          "description": "Software Clusters that this Software Instance manages",
+          "display_name": "Managed Software Clusters",
+          "impact_to": true
+        },
+        {
+          "spec": "Manager:Management:ManagedElement:SoftwareContainer",
+          "description": "Software Containers that this Software Instance manages",
+          "display_name": "Managed Software Containers",
+          "impact_to": true
+        },
+        {
+          "spec": "ManagedElement:Management:Manager:ContainedSoftwareInstance",
+          "description": "Contained Software Instance that manages this Software Instance",
+          "display_name": "Managed by Contained Software Instance",
+          "impact_from": true
+        },
+        {
+          "spec": "ManagedElement:Management:Manager:SoftwareCluster",
+          "description": "Software Cluster that manages this Software Instance",
+          "display_name": "Managed by Software Cluster",
+          "impact_from": true
+        },
+        {
+          "spec": "ManagedElement:Management:Manager:SoftwareInstance",
+          "description": "Software Instance that manages this Software Instance",
+          "display_name": "Managed by Software Instance",
+          "impact_from": true
+        },
+        {
+          "spec": "Manager:Management:ManagedElement:SoftwareInstance",
+          "description": "Software Instances that this Software Instance manages",
+          "display_name": "Managed Software Instances",
+          "impact_to": true
+        },
+        {
+          "spec": "Manager:Management:ManagedElement:VirtualMachine",
+          "description": "Virtual Machines that this Software Instance manages",
+          "display_name": "Managed Virtual Machines",
+          "impact_to": true
+        },
+        {
+          "spec": "Manager:Management:ManagedElement:StorageSystem",
+          "description": "Storage Systems that this Software Instance manages",
+          "display_name": "Managed Storage Systems",
+          "impact_to": true
+        },
+        {
+          "spec": "Manager:Management:ManagedElement:StorageSystemGroup",
+          "description": "Storage System Groups that this Software Instance manages",
+          "display_name": "Managed Storage System Groups",
+          "impact_to": true
+        },
+        {
+          "spec": "Facet:MultiFacet:MainFacet:SoftwareInstance",
+          "description": "Chosen main facet of this Software Instance",
+          "display_name": "Main Facet",
+          "impact_to": true
+        },
+        {
+          "spec": "MainFacet:MultiFacet:Facet:SoftwareInstance",
+          "description": "Other facets of this Software Instance",
+          "display_name": "Other Facets",
+          "impact_from": true
+        },
+        {
+          "spec": "NetworkDevice:NetworkService:NetworkService:LoadBalancerInstance",
+          "description": "Load Balancer Instance hosted by this Software Instance",
+          "display_name": "Load Balancer Instance",
+          "impact_to": true
+        },
+        {
+          "spec": "Listening:ObservedCommunication:Connecting:CandidateSoftwareInstance",
+          "description": "Candidate Software Instances observed connecting to this Software Instance",
+          "display_name": "Incoming Connections from Candidate SIs",
+          "impact_to": true
+        },
+        {
+          "spec": "Listening:ObservedCommunication:Connecting:ContainedSoftwareInstance",
+          "description": "Contained Software Instances observed connecting to this Software Instance",
+          "display_name": "Incoming Connections from Contained SIs",
+          "impact_to": true
+        },
+        {
+          "spec": "Connecting:ObservedCommunication:Listening:CandidateSoftwareInstance",
+          "description": "Candidate Software Instances this Software Instance is observed connecting to",
+          "display_name": "Outgoing Connections to Candidate SIs",
+          "impact_from": true
+        },
+        {
+          "spec": "Connecting:ObservedCommunication:Listening:ContainedSoftwareInstance",
+          "description": "Contained Software Instances this Software Instance is observed connecting to",
+          "display_name": "Outgoing Connections to Contained SIs",
+          "impact_from": true
+        },
+        {
+          "spec": "Connecting:ObservedCommunication:Listening:LoadBalancerService",
+          "description": "Load Balancer Services this Software Instance is observed connecting to",
+          "display_name": "Outgoing Connections to Load Balancer Services",
+          "impact_from": true
+        },
+        {
+          "spec": "Connecting:ObservedCommunication:Listening:SoftwareInstance",
+          "description": "Software Instances this Software Instance is observed connecting to",
+          "display_name": "Outgoing Connections",
+          "impact_from": true
+        },
+        {
+          "spec": "Listening:ObservedCommunication:Connecting:SoftwareInstance",
+          "description": "Software Instances observed connecting to this Software Instance",
+          "display_name": "Incoming Connections",
+          "impact_to": true
+        },
+        {
+          "spec": "Connecting:ObservedCommunication:Listening:UnassignedConnections",
+          "description": "Unassigned Connections this Software Instance is observed connecting to",
+          "display_name": "Outgoing Connections to Unassigned Connections",
+          "impact_from": true
+        },
+        {
+          "spec": "Listening:ObservedCommunication:Connecting:UnassignedConnections",
+          "description": "Unassigned Connections observed connecting to this Software Instance",
+          "display_name": "Incoming Connections from Unassigned Connections",
+          "impact_to": true
+        },
+        {
+          "spec": "Peer:ObservedCommunication:Peer:CandidateSoftwareInstance",
+          "description": "Candidate Software Instances this Software Instance is observed communicating with",
+          "display_name": "Observed Communications"
+        },
+        {
+          "spec": "Peer:ObservedCommunication:Peer:ContainedSoftwareInstance",
+          "description": "Contained Software Instances this Software Instance is observed communicating with",
+          "display_name": "Observed Communications"
+        },
+        {
+          "spec": "Peer:ObservedCommunication:Peer:SoftwareInstance",
+          "description": "Software Instances this Software Instance is observed communicating with",
+          "display_name": "Observed Communications"
+        },
+        {
+          "spec": "Peer:ObservedCommunication:Peer:UnassignedConnections",
+          "description": "Unassigned Connections this Software Instance is observed communicating with",
+          "display_name": "Observed Communications"
+        },
+        {
+          "spec": "OwnedItem:Ownership:BusinessOwner:Person",
+          "description": "The person or owner responsible for this element from a business perspective",
+          "display_name": "Business Owner"
+        },
+        {
+          "spec": "OwnedItem:Ownership:ITOwner:Person",
+          "description": "The person or owner responsible for this element from an IT perspective",
+          "display_name": "IT Owner"
+        },
+        {
+          "spec": "OwnedItem:Ownership:SupportOwner:Person",
+          "description": "The person or owner responsible for the support of this element",
+          "display_name": "Support Manager"
+        },
+        {
+          "spec": "OwnedItem:Ownership:Owner:OrganisationalUnit",
+          "description": "Organizational Unit that this Software Instance belongs to",
+          "display_name": "Organizational Unit"
+        },
+        {
+          "spec": "PatternConfirmed:PatternTouch:PatternTrigger:PatternTrigger",
+          "description": "Executed Pattern",
+          "display_name": "Executed Pattern"
+        },
+        {
+          "spec": "PatternCreated:PatternTouch:PatternTrigger:PatternTrigger",
+          "description": "Executed Pattern",
+          "display_name": "Executed Pattern"
+        },
+        {
+          "spec": "PatternDestroyed:PatternTouch:PatternTrigger:PatternTrigger",
+          "description": "Executed Pattern",
+          "display_name": "Executed Pattern"
+        },
+        {
+          "spec": "PatternModified:PatternTouch:PatternTrigger:PatternTrigger",
+          "description": "Executed Pattern",
+          "display_name": "Executed Pattern"
+        },
+        {
+          "spec": "ElementUsingFile:RelatedFile:File:File",
+          "description": "Files used by this Software Instance",
+          "display_name": "Files"
+        },
+        {
+          "spec": "ContainedSoftware:SoftwareContainment:SoftwareContainer:BusinessApplicationInstance",
+          "description": "Containing Business Application",
+          "display_name": "Containing Business Application",
+          "impact_to": true
+        },
+        {
+          "spec": "ContainedSoftware:SoftwareContainment:SoftwareContainer:BusinessService",
+          "description": "Containing Business Service",
+          "display_name": "Containing Business Service",
+          "impact_to": true
+        },
+        {
+          "spec": "ContainedSoftware:SoftwareContainment:SoftwareContainer:TechnicalService",
+          "description": "Containing Technical Service",
+          "display_name": "Containing Technical Service",
+          "impact_to": true
+        },
+        {
+          "spec": "ContainedSoftware:SoftwareContainment:SoftwareContainer:SoftwareCluster",
+          "description": "Containing Software Cluster",
+          "display_name": "Software Cluster",
+          "impact_to": true
+        },
+        {
+          "spec": "SoftwareContainer:SoftwareContainment:ContainedSoftware:SoftwareInstance",
+          "description": "Contained Software Instances",
+          "display_name": "Contained Software Instances",
+          "impact_from": true
+        },
+        {
+          "spec": "ContainedSoftware:SoftwareContainment:SoftwareContainer:SoftwareInstance",
+          "description": "Containing Software Instance",
+          "display_name": "Software Instance",
+          "impact_to": true
+        },
+        {
+          "spec": "SoftwareContainer:SoftwareContainment:ContainedSoftware:ContainedSoftwareInstance",
+          "description": "Contained Software Instances",
+          "display_name": "Contained Software Instances",
+          "impact_from": true
+        },
+        {
+          "spec": "SoftwareContainer:SoftwareContainment:ContainedSoftware:SoftwareComponent",
+          "description": "Contained Software Components",
+          "display_name": "Contained Software Components",
+          "impact_to": true
+        },
+        {
+          "spec": "ContainedSoftware:SoftwareContainment:SoftwareContainer:SoftwareContainer",
+          "description": "Containing Software Container",
+          "display_name": "Containing Software Container",
+          "impact_to": true
+        },
+        {
+          "spec": "ServiceProvider:SoftwareService:Service:Cluster",
+          "description": "Cluster that this Software Instance represents",
+          "display_name": "Cluster"
+        },
+        {
+          "spec": "ServiceProvider:SoftwareService:Service:ClusterService",
+          "description": "Cluster Service that this Software Instance is implementing",
+          "display_name": "Cluster Service"
+        },
+        {
+          "spec": "ServiceProvider:SoftwareService:Service:LoadBalancerMember",
+          "description": "Load Balancer Member that this Software Instance is implementing a service for",
+          "display_name": "Load Balancer Member",
+          "impact_to": true
+        },
+        {
+          "spec": "ElementWithDetail:SupportDetail:SoftwareDetail:SupportDetail",
+          "description": "Software Support Details for this Software Instance",
+          "display_name": "Software Support Details"
+        }
+      ],
+      "inherited_rels": [],
+      "display_rels": [],
+      "inherited_display_rels": [],
+      "options": [
+        "UI_MASS_DELETE",
+        "UI_NO_EDIT",
+        "UI_QUICK",
+        "UI_SHOW_DP"
+      ]
+    }
+  }
+}

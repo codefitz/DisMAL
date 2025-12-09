@@ -161,6 +161,9 @@ output*/
 *.xls
 *.xlsx
 
+# YAML files
+*.yaml
+
 # Local configuration
 config.yaml
 

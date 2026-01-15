@@ -161,8 +161,12 @@ output*/
 *.xls
 *.xlsx
 
+# YAML files
+*.yaml
+
 # Local configuration
 config.yaml
 
 # Ignore notebook backup files
 *.ipynb.bak.*
+scan.txt

@@ -275,7 +275,17 @@ show
 #id as &quot;DiscoveryRun.id&quot;,
 label as 'DiscoveryRun.label',
 friendlyTime(starttime) as 'DiscoveryRun.starttime',
-friendlyTime(endtime) as 'DiscoveryRun.endtime'</search>
+friendlyTime(endtime) as 'DiscoveryRun.endtime',
+outpost_id as 'DiscoveryRun.outpost_id',
+outpost_name as 'DiscoveryRun.outpost_name'</search>
+	</query>
+	<query title="DiscoveryRun Outpost Map">
+		<description>Optional fallback mapping of outpost IDs to outpost names for report enrichment.</description>
+		<search>search DiscoveryRun
+show
+outpost_id as 'outpost_id',
+outpost_name as 'outpost_name'
+process with unique(0)</search>
 	</query>
 	<query title="Discovery Analysis - Dropped Endpoints">
 		<description>DroppedEndpoints details highlighting endpoints removed from discovery runs.</description>
